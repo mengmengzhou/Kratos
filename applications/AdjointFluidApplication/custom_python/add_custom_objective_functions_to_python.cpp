@@ -6,7 +6,7 @@
 // Application includes
 #include "custom_utilities/objective_function.h"
 #include "custom_utilities/drag_objective_function.h"
-#include "custom_utilities/mal_distribution_objective_function.h"
+#include "custom_utilities/flow_mal_distribution_objective_function.h"
 #include "custom_python/add_custom_objective_functions_to_python.h"
 
 namespace Kratos
@@ -35,11 +35,11 @@ void AddCustomObjectiveFunctionsToPython()
     class_<DragObjectiveFunction<3>, bases<ObjectiveFunction>, boost::noncopyable>
     ("DragObjectiveFunction3D", init<Parameters&>());
 
-    class_<MalDistributionObjectiveFunction<2>, bases<ObjectiveFunction>, boost::noncopyable>
-    ("MalDistributionObjectiveFunction2D", init<Parameters&>());
+    class_<FlowMalDistributionObjectiveFunction<2>, bases<ObjectiveFunction>, boost::noncopyable>
+    ("FlowMalDistributionObjectiveFunction2D", init<Parameters&>());
 
-    class_<MalDistributionObjectiveFunction<3>, bases<ObjectiveFunction>, boost::noncopyable>
-    ("MalDistributionObjectiveFunction3D", init<Parameters&>());
+    class_<FlowMalDistributionObjectiveFunction<3>, bases<ObjectiveFunction>, boost::noncopyable>
+    ("FlowMalDistributionObjectiveFunction3D", init<Parameters&>());
 
 }
 

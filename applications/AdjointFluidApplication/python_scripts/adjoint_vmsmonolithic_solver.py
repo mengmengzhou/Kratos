@@ -148,9 +148,9 @@ class AdjointVMSMonolithicSolver:
                 raise Exception("Invalid DOMAIN_SIZE: " + str(domain_size))
         elif self.settings["objective_settings"]["objective_type"].GetString() == "flow_mal_distribution":
             if (domain_size == 2):
-                self.objective_function = AdjointFluidApplication.MalDistributionObjectiveFunction2D(self.settings["objective_settings"])
+                self.objective_function = AdjointFluidApplication.FlowMalDistributionObjectiveFunction2D(self.settings["objective_settings"])
             elif (domain_size == 3):
-                self.objective_function = AdjointFluidApplication.MalDistributionObjectiveFunction3D(self.settings["objective_settings"])
+                self.objective_function = AdjointFluidApplication.FlowMalDistributionObjectiveFunction3D(self.settings["objective_settings"])
             else:
                 raise Exception("Invalid DOMAIN_SIZE: " + str(domain_size))
         else:

@@ -6,8 +6,8 @@
 //  Main authors:    Michael Andre, https://github.com/msandre
 //
 
-#if !defined(KRATOS_MAL_DISTRIBUTION_OBJECTIVE_FUNCTION)
-#define KRATOS_MAL_DISTRIBUTION_OBJECTIVE_FUNCTION
+#if !defined(KRATOS_FLOW_MAL_DISTRIBUTION_OBJECTIVE_FUNCTION)
+#define KRATOS_FLOW_MAL_DISTRIBUTION_OBJECTIVE_FUNCTION
 
 // System includes
 #include <vector>
@@ -38,20 +38,20 @@ namespace Kratos
 
 /// An objective function for flow mal distribution.
 template <unsigned int TDim>
-class MalDistributionObjectiveFunction : public ObjectiveFunction
+class FlowMalDistributionObjectiveFunction : public ObjectiveFunction
 {
 public:
     ///@name Type Definitions
     ///@{
 
-    KRATOS_CLASS_POINTER_DEFINITION(MalDistributionObjectiveFunction);
+    KRATOS_CLASS_POINTER_DEFINITION(FlowMalDistributionObjectiveFunction);
 
     ///@}
     ///@name Life Cycle
     ///@{
 
     /// Constructor.
-    MalDistributionObjectiveFunction(Parameters& rParameters)
+    FlowMalDistributionObjectiveFunction(Parameters& rParameters)
     {
         KRATOS_TRY
 
@@ -108,7 +108,7 @@ public:
     }
 
     /// Destructor.
-    virtual ~MalDistributionObjectiveFunction()
+    virtual ~FlowMalDistributionObjectiveFunction()
     {
     }
 
@@ -141,7 +141,7 @@ public:
             OpenMPUtils::PartitionedIterators(rModelPart.Nodes(), NodesBegin, NodesEnd);
 
             for (auto it = NodesBegin; it != NodesEnd; ++it)
-                it->Set(OBJECTIVE_SURFACE, false);
+                it->Set(STRUCTURE, false);
         }
 
         ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
@@ -150,7 +150,7 @@ public:
         for (auto it = rSurfaceModelPart.NodesBegin();
              it != rSurfaceModelPart.NodesEnd();
              ++it)
-            it->Set(OBJECTIVE_SURFACE, true);
+            it->Set(STRUCTURE, true);
 
         KRATOS_CATCH("")
     }
@@ -192,7 +192,7 @@ public:
             unsigned int LocalIndex = 0;
             for (unsigned int iNode = 0; iNode < NumNodes; ++iNode)
             {
-                if (rElem.GetGeometry()[iNode].Is(OBJECTIVE_SURFACE))
+                if (rElem.GetGeometry()[iNode].Is(STRUCTURE))
                 {
                     const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].GetValue(NORMAL);
                     const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].GetValue(VELOCITY);
@@ -219,7 +219,7 @@ public:
             unsigned int LocalIndex = 0;
             for (unsigned int iNode = 0; iNode < NumNodes; ++iNode)
             {
-                if (rElem.GetGeometry()[iNode].Is(OBJECTIVE_SURFACE))
+                if (rElem.GetGeometry()[iNode].Is(STRUCTURE))
                 {
                     const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].GetValue(NORMAL);
                     const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].GetValue(VELOCITY);
@@ -368,7 +368,6 @@ private:
     std::string mSurfaceModelPartName;
     array_1d<double, TDim> mDirection;
     std::vector<Vector> mObjectiveFlagVector;
-    //std::vector<unsigned int> mElementIds; //Why do you need it?
     int mMalDistributionDirection;
     double mAverageSurfaceArea;
     double mN;
