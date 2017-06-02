@@ -196,8 +196,17 @@ public:
                 {
                     const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].GetValue(NORMAL);
                     const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].GetValue(VELOCITY);
+
+                    //TODO: Account for the surface areas if, this patch is a sub patch of a bigger patch where then dividing doesnt work.
+                    const WeakPointerVector<Condition >& ng_cond = rElem.GetGeometry()[iNode].GetValue(NEIGHBOUR_CONDITIONS);
+                    unsigned int NumberAdjacentElements = ng_cond.size();
+                    if (NumberAdjacentElements == 0)
+                        NumberAdjacentElements = 1;
+
+                    double inv_numberOfAdjacentElements = 1/NumberAdjacentElements;
+
                     for (unsigned int d = 0; d < TDim; d++)
-                        rRHSContribution[LocalIndex++] = inv_coeff *
+                        rRHSContribution[LocalIndex++] = inv_coeff * inv_numberOfAdjacentElements *
                                                         normal[d] * (
                                                                 normal[d]*
                                                                 velocity[d] / 
@@ -225,8 +234,15 @@ public:
                     const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].GetValue(VELOCITY);
                     double magnitude = norm_2(normal);
 
+                    const WeakPointerVector<Condition >& ng_cond = rElem.GetGeometry()[iNode].GetValue(NEIGHBOUR_CONDITIONS);
+                    unsigned int NumberAdjacentElements = ng_cond.size();
+                    if (NumberAdjacentElements == 0)
+                        NumberAdjacentElements = 1;
+
+                    double inv_numberOfAdjacentElements = 1/NumberAdjacentElements;                    
+
                     for (unsigned int d = 0; d < TDim; d++)
-                        rRHSContribution[LocalIndex++] = inv_coeff*
+                        rRHSContribution[LocalIndex++] = inv_coeff * inv_numberOfAdjacentElements *
                                                         mDirection[d]*
                                                         magnitude*(
                                                                         mDirection[d] *
@@ -383,7 +399,7 @@ private:
 
     ///@}
     ///@name Private Operations
-    ///@{
+    ///@{   
     void CalculateAverageObjectiveParameters(ModelPart& rModelPart)
     {
         ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
