@@ -178,7 +178,7 @@ public:
         {
             Geometry<Node<3> >& pGeometry = (it)->GetGeometry();
             double coeff = 1.00/pGeometry.size();
-	    const array_1d<double,3>& normal = it->GetValue(NORMAL);
+	        const array_1d<double,3>& normal = it->GetValue(NORMAL);
             for(unsigned int i = 0; i<pGeometry.size(); i++)
             {
                 noalias(pGeometry[i].FastGetSolutionStepValue(NORMAL)) += coeff * normal;
