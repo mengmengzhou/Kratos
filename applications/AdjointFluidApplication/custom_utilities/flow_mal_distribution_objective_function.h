@@ -133,8 +133,8 @@ public:
         }
 
 
-// initialize the variables to zero.
-#pragma omp parallel
+        // initialize the variables to zero.
+        #pragma omp parallel
         {
             ModelPart::NodeIterator NodesBegin;
             ModelPart::NodeIterator NodesEnd;
@@ -145,6 +145,16 @@ public:
         }
 
         ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
+
+        // go through all the conditions to identify repeating nodes
+        for(auto it = rSurfaceModelPart.ConditionsBegin();
+                it != rSurfaceModelPart.ConditionsEnd();
+                it++)
+        {
+            Element::GeometryType& rNodes = it->GetGeometry();
+            for(unsigned int in = 0; in<rNodes.size(); in++)
+                mNodeSharingCounter[rNodes[in].Id()]++;
+        }
 
         // mark objective surface
         for (auto it = rSurfaceModelPart.NodesBegin();
@@ -162,9 +172,9 @@ public:
         // allocate auxiliary memory. this is done here instead of Initialize()
         // in case of restart.
         ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
-        auto normal_calculation_obj = NormalCalculationUtils();
-        normal_calculation_obj.CalculateOnSimplex(rSurfaceModelPart, 3);
-
+        NormalCalculationUtils normal_calculation_obj = NormalCalculationUtils();
+        const unsigned int domain_size = rModelPart.GetProcessInfo().GetValue(DOMAIN_SIZE);
+        normal_calculation_obj.CalculateOnSimplex(rSurfaceModelPart, domain_size);
         CalculateAverageObjectiveParameters(rModelPart);
         mObjectiveValue = Calculate(rModelPart);
 
@@ -185,7 +195,7 @@ public:
 
         const unsigned int NumNodes = rElem.GetGeometry().PointsNumber();
 
-        double inv_coeff = 1/(mAverageSurfaceArea*(mN-1)*mObjectiveValue);
+        double inv_coeff = 1.0/(mAverageSurfaceArea*(mN-1)*mObjectiveValue);
 
         if (mMalDistributionDirection == MAL_DISTRIBUTION_DIRECTION_SURFACE_NORMAL)
         {
@@ -194,16 +204,10 @@ public:
             {
                 if (rElem.GetGeometry()[iNode].Is(STRUCTURE))
                 {
-                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].GetValue(NORMAL);
-                    const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].GetValue(VELOCITY);
+                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(NORMAL);
+                    const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(VELOCITY);
 
-                    //TODO: Account for the surface areas if, this patch is a sub patch of a bigger patch where then dividing doesnt work.
-                    const WeakPointerVector<Condition >& ng_cond = rElem.GetGeometry()[iNode].GetValue(NEIGHBOUR_CONDITIONS);
-                    unsigned int NumberAdjacentElements = ng_cond.size();
-                    if (NumberAdjacentElements == 0)
-                        NumberAdjacentElements = 1;
-
-                    double inv_numberOfAdjacentElements = 1/NumberAdjacentElements;
+                    double inv_numberOfAdjacentElements = 1.0/mNodeSharingCounter[rElem.GetGeometry()[iNode].Id()];
 
                     for (unsigned int d = 0; d < TDim; d++)
                         rRHSContribution[LocalIndex++] = inv_coeff * inv_numberOfAdjacentElements *
@@ -230,16 +234,11 @@ public:
             {
                 if (rElem.GetGeometry()[iNode].Is(STRUCTURE))
                 {
-                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].GetValue(NORMAL);
-                    const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].GetValue(VELOCITY);
+                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(NORMAL);
+                    const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(VELOCITY);
                     double magnitude = norm_2(normal);
 
-                    const WeakPointerVector<Condition >& ng_cond = rElem.GetGeometry()[iNode].GetValue(NEIGHBOUR_CONDITIONS);
-                    unsigned int NumberAdjacentElements = ng_cond.size();
-                    if (NumberAdjacentElements == 0)
-                        NumberAdjacentElements = 1;
-
-                    double inv_numberOfAdjacentElements = 1/NumberAdjacentElements;                    
+                    double inv_numberOfAdjacentElements = 1.0/mNodeSharingCounter[rElem.GetGeometry()[iNode].Id()];
 
                     for (unsigned int d = 0; d < TDim; d++)
                         rRHSContribution[LocalIndex++] = inv_coeff * inv_numberOfAdjacentElements *
@@ -315,8 +314,8 @@ public:
 
                 for (auto it = NodesBegin; it != NodesEnd; ++it)
                 {
-                    const array_1d<double,3>& normal = it->GetValue(NORMAL);
-                    const array_1d<double,3>& velocity = it->GetValue(VELOCITY);
+                    const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
+                    const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY);
 
                     result += pow(
                                     (
@@ -340,8 +339,8 @@ public:
 
                 for (auto it = NodesBegin; it != NodesEnd; ++it)
                 {
-                    const array_1d<double,3>& normal = it->GetValue(NORMAL);
-                    const array_1d<double,3>& velocity = it->GetValue(VELOCITY);
+                    const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
+                    const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY);
                     
                     double magnitude = norm_2(normal);
 
@@ -383,7 +382,7 @@ private:
 
     std::string mSurfaceModelPartName;
     array_1d<double, TDim> mDirection;
-    std::vector<Vector> mObjectiveFlagVector;
+    std::map<unsigned long,unsigned int> mNodeSharingCounter;
     int mMalDistributionDirection;
     double mAverageSurfaceArea;
     double mN;
@@ -414,9 +413,9 @@ private:
                 it != rSurfaceModelPart.NodesEnd();
                 ++it)
             {
-                const array_1d<double,3>& normal = it->GetValue(NORMAL);
+                const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
                 double magnitude = norm_2(normal);
-                const array_1d<double,3>& velocity = it->GetValue(VELOCITY);
+                const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY);
 
                 mAverageVelocity += (
                                         normal[0]*velocity[0] + 
@@ -433,8 +432,8 @@ private:
                 it != rSurfaceModelPart.NodesEnd();
                 ++it)
             {
-                const array_1d<double,3>& normal = it->GetValue(NORMAL);
-                const array_1d<double,3>& velocity = it->GetValue(VELOCITY);
+                const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
+                const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY);
 
                 double magnitude = norm_2(normal);
 
