@@ -55,25 +55,35 @@ public:
     {
         KRATOS_TRY
 
-        Parameters DefaultParams(R"(
+        Parameters DefaultParamsSurfaceNormal(R"(
         {
             "objective_type": "flow_mal_distribution",
             "surface_model_part_name": "PLEASE_SPECIFY_MODEL_PART",
             "flow_mal_distribution_direction": "surface_normal"
         })");
 
-        rParameters.ValidateAndAssignDefaults(DefaultParams);
+        Parameters DefaultParamsCustomDirection(R"(
+        {
+            "objective_type": "flow_mal_distribution",
+            "surface_model_part_name": "PLEASE_SPECIFY_MODEL_PART",
+            "flow_mal_distribution_direction": "surface_normal"
+        })");
 
         mSurfaceModelPartName = rParameters["surface_model_part_name"].GetString();
 
         if (rParameters["flow_mal_distribution_direction"].IsArray() == false)
+        {
+            rParameters.ValidateAndAssignDefaults(DefaultParamsSurfaceNormal);
             if (rParameters["flow_mal_distribution_direction"].GetString().compare("surface_normal")==0)
                 mMalDistributionDirection = MAL_DISTRIBUTION_DIRECTION_SURFACE_NORMAL;
             else
                 KRATOS_THROW_ERROR(std::runtime_error,
                                "flow_mal_distribution_direction only accepts as text inputs \"surface_normal\" or \"absolute_value\":",
                                rParameters.PrettyPrintJsonString())
-        else
+        }
+        else 
+        {
+            rParameters.ValidateAndAssignDefaults(DefaultParamsCustomDirection);
             if (rParameters["flow_mal_distribution_direction"].size() != 3)
             {
                 KRATOS_THROW_ERROR(std::runtime_error,
@@ -102,7 +112,8 @@ public:
                     for (unsigned int d = 0; d < TDim; d++)
                         mDirection[d] /= magnitude;
                 }
-            }        
+            }
+        }        
 
         KRATOS_CATCH("")
     }
