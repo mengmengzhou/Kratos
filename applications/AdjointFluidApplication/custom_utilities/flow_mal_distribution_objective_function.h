@@ -66,7 +66,7 @@ public:
         {
             "objective_type": "flow_mal_distribution",
             "surface_model_part_name": "PLEASE_SPECIFY_MODEL_PART",
-            "flow_mal_distribution_direction": "surface_normal"
+            "flow_mal_distribution_direction": [1.0, 0.0, 0.0]
         })");
 
         mSurfaceModelPartName = rParameters["surface_model_part_name"].GetString();
