@@ -31,7 +31,6 @@
 
 // Application includes
 #include "structural_mechanics_application_variables.h"
-#include "custom_utilities/modal_mass_contribution_utilities.hpp"
 
 namespace Kratos
 {
