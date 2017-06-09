@@ -333,8 +333,8 @@ namespace Kratos
 
 		double G12 = rMaterialProperties[SHEAR_MODULUS_XY];
 
-		double G13 = G12;	// fixup
-		double G23 = G12;	// fixup
+		//double G13 = G12;	// currently handled through "shell_cross_section.cpp"
+		//double G23 = G12;	// currently handled through "shell_cross_section.cpp"
 
 		double v12 = rMaterialProperties[POISSON_RATIO_XY];
 		double v21 = v12*E2 / E1;
@@ -343,10 +343,8 @@ namespace Kratos
 		double Q12 = v12*E2 / (1.0 - v12*v21);
 		double Q22 = E2 / (1.0 - v12*v21);
 		double Q66 = G12;
-		double Q44 = G23;
-		double Q55 = G13;
-
-		//std::cout << "Q11 in material law = " << Q11 << std::endl;
+		//double Q44 = G23;
+		//double Q55 = G13;
 
 		double theta = 0.0;	// rotation currently handled through "shell_cross_section.cpp" variable iPlyAngle
 		double c = cos(theta);

@@ -278,8 +278,8 @@ namespace Kratos
 			// these data are allocated and constructed
 			// at the beginning of the calculation
 
-			ShellQ4_LocalCoordinateSystem LCS0; /*!< reference coordinate system */
 			ShellQ4_LocalCoordinateSystem LCS;  /*!< current coordinate system */
+			ShellQ4_LocalCoordinateSystem LCS0; /*!< reference coordinate system */
 
 			// Unit vectors (in cartesian coords)
 			Vector s_xi = ZeroVector(3);	/*!< xi unit vector in cartesian coords */
