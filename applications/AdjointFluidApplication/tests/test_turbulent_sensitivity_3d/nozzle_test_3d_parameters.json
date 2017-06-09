@@ -69,8 +69,8 @@
         "skin_parts"                    : ["Inlet3D_inlet","Outlet3D_outlet","NoSlip3D_walls"]
     },
     "initial_conditions_process_list"  : [{
-        "implemented_in_file"   : "process_factory",
-        "implemented_in_module" : "KratosMultiphysics",
+        "python_module"         : "process_factory",
+        "kratos_module"         : "KratosMultiphysics",
         "help"                  : "This process ",
         "process_name"          : "ApplyConstantVectorValueProcess",
         "Parameters"            : {
@@ -82,8 +82,8 @@
         }
     }],
     "boundary_conditions_process_list" : [{
-        "implemented_in_file"   : "impose_vector_value_by_direction_process",
-        "implemented_in_module" : "KratosMultiphysics",
+        "python_module"         : "impose_vector_value_by_direction_process",
+        "kratos_module"         : "KratosMultiphysics",
         "help"                  : "This process fixes all the components of a given vector variable",
         "check"                 : "DirectorVectorNonZero direction",
         "process_name"          : "ImposeVectorValueByDirectionProcess",
@@ -95,8 +95,8 @@
             "direction"       : [1.0,0.0,0.0]
         }
     },{
-        "implemented_in_file"   : "apply_noslip_process",
-        "implemented_in_module" : "KratosMultiphysics.FluidDynamicsApplication",
+        "python_module"         : "apply_noslip_process",
+        "kratos_module"         : "KratosMultiphysics.FluidDynamicsApplication",
         "process_name"          : "ApplyNoSlipProcess",
         "Parameters"            : {
             "mesh_id"         : 0,
