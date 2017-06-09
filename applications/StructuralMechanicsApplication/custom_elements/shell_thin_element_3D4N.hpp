@@ -294,8 +294,6 @@ namespace Kratos
 			VectorType localDisplacements = ZeroVector(24);  /*!< local displacement vector */
 
 			// Element flags
-			bool ExtractKm = false; /*!< flag for the calculation of ONLY the material stiffness matrix*/
-			bool ExtractKg = false; /*!< flag for the calculation of ONLY the geometric stiffness matrix*/
 			bool CalculateRHS; /*!< flag for the calculation of the right-hand-side vector */
 			bool CalculateLHS; /*!< flag for the calculation of the left-hand-side vector */
 
