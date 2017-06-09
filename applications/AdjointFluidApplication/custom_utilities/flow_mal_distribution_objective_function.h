@@ -12,6 +12,7 @@
 // System includes
 #include <vector>
 #include <string>
+#include <fstream>
 
 // External includes
 
@@ -59,17 +60,20 @@ public:
         {
             "objective_type": "flow_mal_distribution",
             "surface_model_part_name": "PLEASE_SPECIFY_MODEL_PART",
-            "flow_mal_distribution_direction": "surface_normal"
+            "flow_mal_distribution_direction": "surface_normal",
+            "output_file": "flow_mal_distribution"
         })");
 
         Parameters DefaultParamsCustomDirection(R"(
         {
             "objective_type": "flow_mal_distribution",
             "surface_model_part_name": "PLEASE_SPECIFY_MODEL_PART",
-            "flow_mal_distribution_direction": [1.0, 0.0, 0.0]
+            "flow_mal_distribution_direction": [1.0, 0.0, 0.0],
+            "output_file": "flow_mal_distribution"
         })");
 
         mSurfaceModelPartName = rParameters["surface_model_part_name"].GetString();
+        mOutputFilename = rParameters["output_file"].GetString();
 
         if (rParameters["flow_mal_distribution_direction"].IsArray() == false)
         {
@@ -121,6 +125,8 @@ public:
     /// Destructor.
     virtual ~FlowMalDistributionObjectiveFunction()
     {
+        if (mOutputFileOpenend)
+            mOutputFileStream.close();
     }
 
     ///@}
@@ -154,9 +160,7 @@ public:
             for (auto it = NodesBegin; it != NodesEnd; ++it)
                 it->Set(STRUCTURE, false);
         }
-
         ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
-
         // go through all the conditions to identify repeating nodes
         for(auto it = rSurfaceModelPart.ConditionsBegin();
                 it != rSurfaceModelPart.ConditionsEnd();
@@ -172,6 +176,17 @@ public:
              it != rSurfaceModelPart.NodesEnd();
              ++it)
             it->Set(STRUCTURE, true);
+        
+        mObjectiveValue = Calculate(rModelPart);
+
+        mOutputFileStream.open(mOutputFilename + ".data");
+        mOutputFileStream<<"#time       FLOW_MAL_DISTRIBUTION"<<std::endl;
+        mOutputFileOpenend = true;
+
+        NormalCalculationUtils normal_calculation_obj = NormalCalculationUtils();
+        const unsigned int domain_size = rModelPart.GetProcessInfo().GetValue(DOMAIN_SIZE);
+        normal_calculation_obj.CalculateOnSimplex(rSurfaceModelPart, domain_size);
+        CalculateAverageObjectiveParameters(rModelPart);        
 
         KRATOS_CATCH("")
     }
@@ -182,12 +197,6 @@ public:
 
         // allocate auxiliary memory. this is done here instead of Initialize()
         // in case of restart.
-        ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
-        NormalCalculationUtils normal_calculation_obj = NormalCalculationUtils();
-        const unsigned int domain_size = rModelPart.GetProcessInfo().GetValue(DOMAIN_SIZE);
-        normal_calculation_obj.CalculateOnSimplex(rSurfaceModelPart, domain_size);
-        CalculateAverageObjectiveParameters(rModelPart);
-        mObjectiveValue = Calculate(rModelPart);
 
         KRATOS_CATCH("")
     }
@@ -215,8 +224,8 @@ public:
             {
                 if (rElem.GetGeometry()[iNode].Is(STRUCTURE))
                 {
-                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(NORMAL);
-                    const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(VELOCITY);
+                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(NORMAL, 0);
+                    const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(VELOCITY, 0);
 
                     double inv_numberOfAdjacentElements = 1.0/mNodeSharingCounter[rElem.GetGeometry()[iNode].Id()];
 
@@ -245,8 +254,8 @@ public:
             {
                 if (rElem.GetGeometry()[iNode].Is(STRUCTURE))
                 {
-                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(NORMAL);
-                    const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(VELOCITY);
+                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(NORMAL, 0);
+                    const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(VELOCITY, 0);
                     double magnitude = norm_2(normal);
 
                     double inv_numberOfAdjacentElements = 1.0/mNodeSharingCounter[rElem.GetGeometry()[iNode].Id()];
@@ -325,8 +334,8 @@ public:
 
                 for (auto it = NodesBegin; it != NodesEnd; ++it)
                 {
-                    const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
-                    const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY);
+                    const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL, 0);
+                    const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY, 0);
 
                     result += pow(
                                     (
@@ -350,8 +359,8 @@ public:
 
                 for (auto it = NodesBegin; it != NodesEnd; ++it)
                 {
-                    const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
-                    const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY);
+                    const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL, 0);
+                    const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY, 0);
                     
                     double magnitude = norm_2(normal);
 
@@ -369,6 +378,22 @@ public:
         }
 
         return sqrt(result/(mN-1));
+    }
+
+    virtual void FinalizeSolutionStep(ModelPart& rModelPart)
+    {
+        ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
+        NormalCalculationUtils normal_calculation_obj = NormalCalculationUtils();
+        const unsigned int domain_size = rModelPart.GetProcessInfo().GetValue(DOMAIN_SIZE);
+        normal_calculation_obj.CalculateOnSimplex(rSurfaceModelPart, domain_size);
+        CalculateAverageObjectiveParameters(rModelPart);
+
+        ProcessInfo& rProcessInfo = rModelPart.GetProcessInfo();
+        mObjectiveValue = Calculate(rModelPart);
+        mOutputFileStream.precision(5);
+        mOutputFileStream<<std::scientific<<rProcessInfo[TIME]<<" ";
+        mOutputFileStream.precision(15);
+        mOutputFileStream<<std::scientific<<mObjectiveValue<<std::endl;        
     }
 
     ///@}
@@ -392,6 +417,9 @@ private:
     ///@{
 
     std::string mSurfaceModelPartName;
+    std::string mOutputFilename;
+    std::ofstream mOutputFileStream;
+    bool mOutputFileOpenend = false;
     array_1d<double, TDim> mDirection;
     std::map<unsigned long,unsigned int> mNodeSharingCounter;
     int mMalDistributionDirection;
@@ -426,7 +454,7 @@ private:
             {
                 const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
                 double magnitude = norm_2(normal);
-                const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY);
+                const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY, 0);
 
                 mAverageVelocity += (
                                         normal[0]*velocity[0] + 
@@ -444,7 +472,7 @@ private:
                 ++it)
             {
                 const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
-                const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY);
+                const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY, 0);
 
                 double magnitude = norm_2(normal);
 
