@@ -805,6 +805,7 @@ namespace Kratos
 
 	void ShellThinElement3D4N::CalculateGeometricStiffnessMatrix(MatrixType & rGeometricStiffnessMatrix, ProcessInfo & rCurrentProcessInfo)
 	{
+		// Placeholders for extension into stability analysis
 	}
 
 	// =========================================================================
