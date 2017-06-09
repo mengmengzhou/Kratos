@@ -21,6 +21,7 @@
 #include "custom_utilities/shell_cross_section.hpp"
 #include "utilities/quaternion.h"
 #include "custom_utilities/shellq4_local_coordinate_system.hpp"
+//#include "custom_utilities/shellq4_corotational_coordinate_transformation.hpp"
 
 namespace Kratos
 {
@@ -277,9 +278,8 @@ namespace Kratos
 			// these data are allocated and constructed
 			// at the beginning of the calculation
 
-			ShellQ4_LocalCoordinateSystem LCS;  /*!< current coordinate system */
 			ShellQ4_LocalCoordinateSystem LCS0; /*!< reference coordinate system */
-			
+			ShellQ4_LocalCoordinateSystem LCS;  /*!< current coordinate system */
 
 			// Unit vectors (in cartesian coords)
 			Vector s_xi = ZeroVector(3);	/*!< xi unit vector in cartesian coords */

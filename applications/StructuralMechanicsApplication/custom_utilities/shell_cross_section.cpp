@@ -830,7 +830,7 @@ namespace Kratos
 		bool printLayers = false; // for debugging
 
 		// ascertain how many plies there are and begin stacking them
-		unsigned int plies = (props)[SHELL_ORTHOTROPIC_LAYERS].size1();
+		int plies = (props)[SHELL_ORTHOTROPIC_LAYERS].size1();
 		this->BeginStack();
 
 		// figure out the format of material properties based on it's width
@@ -984,7 +984,7 @@ namespace Kratos
 	void ShellCrossSection::GetLaminaeStrengths(std::vector<Matrix> & rLaminae_Strengths, Properties& rProps)
 	{
 		// ascertain how many plies there are
-		unsigned int plies = (rProps)[SHELL_ORTHOTROPIC_LAYERS].size1();
+		int plies = (rProps)[SHELL_ORTHOTROPIC_LAYERS].size1();
 
 		// figure out the format of material properties based on it's width
 		int myFormat = (rProps)[SHELL_ORTHOTROPIC_LAYERS].size2();

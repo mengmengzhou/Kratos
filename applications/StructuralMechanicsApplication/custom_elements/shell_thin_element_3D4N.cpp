@@ -361,7 +361,7 @@ namespace Kratos
 		KRATOS_TRY
 
 			GeometryType& geom = GetGeometry();
-		/*
+
 		// verify that the variables are correctly initialized
 		if (DISPLACEMENT.Key() == 0)
 			KRATOS_THROW_ERROR(std::invalid_argument,
@@ -481,7 +481,7 @@ namespace Kratos
 			dummySection->SetSectionBehavior(ShellCrossSection::Thin);
 			dummySection->Check(props, geom, rCurrentProcessInfo);
 		}
-		*/
+
 		return 0;
 
 		KRATOS_CATCH("")
