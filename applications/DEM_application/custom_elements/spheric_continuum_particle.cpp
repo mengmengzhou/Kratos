@@ -246,22 +246,23 @@ namespace Kratos {
 
             if (mNeighbourElements[i] == NULL) continue;
             if (this->Is(NEW_ENTITY) && mNeighbourElements[i]->Is(NEW_ENTITY)) continue;
+
             SphericContinuumParticle* neighbour_iterator = dynamic_cast<SphericContinuumParticle*>(mNeighbourElements[i]);
-            data_buffer.mpOtherParticle = neighbour_iterator;
 
-            unsigned int neighbour_iterator_id = data_buffer.mpOtherParticle->Id();
+            unsigned int neighbour_iterator_id = neighbour_iterator->Id();
 
-            noalias(data_buffer.mOtherToMeVector) = this->GetGeometry()[0].Coordinates() - data_buffer.mpOtherParticle->GetGeometry()[0].Coordinates();
+            array_1d<double, 3> other_to_me_vect;
+            noalias(other_to_me_vect) = this->GetGeometry()[0].Coordinates() - neighbour_iterator->GetGeometry()[0].Coordinates();
 
-            const double& other_radius = data_buffer.mpOtherParticle->GetRadius();
+            const double& other_radius = neighbour_iterator->GetRadius();
 
-            data_buffer.mDistance = DEM_MODULUS_3(data_buffer.mOtherToMeVector);
+            double distance = DEM_MODULUS_3(other_to_me_vect);
             double radius_sum = GetRadius() + other_radius;
 
             double initial_delta = GetInitialDelta(i);
 
             double initial_dist = radius_sum - initial_delta;
-            double indentation = initial_dist - data_buffer.mDistance;
+            double indentation = initial_dist - distance;
             double myYoung = GetYoung();
             double myPoisson = GetPoisson();
 
@@ -279,8 +280,8 @@ namespace Kratos {
             double acumulated_damage = 0.0;
 
             // Getting neighbor properties
-            double other_young = data_buffer.mpOtherParticle->GetYoung();
-            double other_poisson = data_buffer.mpOtherParticle->GetPoisson();
+            double other_young = neighbour_iterator->GetYoung();
+            double other_poisson = neighbour_iterator->GetPoisson();
             double equiv_poisson;
             if ((myPoisson + other_poisson) != 0.0) { equiv_poisson = 2.0 * myPoisson * other_poisson / (myPoisson + other_poisson); }
             else { equiv_poisson = 0.0; }
@@ -294,7 +295,7 @@ namespace Kratos {
                 mContinuumConstitutiveLawArray[i]->CalculateElasticConstants(kn_el, kt_el, initial_dist, equiv_young, equiv_poisson, calculation_area, this, neighbour_iterator); 
             }
 
-            EvaluateDeltaDisplacement(data_buffer, DeltDisp, RelVel, LocalCoordSystem, OldLocalCoordSystem, vel, delta_displ);
+            EvaluateDeltaDisplacement(DeltDisp, RelVel, LocalCoordSystem, OldLocalCoordSystem, other_to_me_vect, vel, delta_displ, neighbour_iterator, distance);
 
             if (this->Is(DEMFlags::HAS_ROTATION)) {
                 RelativeDisplacementAndVelocityOfContactPointDueToRotationMatrix(DeltDisp, RelVel, OldLocalCoordSystem, other_radius, data_buffer.mDt, ang_vel, neighbour_iterator);
@@ -370,8 +371,8 @@ namespace Kratos {
                 const double previous_indentation = indentation + LocalDeltDisp[2];
                 mDiscontinuumConstitutiveLaw->CalculateForces(r_process_info, OldLocalElasticContactForce, LocalElasticContactForce,
                         LocalDeltDisp, LocalRelVel, indentation, previous_indentation,
-                        ViscoDampingLocalContactForce, cohesive_force, this, data_buffer.mpOtherParticle, sliding, LocalCoordSystem);
-            } else { //Not bonded and no idata_buffer.mpOtherParticlendentation
+                        ViscoDampingLocalContactForce, cohesive_force, this, neighbour_iterator, sliding, LocalCoordSystem);
+            } else { //Not bonded and no indentation
                 LocalElasticContactForce[0] = 0.0;      LocalElasticContactForce[1] = 0.0;      LocalElasticContactForce[2] = 0.0;
                 ViscoDampingLocalContactForce[0] = 0.0; ViscoDampingLocalContactForce[1] = 0.0; ViscoDampingLocalContactForce[2] = 0.0;
                 cohesive_force= 0.0;
@@ -392,9 +393,9 @@ namespace Kratos {
                                   GlobalElasticContactForce, GlobalElasticExtraContactForce, TotalGlobalElasticContactForce,ViscoDampingLocalContactForce, 0.0, other_ball_to_ball_forces, rElasticForce, rContactForce, i, r_process_info); //TODO: replace the 0.0 with an actual cohesive force for discontinuum neighbours
 
             if (this->Is(DEMFlags::HAS_ROTATION)) {
-                ComputeMoments(LocalContactForce[2], TotalGlobalElasticContactForce, RollingResistance, LocalCoordSystem[2], data_buffer.mpOtherParticle, indentation);
+                ComputeMoments(LocalContactForce[2], TotalGlobalElasticContactForce, RollingResistance, LocalCoordSystem[2], neighbour_iterator, indentation);
                 if (i < mContinuumInitialNeighborsSize && mIniNeighbourFailureId[i] == 0) {
-                    mContinuumConstitutiveLawArray[i]->ComputeParticleRotationalMoments(this, neighbour_iterator, equiv_young, data_buffer.mDistance, calculation_area,
+                    mContinuumConstitutiveLawArray[i]->ComputeParticleRotationalMoments(this, neighbour_iterator, equiv_young, distance, calculation_area,
                                                                                         LocalCoordSystem, ElasticLocalRotationalMoment, ViscoLocalRotationalMoment, equiv_poisson, indentation);
                 }
 
@@ -410,10 +411,10 @@ namespace Kratos {
             }
 
             if (this->Is(DEMFlags::HAS_STRESS_TENSOR) /*&& (i < mContinuumInitialNeighborsSize)*/) {
-                AddNeighbourContributionToStressTensor(TotalGlobalElasticContactForce, LocalCoordSystem[2], data_buffer.mDistance, radius_sum, this);
+                AddNeighbourContributionToStressTensor(TotalGlobalElasticContactForce, LocalCoordSystem[2], distance, radius_sum, this);
             }                        
 
-            AddContributionToRepresentativeVolume(data_buffer.mDistance, radius_sum, calculation_area);
+            AddContributionToRepresentativeVolume(distance, radius_sum, calculation_area);
             
             ComputeForceWithNeighbourFinalOperations();
 

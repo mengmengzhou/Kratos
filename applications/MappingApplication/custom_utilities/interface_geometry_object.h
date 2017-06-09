@@ -240,7 +240,7 @@ public:
     ///@{
 
     /// Turn back information as a string.
-    virtual std::string Info() const override
+    virtual std::string Info() const
     {
         std::stringstream buffer;
         buffer << "InterfaceGeometryObject" ;
@@ -248,13 +248,13 @@ public:
     }
 
     /// Print information about this object.
-    virtual void PrintInfo(std::ostream& rOStream) const override
+    virtual void PrintInfo(std::ostream& rOStream) const
     {
         rOStream << "InterfaceGeometryObject";
     }
 
     /// Print object's data.
-    virtual void PrintData(std::ostream& rOStream) const override {}
+    virtual void PrintData(std::ostream& rOStream) const {}
 
 
     ///@}

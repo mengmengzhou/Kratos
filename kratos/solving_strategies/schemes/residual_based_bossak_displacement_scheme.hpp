@@ -376,7 +376,7 @@ public:
 
         if(this->mElementsAreInitialized == false)
         {
-            KRATOS_ERROR << "Before initilizing Conditions, initialize Elements FIRST";
+            KRATOS_THROW_ERROR( std::logic_error, "Before initilizing Conditions, initialize Elements FIRST", "" );
         }
 
         const unsigned int NumThreads = OpenMPUtils::GetNumThreads();
@@ -802,15 +802,15 @@ public:
         // Verify that the variables are correctly initialized
         if(DISPLACEMENT.Key() == 0)
         {
-            KRATOS_ERROR << "DISPLACEMENT has Key zero! (check if the application is correctly registered" << std::endl;
+            KRATOS_THROW_ERROR( std::invalid_argument,"DISPLACEMENT has Key zero! (check if the application is correctly registered", "" );
         }
         if(VELOCITY.Key() == 0)
         {
-            KRATOS_ERROR << "VELOCITY has Key zero! (check if the application is correctly registered" << std::endl;
+            KRATOS_THROW_ERROR( std::invalid_argument,"VELOCITY has Key zero! (check if the application is correctly registered", "" );
         }
         if(ACCELERATION.Key() == 0)
         {
-            KRATOS_ERROR << "ACCELERATION has Key zero! (check if the application is correctly registered" << std::endl;
+            KRATOS_THROW_ERROR( std::invalid_argument,"ACCELERATION has Key zero! (check if the application is correctly registered", "" );
         }
 
         // Check that variables are correctly allocated
@@ -819,15 +819,15 @@ public:
         {
             if (it->SolutionStepsDataHas(DISPLACEMENT) == false)
             {
-                KRATOS_ERROR << "DISPLACEMENT variable is not allocated for node " << it->Id() << std::endl;
+                KRATOS_THROW_ERROR( std::logic_error, "DISPLACEMENT variable is not allocated for node ", it->Id() );
             }
             if (it->SolutionStepsDataHas(VELOCITY) == false)
             {
-                KRATOS_ERROR << "VELOCITY variable is not allocated for node " << it->Id() << std::endl;
+                KRATOS_THROW_ERROR( std::logic_error, "DISPLACEMENT variable is not allocated for node ", it->Id() );
             }
             if (it->SolutionStepsDataHas(ACCELERATION) == false)
             {
-                KRATOS_ERROR << "ACCELERATION variable is not allocated for node " << it->Id() << std::endl;
+                KRATOS_THROW_ERROR( std::logic_error, "DISPLACEMENT variable is not allocated for node ", it->Id() );
             }
         }
 
@@ -837,29 +837,29 @@ public:
         {
             if(it->HasDofFor(DISPLACEMENT_X) == false)
             {
-                KRATOS_ERROR << "missing DISPLACEMENT_X dof on node " << it->Id() << std::endl;
+                KRATOS_THROW_ERROR( std::invalid_argument,"missing DISPLACEMENT_X dof on node ",it->Id() );
             }
             if(it->HasDofFor(DISPLACEMENT_Y) == false)
             {
-                KRATOS_ERROR << "missing DISPLACEMENT_Y dof on node " << it->Id() << std::endl;
+                KRATOS_THROW_ERROR( std::invalid_argument,"missing DISPLACEMENT_Y dof on node ",it->Id() );
             }
             if(it->HasDofFor(DISPLACEMENT_Z) == false)
             {
-                KRATOS_ERROR << "missing DISPLACEMENT_Z dof on node " << it->Id() << std::endl;
+                KRATOS_THROW_ERROR( std::invalid_argument,"missing DISPLACEMENT_Z dof on node ",it->Id() );
             }
         }
 
         // Check for admissible value of the AlphaBossak
         if(mAlpha.m > 0.0 || mAlpha.m < -0.3)
         {
-            KRATOS_ERROR << "Value not admissible for AlphaBossak. Admissible values should be between 0.0 and -0.3. Current value is " << mAlpha.m << std::endl;
+            KRATOS_THROW_ERROR( std::logic_error,"Value not admissible for AlphaBossak. Admissible values should be between 0.0 and -0.3. Current value is ", mAlpha.m );
         }
 
         // Check for minimum value of the buffer index
         // Verify buffer size
         if (rModelPart.GetBufferSize() < 2)
         {
-            KRATOS_ERROR << "insufficient buffer size. Buffer size should be greater than 2. Current size is" << rModelPart.GetBufferSize() << std::endl;
+            KRATOS_THROW_ERROR( std::logic_error, "insufficient buffer size. Buffer size should be greater than 2. Current size is", rModelPart.GetBufferSize() );
         }
 
         return 0;

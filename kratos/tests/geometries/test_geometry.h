@@ -29,6 +29,7 @@ namespace Kratos {
 namespace Testing {
 
     static std::streambuf *coutbuf = std::cout.rdbuf();
+    static bool exceptionThrown = false;
 
     // FIXME: EXCPETION -> EXCEPTION
     // TODO: Move to 'include/checks.h' once is confirmed to work as intended

@@ -123,7 +123,8 @@ public:
         for (unsigned int it=0; it<mMaxIterations; ++it)
         {
             // Loop along the elements to find which ones have a unique selected node
-            for (int k = 0; k < static_cast<int>(rElements.size()); ++k)
+            #pragma omp parallel for
+            for (int k = 0; k < static_cast<int>(rNodes.size()); ++k)
             {
                 unsigned int NewNodes = 0;
                 ModelPart::ElementsContainerType::iterator itElement = rElements.begin() + k;
@@ -156,7 +157,8 @@ public:
                         else
                         {
                             // Get a pointer to the unique SELECTED node
-                            pNode = rGeometry(j);
+                            NodeType::Pointer pAux = rGeometry(j);
+                            std::swap(pAux, pNode);
                         }
                     }
 
@@ -165,12 +167,14 @@ public:
                     v_avg /= (ElemNumNodes-1);
 
                     // Historical values initialization
+                    pNode->SetLock();                                               // Avoid another thread to acces the node while the value set
                     pNode->Set(SELECTED, false);                                    // Once a node has been initialized it is marked as non SELECTED
                     for (unsigned int step=0; step<BufferSize; ++step)              // Fill the velocity and pressure buffer
                     {
                         pNode->FastGetSolutionStepValue(PRESSURE, step) = p_avg;
                         pNode->FastGetSolutionStepValue(VELOCITY, step) = v_avg;
                     }
+                    pNode->UnSetLock();                                             // Free the node thread access
                 }
             }
         }

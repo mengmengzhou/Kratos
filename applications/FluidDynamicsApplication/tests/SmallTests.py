@@ -3,12 +3,6 @@ import os
 # Import Kratos
 from KratosMultiphysics import *
 
-try:
-    import KratosMultiphysics.ExternalSolversApplication
-    have_external_solvers = True
-except ImportError as e:
-    have_external_solvers = False
-
 # Import KratosUnittest
 import KratosMultiphysics.KratosUnittest as KratosUnittest
 import KratosExecuteEmbeddedTest as ExecuteEmbeddedTest
@@ -50,6 +44,7 @@ class EmbeddedTestFactory(KratosUnittest.TestCase):
     def tearDown(self):
         pass
 
+
 class ManufacturedSolutionTestFactory(KratosUnittest.TestCase):
 
     def setUp(self):
@@ -86,7 +81,7 @@ class EmbeddedCouetteImposedTest(EmbeddedTestFactory):
 class EmbeddedReservoirTest(EmbeddedTestFactory):
     file_name = "EmbeddedReservoirTest/EmbeddedReservoirTest"
 
-@KratosUnittest.skipUnless(have_external_solvers, "Missing required application: ExternalSolversApplication")
+
 class ManufacturedSolutionTest(ManufacturedSolutionTestFactory):
     file_name = "ManufacturedSolutionTest/ManufacturedSolutionTest"
 

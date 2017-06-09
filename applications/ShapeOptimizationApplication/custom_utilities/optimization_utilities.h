@@ -17,6 +17,7 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <iomanip>      // for std::setprecision
 
 // ------------------------------------------------------------------------------
 // External includes
@@ -29,15 +30,15 @@
 // ------------------------------------------------------------------------------
 // Project includes
 // ------------------------------------------------------------------------------
-#include "includes/define.h"
-#include "processes/process.h"
-#include "includes/node.h"
-#include "includes/element.h"
-#include "includes/model_part.h"
-#include "includes/kratos_flags.h"
-#include "utilities/timer.h"
-#include "spaces/ublas_space.h"
+#include "../../kratos/includes/define.h"
+#include "../../kratos/processes/process.h"
+#include "../../kratos/includes/node.h"
+#include "../../kratos/includes/element.h"
+#include "../../kratos/includes/model_part.h"
+#include "../../kratos/includes/kratos_flags.h"
+#include "../../kratos/utilities/timer.h"
 #include "shape_optimization_application.h"
+#include "../../kratos/spaces/ublas_space.h"
 
 // ==============================================================================
 
@@ -85,13 +86,19 @@ public:
     ///@{
 
     /// Default constructor.
-    OptimizationUtilities( ModelPart& designSurface, Parameters::Pointer optimizationSettings )
+    OptimizationUtilities( ModelPart& designSurface, Parameters& optimizationSettings )
         : mrDesignSurface( designSurface ),
-          mpOptimizationSettings( optimizationSettings )
+          mStepSize( optimizationSettings["line_search"]["step_size"].GetDouble() ),
+          mNormalizeSearchDirection( optimizationSettings["line_search"]["normalize_search_direction"].GetBool() )
     {
+        // Set precision for output
+        std::cout.precision(12);
+
         // Initialize constraint value
-        mConstraintValue = 0.0;
         mPreviousConstraintValue = 0.0;
+
+        // Initialize variables
+        mCorrectionScaling = 0.1;
     }
 
     /// Destructor.
@@ -107,7 +114,13 @@ public:
 
     ///@}
     ///@name Operations
-    ///@{     
+    ///@{
+
+    // --------------------------------------------------------------------------
+    void setPrecisionForOutput()
+    {
+        std::cout.precision(12);
+    }        
 
     // ==============================================================================
     // General optimization operations
@@ -116,12 +129,8 @@ public:
     {
         KRATOS_TRY;
 
-        double step_size = (*mpOptimizationSettings)["line_search"]["step_size"].GetDouble();
-        bool normalize_search_direction = (*mpOptimizationSettings)["line_search"]["normalize_search_direction"].GetBool();
-
-
         // Computation of update of design variable. Normalization is applied if specified.
-        if(normalize_search_direction)
+        if(mNormalizeSearchDirection)
         {
             // Compute max norm of search direction
             double max_norm_search_dir = 0.0;
@@ -138,7 +147,7 @@ public:
             // Compute update
             for (ModelPart::NodeIterator node_i = mrDesignSurface.NodesBegin(); node_i != mrDesignSurface.NodesEnd(); ++node_i)
             {
-                array_3d design_update = step_size * ( node_i->FastGetSolutionStepValue(SEARCH_DIRECTION)/max_norm_search_dir );
+                array_3d design_update = mStepSize * ( node_i->FastGetSolutionStepValue(SEARCH_DIRECTION)/max_norm_search_dir );
                 noalias(node_i->FastGetSolutionStepValue(DESIGN_UPDATE)) = design_update;
 
                 // Sum design updates to obtain control point position
@@ -150,7 +159,7 @@ public:
             // Compute update
             for (ModelPart::NodeIterator node_i = mrDesignSurface.NodesBegin(); node_i != mrDesignSurface.NodesEnd(); ++node_i)
             {
-                array_3d design_update = step_size * ( node_i->FastGetSolutionStepValue(SEARCH_DIRECTION) );
+                array_3d design_update = mStepSize * ( node_i->FastGetSolutionStepValue(SEARCH_DIRECTION) );
                 noalias(node_i->FastGetSolutionStepValue(DESIGN_UPDATE)) = design_update;
 
                 // Sum design updates to obtain control point position
@@ -183,7 +192,7 @@ public:
     // ==============================================================================
     // For running penalized projection method
     // ==============================================================================
-    void compute_projected_search_direction()
+    void compute_projected_search_direction( double c )
     {
         KRATOS_TRY;
 
@@ -222,35 +231,19 @@ public:
         KRATOS_CATCH("");
     }
 
-    // --------------------------------------------------------------------------
-    void correct_projected_search_direction( double constraint_value )
+    // ==============================================================================
+    void correct_projected_search_direction( double c )
     {
-        mConstraintValue = constraint_value;
-
         // Check correction necessary
-        if(mConstraintValue==0)
+        if(c==0)
          return;
 
-        // Perform correction
-        double correction_factor = ComputeCorrectionFactor();
-    	for (ModelPart::NodeIterator node_i = mrDesignSurface.NodesBegin(); node_i != mrDesignSurface.NodesEnd(); ++node_i)
-    	{
-    		array_3d correction_term = correction_factor * mConstraintValue * node_i->FastGetSolutionStepValue(MAPPED_CONSTRAINT_SENSITIVITY);
-    		node_i->FastGetSolutionStepValue(SEARCH_DIRECTION) -= correction_term;
-    	}
-
-        // Store constraint value for next correction step
-        mPreviousConstraintValue = mConstraintValue;
-    }
-
-    // --------------------------------------------------------------------------
-    double ComputeCorrectionFactor()
-    {
+        // Calucation of vector norms 
     	double norm_correction_term = 0.0;
     	double norm_search_direction = 0.0;
     	for (ModelPart::NodeIterator node_i = mrDesignSurface.NodesBegin(); node_i != mrDesignSurface.NodesEnd(); ++node_i)
     	{
-    		array_3d correction_term = mConstraintValue * node_i->FastGetSolutionStepValue(MAPPED_CONSTRAINT_SENSITIVITY);
+    		array_3d correction_term = c * node_i->FastGetSolutionStepValue(MAPPED_CONSTRAINT_SENSITIVITY);
     		norm_correction_term += inner_prod(correction_term,correction_term);
 
     		array_3d ds = node_i->FastGetSolutionStepValue(SEARCH_DIRECTION);
@@ -258,42 +251,49 @@ public:
     	}
     	norm_correction_term = sqrt(norm_correction_term);
     	norm_search_direction = sqrt(norm_search_direction);
-        double correction_scaling = GetCorrectionScaling();
 
-    	return correction_scaling * norm_search_direction / norm_correction_term;
-    }
-
-    // --------------------------------------------------------------------------
-    double GetCorrectionScaling()
-    {
-        double correction_scaling = (*mpOptimizationSettings)["optimization_algorithm"]["correction_scaling"].GetDouble(); 
-        if((*mpOptimizationSettings)["optimization_algorithm"]["use_adaptive_correction"].GetBool())
-        {
-            correction_scaling = AdaptCorrectionScaling( correction_scaling );
-            (*mpOptimizationSettings)["optimization_algorithm"]["correction_scaling"].SetDouble(correction_scaling);
-        }
-        return correction_scaling;
-    }
-
-    // --------------------------------------------------------------------------
-    double AdaptCorrectionScaling( double correction_scaling )
-    {
     	// Three cases need to be covered
+
 		// 1) In case we have two subsequently decreasing constraint values --> correction is fine --> leave current correction scaling
+
     	// 2) In case the correction jumps over the constraint (change of sign) --> correction was too big --> reduce
-    	if(mConstraintValue*mPreviousConstraintValue<0)
+    	if(c*mPreviousConstraintValue<0)
     	{
-    		correction_scaling *= 0.5;
+    		mCorrectionScaling *= 0.5;
     		std::cout << "Correction scaling needs to decrease...." << std::endl;
     	}
+
     	// 3) In case we have subsequently increasing constraint value --> correction was too low --> increase
-    	if(std::abs(mConstraintValue)>std::abs(mPreviousConstraintValue) && mConstraintValue*mPreviousConstraintValue>0)
+    	if(std::abs(c)>std::abs(mPreviousConstraintValue) && c*mPreviousConstraintValue>0)
     	{
     		std::cout << "Correction scaling needs to increase...." << std::endl;
-    		correction_scaling = std::min(correction_scaling*2,1.0);
+    		mCorrectionScaling = std::min(mCorrectionScaling*2,1.0);
+    	}
+    	double correction_factor = mCorrectionScaling * norm_search_direction / norm_correction_term;
+
+        // Perform correction
+    	for (ModelPart::NodeIterator node_i = mrDesignSurface.NodesBegin(); node_i != mrDesignSurface.NodesEnd(); ++node_i)
+    	{
+    		array_3d correction_term = correction_factor * c * node_i->FastGetSolutionStepValue(MAPPED_CONSTRAINT_SENSITIVITY);
+            // KRATOS_WATCH(correction_term);
+            // KRATOS_WATCH(node_i->FastGetSolutionStepValue(SEARCH_DIRECTION));
+    		node_i->FastGetSolutionStepValue(SEARCH_DIRECTION) -= correction_term;
     	}
 
-        return correction_scaling;
+        // Store constraint value for next correction step
+        mPreviousConstraintValue = c;
+    }
+
+    // --------------------------------------------------------------------------
+    void set_correction_scaling( double correctionScaling )
+    {
+        mCorrectionScaling = correctionScaling;
+    }
+
+    // --------------------------------------------------------------------------
+    double get_correction_scaling()
+    {
+        return mCorrectionScaling;
     }
 
     // ==============================================================================
@@ -387,9 +387,14 @@ private:
     // Initialized by class constructor
     // ==============================================================================
     ModelPart& mrDesignSurface;
-    Parameters::Pointer mpOptimizationSettings;
-    double mConstraintValue;
+    double mStepSize;
+    bool mNormalizeSearchDirection;
     double mPreviousConstraintValue;
+
+    // ==============================================================================
+    // For running penalized projection method
+    // ==============================================================================
+    double mCorrectionScaling;
 
     ///@}
     ///@name Private Operators

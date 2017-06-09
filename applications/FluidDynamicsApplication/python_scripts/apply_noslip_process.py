@@ -26,8 +26,9 @@ class ApplyNoSlipProcess(KratosMultiphysics.Process):
 
         settings.ValidateAndAssignDefaults(default_settings)
 
-        import assign_vector_variable_process
-        self.vector_process = assign_vector_variable_process.AssignVectorVariableProcess(Model, settings)
+        import experimental_assign_vector_process
+
+        self.vector_process = experimental_assign_vector_process.AssignVectorProcess(Model, settings)
 
 
     def ExecuteInitializeSolutionStep(self):

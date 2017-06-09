@@ -77,15 +77,7 @@ void SetCurrentNeighbour(SphericParticle* p_neighbour)
     mpOtherParticle = p_neighbour;
 }
 
-void SetBoundingBox(const bool periodicity, const array_1d<double, 3> domain_min, const array_1d<double, 3> domain_max)
-{
-    mDomainIsPeriodic = periodicity;
-    mDomainMin = domain_min;
-    mDomainMax = domain_max;
-}
-
 bool mMultiStageRHS;
-bool mDomainIsPeriodic;
 double mDistance;
 double mRadiusSum;
 double mDt;
@@ -95,8 +87,6 @@ double mMyCoors[3];
 double mOtherCoors[3];
 double mLocalRelVel[3];
 array_1d<double, 3> mOtherToMeVector;
-array_1d<double, 3> mDomainMin;
-array_1d<double, 3> mDomainMax;
 SphericParticle* mpThisParticle;
 SphericParticle* mpOtherParticle;
 };
@@ -109,14 +99,8 @@ virtual std::unique_ptr<ParticleDataBuffer> CreateParticleDataBuffer(SphericPart
     return std::unique_ptr<ParticleDataBuffer>(new ParticleDataBuffer(p_this_particle));
 }
 
-void TransformNeighbourCoorsToClosestInPeriodicDomain(ParticleDataBuffer & data_buffer);
-void TransformNeighbourCoorsToClosestInPeriodicDomain(ParticleDataBuffer & data_buffer,
-                                                      const array_1d<double, 3>& coors,
-                                                      array_1d<double, 3>& neighbour_coors);
-void TransformNeighbourCoorsToClosestInPeriodicDomain(const ProcessInfo& r_process_info,
-                                                      const double coors[3],
-                                                      double neighbour_coors[3]);
-
+void TransformToClosestPeriodicCoordinates(double my_coors[3], double other_coors[3]);
+bool GetDomainPeriodicity();
 virtual void CalculateRelativePositions(ParticleDataBuffer & data_buffer);
 
 using DiscreteElement::Initialize; //To avoid Clang Warning. We tell the compiler that we are aware of the existence of this function, but we overload it still.
@@ -145,7 +129,7 @@ virtual void Calculate(const Variable<double>& rVariable, double& Output, const 
 virtual void Calculate(const Variable<array_1d<double, 3 > >& rVariable, array_1d<double, 3 > & Output, const ProcessInfo& r_process_info) override;
 virtual void Calculate(const Variable<Vector >& rVariable, Vector& Output, const ProcessInfo& r_process_info) override;
 virtual void Calculate(const Variable<Matrix >& rVariable, Matrix& Output, const ProcessInfo& r_process_info) override;
-virtual void CalculateMaxBallToBallIndentation(double& rCurrentMaxIndentation, const ProcessInfo& r_process_info);
+virtual void CalculateMaxBallToBallIndentation(double& rCurrentMaxIndentation);
 virtual void CalculateMaxBallToFaceIndentation(double& rCurrentMaxIndentation);
 virtual double CalculateLocalMaxPeriod(const bool has_mpi, const ProcessInfo& r_process_info);
 
@@ -305,13 +289,15 @@ virtual void ComputeBallToBallContactForce(ParticleDataBuffer & data_buffer,
                                            array_1d<double, 3>& rContactForce,
                                            double& RollingResistance);
 
-virtual void EvaluateDeltaDisplacement(ParticleDataBuffer & data_buffer,
-                                       double DeltDisp[3],
+virtual void EvaluateDeltaDisplacement(double DeltDisp[3],
                                        double RelVel[3],
                                        double LocalCoordSystem[3][3],
                                        double OldLocalCoordSystem[3][3],
+                                       const array_1d<double, 3> &other_to_me_vect,
                                        const array_1d<double, 3> &vel,
-                                       const array_1d<double, 3> &delta_displ);
+                                       const array_1d<double, 3> &delta_displ,
+                                       SphericParticle* neighbour_iterator,
+                                       double& distance);
 
 virtual void RelativeDisplacementAndVelocityOfContactPointDueToRotation(const double indentation,
                                                                         double DeltDesp[3],

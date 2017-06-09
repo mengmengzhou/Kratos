@@ -75,13 +75,13 @@ public:
     /** Constructor.
      */
 
-    /**
-    * Empty constructor
-    */
-    PartitionedFSIUtilities()
+    /*@{ */
+    PartitionedFSIUtilities(ModelPart& rFluidInterfaceModelPart,
+                            ModelPart& rStructureInterfaceModelPart):
+                            mrFluidInterfaceModelPart(rFluidInterfaceModelPart),
+                            mrStructureInterfaceModelPart(rStructureInterfaceModelPart)
     {
     }
-
     /*@} */
 
     /** Copy constructor.
@@ -104,62 +104,91 @@ public:
     /*@{ */
 
     /**
-     * This function computes the interface residual size as the
-     * number of interface nodes times the problem domain size.
-     * @return the model part residual size
+     * This function computes the fluid interface residual size as the
+     * number of fluid interface nodes times the problem domain size.
+     * @return the fluid domain residual size
      */
-    unsigned int GetInterfaceResidualSize(const ModelPart& rInterfaceModelPart)
+    unsigned int GetFluidInterfaceResidualSize()
     {
-        return (rInterfaceModelPart.NumberOfNodes())*TDim;
+        return (mrFluidInterfaceModelPart.NumberOfNodes())*TDim;
     }
 
     /**
-     * This function returns the interface length in 2D or the interface area in 3D.
-     * @param rInterfaceModelPart: interface modelpart in where the are is computed
-     * @return the given modelpart interface length
+     * This function computes the structure interface residual size as the
+     * number of structure interface nodes times the problem domain size.
+     * @return the structure domain residual size
      */
-    double GetInterfaceArea(ModelPart& rInterfaceModelPart)
+    unsigned int GetStructureInterfaceResidualSize()
     {
-        double InterfaceArea = 0.0;
+        return (mrStructureInterfaceModelPart.NumberOfNodes())*TDim;
+    }
 
-        #pragma omp parallel for reduction(+:InterfaceArea)
-        for(int k=0; k < static_cast<int>(rInterfaceModelPart.NumberOfConditions()); ++k)
+    /**
+     * This function returns the fluid interface length in 2D or the fluid interface area in 3D.
+     * @return the fluid interface length
+     */
+    double GetFluidInterfaceArea()
+    {
+        double FluidInterfaceArea = 0.0;
+
+        #pragma omp parallel for reduction(+:FluidInterfaceArea)
+        for(int k=0; k < static_cast<int>(mrFluidInterfaceModelPart.NumberOfConditions()); ++k)
         {
-            ModelPart::ConditionIterator it_cond = rInterfaceModelPart.ConditionsBegin()+k;
+            ModelPart::ConditionIterator it_cond = mrFluidInterfaceModelPart.ConditionsBegin()+k;
 
             const Condition::GeometryType& rGeom = it_cond->GetGeometry();
-            InterfaceArea += rGeom.Length();
+            FluidInterfaceArea += rGeom.Length();
         }
 
-        rInterfaceModelPart.GetCommunicator().SumAll(InterfaceArea);
+        mrFluidInterfaceModelPart.GetCommunicator().SumAll(FluidInterfaceArea);
 
-        return InterfaceArea;
+        return FluidInterfaceArea;
+    }
+
+    /**
+     * This function returns the structure interface length in 2D or the structure interface area in 3D.
+     * @return the structure interface length
+     */
+    double GetStructureInterfaceArea()
+    {
+        double StructureInterfaceArea = 0.0;
+
+        #pragma omp parallel for reduction(+:StructureInterfaceArea)
+        for(int k=0; k < static_cast<int>(mrStructureInterfaceModelPart.NumberOfConditions()); ++k)
+        {
+            ModelPart::ConditionIterator it_cond = mrStructureInterfaceModelPart.ConditionsBegin()+k;
+
+            const Condition::GeometryType& rGeom = it_cond->GetGeometry();
+            StructureInterfaceArea += rGeom.Length();
+        }
+
+        mrStructureInterfaceModelPart.GetCommunicator().SumAll(StructureInterfaceArea);
+
+        return StructureInterfaceArea;
     }
 
     /**
      * This function sets the variable data contained in a vector over the the
      * fluid interface.
-     * @param rInterfaceModelPart: interface modelpart in where the vector variable is set
      * @param rVariable: variable to be set
-     * @param rInterfaceDataVector: vector containing the data values to be set
+     * @param rFluidInterfaceDataVector: vector containing the data values to be set
      */
-    void SetInterfaceVectorVariable(ModelPart& rInterfaceModelPart,
-                                    const Variable<array_1d<double, 3 > >& rVariable,
-                                    const VectorType& rInterfaceDataVector)
+    void SetFluidInterfaceVectorVariable(const Variable<array_1d<double, 3 > >& rVariable,
+                                         const VectorType& rFluidInterfaceDataVector)
     {
         // Initialize the variable value
-        VariableUtils().SetToZero_VectorVar(rVariable, rInterfaceModelPart.Nodes());
+        VariableUtils().SetToZero_VectorVar(rVariable, mrFluidInterfaceModelPart.Nodes());
 
         #pragma omp parallel for
-        for(int k=0; k<static_cast<int>(rInterfaceModelPart.NumberOfNodes()); ++k)
+        for(int k=0; k<static_cast<int>(mrFluidInterfaceModelPart.NumberOfNodes()); ++k)
         {
-            ModelPart::NodeIterator it_node = rInterfaceModelPart.NodesBegin()+k;
+            ModelPart::NodeIterator it_node = mrFluidInterfaceModelPart.NodesBegin()+k;
             unsigned int base_i = k*TDim;
 
             array_1d<double,3>& value_to_set = it_node->FastGetSolutionStepValue(rVariable);
             for (unsigned int jj=0; jj<TDim; ++jj)
             {
-                value_to_set[jj] = rInterfaceDataVector[base_i+jj];
+                value_to_set[jj] = rFluidInterfaceDataVector[base_i+jj];
             }
         }
     }
@@ -167,17 +196,15 @@ public:
     /**
      * This function sets the variable data contained in a vector over the the
      * fluid interface. The variable can be fixed or not.
-     * @param rInterfaceModelPart: interface modelpart in where the vector variable is set
      * @param rVariable: variable to be set
      * @param rFluidInterfaceDataVector: vector containing the data values to be set
      * @param FixVariable: if true, fixes the variable in the fluid interface model part
      */
-    void SetAndFixInterfaceVectorVariable(ModelPart& rInterfaceModelPart,
-                                          const Variable<array_1d<double, 3 > >& rVariable,
-                                          const VectorType& rFluidInterfaceDataVector,
-                                          const bool FixVariable)
+    void SetAndFixFluidInterfaceVectorVariable(const Variable<array_1d<double, 3 > >& rVariable,
+                                               const VectorType& rFluidInterfaceDataVector,
+                                               const bool FixVariable)
     {
-        this->SetInterfaceVectorVariable(rInterfaceModelPart, rVariable, rFluidInterfaceDataVector);
+        this->SetFluidInterfaceVectorVariable(rVariable, rFluidInterfaceDataVector);
 
         // If needed, apply fixity to rVariable
         if (FixVariable)
@@ -191,9 +218,9 @@ public:
             const component_type varz = KratosComponents< component_type >::Get(variable_name+std::string("_Z"));
 
             // Fix the variable components
-            VariableUtils().ApplyFixity(varx, true, rInterfaceModelPart.Nodes());
-            VariableUtils().ApplyFixity(vary, true, rInterfaceModelPart.Nodes());
-            VariableUtils().ApplyFixity(varz, true, rInterfaceModelPart.Nodes());
+            VariableUtils().ApplyFixity(varx, true, mrFluidInterfaceModelPart.Nodes());
+            VariableUtils().ApplyFixity(vary, true, mrFluidInterfaceModelPart.Nodes());
+            VariableUtils().ApplyFixity(varz, true, mrFluidInterfaceModelPart.Nodes());
         }
     }
 
@@ -203,38 +230,36 @@ public:
      * The nodal values of the residual are stored in the FSI_INTERFACE_RESIDUAL variable.
      * Besides, the norm of the residual vector is stored in the ProcessInfo using
      * the FSI_INTERFACE_RESIDUAL_NORM variable.
-     * @param rInterfaceModelPart: interface modelpart in where the residual is computed
-     * @param interface_residual: reference to the residual vector
+     * @param fluid_interface_residual: reference to the residual vector
      */
-    void ComputeInterfaceVectorResidual(ModelPart& rInterfaceModelPart,
-                                        const Variable<array_1d<double, 3 > >& rOriginalVariable,
-                                        const Variable<array_1d<double, 3 > >& rModifiedVariable,
-                                        VectorType& interface_residual) // TODO: MPI parallelization
+    void ComputeFluidInterfaceVectorResidual(const Variable<array_1d<double, 3 > >& rOriginalVariable,
+                                             const Variable<array_1d<double, 3 > >& rModifiedVariable,
+                                             VectorType& fluid_interface_residual) // TODO: MPI parallelization
     {
-        interface_residual = ZeroVector(this->GetInterfaceResidualSize(rInterfaceModelPart));
+        fluid_interface_residual = ZeroVector(this->GetFluidInterfaceResidualSize());
 
         // Compute node-by-node residual
-        this->ComputeNodeByNodeResidual(rInterfaceModelPart, rOriginalVariable, rModifiedVariable, FSI_INTERFACE_RESIDUAL);
+        this->ComputeNodeByNodeResidual(rOriginalVariable, rModifiedVariable, FSI_INTERFACE_RESIDUAL);
 
         // Compute consitent residual
-        // this->ComputeConsistentResidual(rInterfaceModelPart, rOriginalVariable, rModifiedVariable, FSI_INTERFACE_RESIDUAL);
+        // this->ComputeConsistentResidual(rOriginalVariable, rModifiedVariable, FSI_INTERFACE_RESIDUAL);
 
         // Assemble the final consistent residual values
         #pragma omp parallel for
-        for(int k=0; k<static_cast<int>(rInterfaceModelPart.NumberOfNodes()); ++k)
+        for(int k=0; k<static_cast<int>(mrFluidInterfaceModelPart.NumberOfNodes()); ++k)
         {
-            const ModelPart::NodeIterator it_node = rInterfaceModelPart.NodesBegin()+k;
+            const ModelPart::NodeIterator it_node = mrFluidInterfaceModelPart.NodesBegin()+k;
             const unsigned int base_i = k*TDim;
 
             const array_1d<double,3>& fsi_res = it_node->FastGetSolutionStepValue(FSI_INTERFACE_RESIDUAL);
             for (unsigned int jj=0; jj<TDim; ++jj)
             {
-                interface_residual[base_i+jj] = fsi_res[jj];
+                fluid_interface_residual[base_i+jj] = fsi_res[jj];
             }
         }
 
         // Store the L2 norm of the error in the fluid process info
-        rInterfaceModelPart.GetProcessInfo().GetValue(FSI_INTERFACE_RESIDUAL_NORM) = TSpace::TwoNorm(interface_residual);
+        mrFluidInterfaceModelPart.GetProcessInfo().GetValue(FSI_INTERFACE_RESIDUAL_NORM) = TSpace::TwoNorm(fluid_interface_residual);
 
     };
 
@@ -245,24 +270,23 @@ public:
      * The nodal values of the residual are stored in the FSI_INTERFACE_MESH_RESIDUAL variable.
      * Besides, the norm of the mesh residual vector is stored in the ProcessInfo using
      * the FSI_INTERFACE_MESH_RESIDUAL_NORM variable.
-     * @param rFluidInterfaceModelPart: interface modelpart in where the residual is computed
      */
-    void ComputeFluidInterfaceMeshVelocityResidualNorm(ModelPart& rFluidInterfaceModelPart) // TODO: MPI parallelization
+    void ComputeFluidInterfaceMeshVelocityResidualNorm() // TODO: MPI parallelization
     {
 
-        VectorType fluid_interface_mesh_residual = ZeroVector(this->GetInterfaceResidualSize(rFluidInterfaceModelPart));
+        VectorType fluid_interface_mesh_residual = ZeroVector(this->GetFluidInterfaceResidualSize());
 
         // Compute node-by-node residual
-        // this->ComputeNodeByNodeResidual(rFluidInterfaceModelPart, VELOCITY, MESH_VELOCITY, FSI_INTERFACE_MESH_RESIDUAL);
+        // this->ComputeNodeByNodeResidual(VELOCITY, MESH_VELOCITY, FSI_INTERFACE_MESH_RESIDUAL);
 
         // Compute consitent residual
-        this->ComputeConsistentResidual(rFluidInterfaceModelPart, VELOCITY, MESH_VELOCITY, FSI_INTERFACE_MESH_RESIDUAL);
+        this->ComputeConsistentResidual(VELOCITY, MESH_VELOCITY, FSI_INTERFACE_MESH_RESIDUAL);
 
         // Assemble the final consistent residual values
         #pragma omp parallel for
-        for(int k=0; k<static_cast<int>(rFluidInterfaceModelPart.NumberOfNodes()); ++k)
+        for(int k=0; k<static_cast<int>(mrFluidInterfaceModelPart.NumberOfNodes()); ++k)
         {
-            const ModelPart::NodeIterator it_node = rFluidInterfaceModelPart.NodesBegin()+k;
+            const ModelPart::NodeIterator it_node = mrFluidInterfaceModelPart.NodesBegin()+k;
             const unsigned int base_i = k*TDim;
 
             const array_1d<double,3>& fsi_mesh_res = it_node->FastGetSolutionStepValue(FSI_INTERFACE_MESH_RESIDUAL);
@@ -273,7 +297,7 @@ public:
         }
 
         // Store the L2 norm of the error in the fluid process info
-        rFluidInterfaceModelPart.GetProcessInfo().GetValue(FSI_INTERFACE_MESH_RESIDUAL_NORM) = TSpace::TwoNorm(fluid_interface_mesh_residual);
+        mrFluidInterfaceModelPart.GetProcessInfo().GetValue(FSI_INTERFACE_MESH_RESIDUAL_NORM) = TSpace::TwoNorm(fluid_interface_mesh_residual);
 
     }
 
@@ -283,8 +307,8 @@ protected:
     /**@name Protected static Member Variables */
     /*@{ */
 
-    // ModelPart&      mrFluidInterfaceModelPart;
-    // ModelPart&      mrStructureInterfaceModelPart;
+    ModelPart&      mrFluidInterfaceModelPart;
+    ModelPart&      mrStructureInterfaceModelPart;
 
     /*@} */
     /**@name Protected member Variables */
@@ -338,23 +362,21 @@ private:
     /**
      * This function computes the nodal error of a vector magnitude. The error is defined
      * as OriginalVariable minus ModifiedVariable.
-     * @param rInterfaceModelPart: interface modelpart in where the residual is computed
      * @param rOriginalVariable: variable with the reference value
      * @param rModifiedVariable: variable with the computed vvalue
      * @param rErrorStorageVariable: variable to store the error nodal value
      */
-    void ComputeNodeByNodeResidual(ModelPart& rInterfaceModelPart,
-                                   const Variable<array_1d<double, 3 > >& rOriginalVariable,
+    void ComputeNodeByNodeResidual(const Variable<array_1d<double, 3 > >& rOriginalVariable,
                                    const Variable<array_1d<double, 3 > >& rModifiedVariable,
                                    const Variable<array_1d<double, 3 > >& rErrorStorageVariable)
     {
         // Initialize the residual storage variable
-        VariableUtils().SetToZero_VectorVar(rErrorStorageVariable, rInterfaceModelPart.Nodes());
+        VariableUtils().SetToZero_VectorVar(rErrorStorageVariable, mrFluidInterfaceModelPart.Nodes());
 
         #pragma omp parallel for
-        for(int k=0; k<static_cast<int>(rInterfaceModelPart.NumberOfNodes()); ++k)
+        for(int k=0; k<static_cast<int>(mrFluidInterfaceModelPart.NumberOfNodes()); ++k)
         {
-            ModelPart::NodeIterator it_node = rInterfaceModelPart.NodesBegin()+k;
+            ModelPart::NodeIterator it_node = mrFluidInterfaceModelPart.NodesBegin()+k;
             array_1d<double, 3>& rErrorStorage = it_node->FastGetSolutionStepValue(rErrorStorageVariable);
 
             const array_1d<double, 3>& value_fluid = it_node->FastGetSolutionStepValue(rOriginalVariable);
@@ -368,23 +390,21 @@ private:
      * This function computes the nodal error of a vector magnitude in a consistent manner.
      * The error is defined as the integral over the interface of a tests function times
      * the difference between rOriginalVariable and rModifiedVariable.
-     * @param rInterfaceModelPart: interface modelpart in where the residual is computed
      * @param rOriginalVariable: variable with the reference value
      * @param rModifiedVariable: variable with the computed vvalue
      * @param rErrorStorageVariable: variable to store the error nodal value
      */
-    void ComputeConsistentResidual(ModelPart& rInterfaceModelPart,
-                                   const Variable<array_1d<double, 3 > >& rOriginalVariable,
+    void ComputeConsistentResidual(const Variable<array_1d<double, 3 > >& rOriginalVariable,
                                    const Variable<array_1d<double, 3 > >& rModifiedVariable,
                                    const Variable<array_1d<double, 3 > >& rErrorStorageVariable)
     {
         // Initialize the interface residual variable
-        VariableUtils().SetToZero_VectorVar(rErrorStorageVariable, rInterfaceModelPart.Nodes());
+        VariableUtils().SetToZero_VectorVar(rErrorStorageVariable, mrFluidInterfaceModelPart.Nodes());
 
         #pragma omp parallel for
-        for(int k=0; k < static_cast<int>(rInterfaceModelPart.NumberOfConditions()); ++k)
+        for(int k=0; k < static_cast<int>(mrFluidInterfaceModelPart.NumberOfConditions()); ++k)
         {
-            ModelPart::ConditionIterator it_cond = rInterfaceModelPart.ConditionsBegin()+k;
+            ModelPart::ConditionIterator it_cond = mrFluidInterfaceModelPart.ConditionsBegin()+k;
 
             const Condition::GeometryType& rGeom = it_cond->GetGeometry();
             const unsigned int BlockSize = TDim;

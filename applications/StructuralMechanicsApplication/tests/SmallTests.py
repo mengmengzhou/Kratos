@@ -166,12 +166,10 @@ class EigenQ4Thick2x2PlateTests(StructuralMechanichsTestFactory):
 
 class EigenTL3D8NCubeTests(StructuralMechanichsTestFactory):
     file_name = "eigen_test/Eigen_TL_3D8N_Cube_test"
+<<<<<<< HEAD
 
 class ShellThinQ4MembraneTest(StructuralMechanichsTestFactory):
     file_name = "shell_thinQ4_test/shell_thinQ4_Membrane"
-
-class Fofi4PointTentnoCableTests(StructuralMechanichsTestFactory):
-    file_name = "formfinding_test/Fofi_4Point_Tent_noCable_test"
+=======
     
-class MembraneQ4PointLoadTests(StructuralMechanichsTestFactory):
-    file_name = "membrane_test/Membrane_Q4_PointLoad_test"
+>>>>>>> refs/remotes/origin/master

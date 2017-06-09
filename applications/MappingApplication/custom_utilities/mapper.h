@@ -240,8 +240,7 @@ protected:
     }
 
     void ProcessMappingOptions(const Kratos::Flags& rMappingOptions,
-                               double& Factor)
-    {
+                               double& Factor) {
         if (rMappingOptions.Is(MapperFlags::SWAP_SIGN))
         {
             Factor *= (-1);
