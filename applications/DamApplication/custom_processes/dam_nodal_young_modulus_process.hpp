@@ -14,6 +14,8 @@
 #include "includes/kratos_parameters.h"
 #include "processes/process.h"
 
+#include "custom_utilities/pendulum_convergence_utility.hpp"
+
 #include "dam_application_variables.h"
 
 namespace Kratos
@@ -31,7 +33,7 @@ public:
     /// Constructor
     DamNodalYoungModulusProcess(ModelPart& model_part,
                                 Parameters rParameters
-                                ) : Process(Flags()) , mr_model_part(model_part)
+                                ) : Process(Flags()) , mr_model_part(model_part) , mrParameters(rParameters)
     {
         KRATOS_TRY
 			 
@@ -117,41 +119,57 @@ public:
 
     void ExecuteInitializeSolutionStep()
     {
-        
         KRATOS_TRY;
-        
-        Variable<double> var = KratosComponents< Variable<double> >::Get(mvariable_name);
-        const int nnodes = mr_model_part.GetMesh(mmesh_id).Nodes().size();
-                
-    if(nnodes != 0)
+
+        double tolerance = 0.0001;
+        double reference = 0.00555;
+        Vector Vectorconvergence;
+        Vectorconvergence.resize(2);
+
+        Vectorconvergence = PendulumConvergenceUtility(mr_model_part).CheckConvergence(tolerance,reference);
+
+        KRATOS_WATCH(Vectorconvergence)
+
+        if (Vectorconvergence[0] < 0.5 )
         {
-            ModelPart::NodesContainerType::iterator it_begin = mr_model_part.GetMesh(mmesh_id).NodesBegin();
-        
-            #pragma omp parallel for
-            for(int i = 0; i<nnodes; i++)
+            Variable<double> var = KratosComponents< Variable<double> >::Get(mvariable_name);
+            const int nnodes = mr_model_part.GetMesh(mmesh_id).Nodes().size();
+            double time = mr_model_part.GetProcessInfo()[TIME];
+            double myoung_1_iter = myoung_1/time;
+            
+            if(nnodes != 0)
             {
-                ModelPart::NodesContainerType::iterator it = it_begin + i;
-                
-                if(mis_fixed)
+                ModelPart::NodesContainerType::iterator it_begin = mr_model_part.GetMesh(mmesh_id).NodesBegin();
+                    #pragma omp parallel for
+                for(int i = 0; i<nnodes; i++)
                 {
-                    it->Fix(var);
-                }
+                    ModelPart::NodesContainerType::iterator it = it_begin + i;
+            
+                    if(mis_fixed)
+                    {
+                        it->Fix(var);
+                    }
+            
+                    double Young = myoung_1_iter + (myoung_2*it->Coordinate(1)) + (myoung_3*it->Coordinate(2)) + (myoung_4*it->Coordinate(3));
+            
+                    if(Young <= 0.0)
+                    {                   
+                        it->FastGetSolutionStepValue(var) = 0.0;
                 
-                double Young = myoung_1 + (myoung_2*it->Coordinate(1)) + (myoung_3*it->Coordinate(2)) + (myoung_4*it->Coordinate(3));
-                
-                if(Young <= 0.0)
-                {                   
-                    it->FastGetSolutionStepValue(var) = 0.0;
-                    
+                    }
+                    else
+                        it->FastGetSolutionStepValue(var) = Young;
                 }
-                else
-                    it->FastGetSolutionStepValue(var) = Young;
             }
+
         }
+
         
-        KRATOS_CATCH("");
-    }
-    
+            KRATOS_CATCH("");
+    }  
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
     /// Turn back information as a string.
     std::string Info() const
     {
@@ -174,8 +192,8 @@ public:
 protected:
 
     /// Member Variables
-
     ModelPart& mr_model_part;
+    Parameters& mrParameters;
     std::size_t mmesh_id;
     std::string mvariable_name;
     bool mis_fixed;
