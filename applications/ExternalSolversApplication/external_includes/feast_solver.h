@@ -42,6 +42,10 @@ extern "C" {
 #include "includes/ublas_interface.h"
 #include "spaces/ublas_space.h"
 
+// Debug includes - remove after testing -PW
+#include <string>
+#include <iomanip>
+
 #if !defined(KRATOS_FEAST_SOLVER)
 #define  KRATOS_FEAST_SOLVER
 
@@ -306,6 +310,71 @@ public:
 			FEAST_Settings["perform_stochastic_estimate"].SetBool(false);
 		}
 		
+		bool printM = false;
+		if (printM)
+		{
+			std::cout << "\nPrinting Kg in feast_solver.h\n" << std::endl;
+
+
+			for (unsigned i = 0; i < M.size1(); ++i)
+			{
+				//std::cout << "| ";
+				for (unsigned j = 0; j < M.size2(); ++j)
+				{
+					std::cout << std::fixed << std::setprecision(2) << std::setw(10)
+						<< M(i, j) << ", ";
+				}
+				std::cout << std::endl;
+			}
+			
+		}
+		
+		bool printK = false;
+		if (printK)
+		{
+			std::cout << "\nPrinting Km in feast_solver.h\n" << std::endl;
+
+
+			for (unsigned i = 0; i < K.size1(); ++i)
+			{
+				//std::cout << "| ";
+				for (unsigned j = 0; j < K.size2(); ++j)
+				{
+					std::cout << std::fixed << std::setprecision(2) << std::setw(10)
+						<< K(i, j) << ", ";
+				}
+				std::cout << std::endl;
+			}
+
+		}
+
+		bool symmTestM = true;
+		
+		if (symmTestM)
+		{
+			int countsymm = 0;
+			double tolerance = 0.01;
+			for (size_t i = 0; i < M.size1(); i++)
+			{
+				for (size_t j = 0; j < M.size2(); j++)
+				{
+					if (M(i, j) > 0.0001)
+					{
+						double diff = ((M(i, j)) - (M(j, i))) / abs(M(i, j));
+						if (diff>tolerance)
+						{
+							countsymm++;
+							std::cout << "\ndiff at [" << i << ", " << j << "]" << std::endl;
+							std::cout << M(i, j) << " vs " << M(j, i) << std::endl;
+							std::cout << "Diff = " << diff << std::endl;
+							//rGeometricStiffnessMatrix(i, j) = rGeometricStiffnessMatrix(j, i);
+						}
+					}
+				}
+			}
+
+			std::cout << "Number of unsymmetric entries = " << countsymm << std::endl;
+		}
 
 		int SearchDimension = FEAST_Settings["search_dimension"].GetInt();
 		int NumEigenvalues = FEAST_Settings["number_of_eigenvalues"].GetInt();

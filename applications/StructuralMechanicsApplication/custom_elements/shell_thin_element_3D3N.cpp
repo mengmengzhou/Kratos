@@ -564,7 +564,7 @@ void ShellThinElement3D3N::CalculateGeometricStiffnessMatrix(MatrixType & rGeome
 		{
 			for (size_t j = 0; j < 18; j++)
 			{
-				rGeometricStiffnessMatrix(i, j) = rGeometricStiffnessMatrix(j, i);
+				//rGeometricStiffnessMatrix(i, j) = rGeometricStiffnessMatrix(j, i);
 			}
 		}
 	}

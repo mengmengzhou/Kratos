@@ -815,13 +815,14 @@ void ShellThickElement3D4N::CalculateGeometricStiffnessMatrix(MatrixType & rGeom
 {
 	Vector dummyRHS;
 	CalculateAll(rGeometricStiffnessMatrix, dummyRHS, rCurrentProcessInfo, true, false,2);
+	//rGeometricStiffnessMatrix *= -1.0;
 
-	std::cout << "\n" << rGeometricStiffnessMatrix << std::endl;
+	//std::cout << "Kg multiplied with -1\n\n\n" << std::endl;
 
 	double tolerance = 0.01;
 	int countsymm = 0;
-
-	bool make_symmmetric = true;
+	
+	bool make_symmmetric = false;
 	if (make_symmmetric)
 	{
 		for (size_t i = 0; i < 24; i++)
@@ -850,14 +851,43 @@ void ShellThickElement3D4N::CalculateGeometricStiffnessMatrix(MatrixType & rGeom
 	}
 
 	
+	bool test_decomposition = false;
+	if (test_decomposition)
+	{
+		MatrixType Kg = MatrixType(rGeometricStiffnessMatrix);
+
+		MatrixType Ktot;
+		MatrixType Km;
+
+		CalculateAll(Ktot, dummyRHS, rCurrentProcessInfo, true, false, 0);
+
+		CalculateAll(Km, dummyRHS, rCurrentProcessInfo, true, false, 1);
+
+		MatrixType Kdiff = MatrixType(Ktot - Km - Kg);
+		int diff_count = 0;
+		for (size_t i = 0; i < Kdiff.size1(); i++)
+		{
+			for (size_t j = 0; j < Kdiff.size2(); j++)
+			{
+				if (abs(Kdiff(i,j)) > 0.001)
+				{
+					diff_count++;
+				}
+			}
+		}
+
+		std::cout << "Printing diff between K decomp!!!!!!!!!!!!!!\n\n" << (Ktot - Km - Kg) << std::endl;
+		std::cout << "\nNumber of non-zero entries = " << diff_count << std::endl;
+	}
+
 }
 
 void ShellThickElement3D4N::CalculateElasticStiffnessMatrix(MatrixType & rElasticStiffnessMatrix, ProcessInfo & rCurrentProcessInfo)
 {
 	Vector dummyRHS;
 	CalculateAll(rElasticStiffnessMatrix, dummyRHS, rCurrentProcessInfo, true, false, 1);
-	//rElasticStiffnessMatrix = IdentityMatrix(24);
-	//rElasticStiffnessMatrix *= 4.0;
+
+	//std::cout << "\n\nPrinting element Km \n" << rElasticStiffnessMatrix << std::endl;
 }
 
 

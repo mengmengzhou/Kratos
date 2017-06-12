@@ -252,7 +252,7 @@ namespace Kratos
 			// It should be used in a LinearCoordinateTransformation.
 			// Here instead we already calculate a nonlinear Projector (P = Pu - S * G)!
 
-			bool bCSEformulation = true;
+			bool bCSEformulation = false;
 
 			MatrixType T(24, 24);
 			LCS.ComputeTotalRotationMatrix(T);
@@ -284,6 +284,7 @@ namespace Kratos
 			// projectedLocalForces = - P' * H' * Ke * U
 			if (bCSEformulation)
 			{
+				std::cout << "\n\n%%%%%%%%%%% bCSEformulation enabled %%%%%%%%%%%\n\n" << std::endl;
 				projectedLocalForces.clear();
 				tempVec = prod(trans(H), rRightHandSideVector);
 				projectedLocalForces = prod(trans(P), tempVec);
