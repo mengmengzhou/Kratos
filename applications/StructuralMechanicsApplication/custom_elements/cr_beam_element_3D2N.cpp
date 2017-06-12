@@ -1093,8 +1093,10 @@ namespace Kratos
 			this->CalculateLeftHandSide(LeftHandSideMatrix, rCurrentProcessInfo);
 			Vector NodalDeformation = ZeroVector(LocalSize);
 			this->GetValuesVector(NodalDeformation);
+			KRATOS_WATCH(NodalDeformation);
 			rRightHandSideVector = ZeroVector(LocalSize);
 			rRightHandSideVector -= prod(LeftHandSideMatrix, NodalDeformation);
+			KRATOS_WATCH(rRightHandSideVector);
 		}
 
 		//add bodyforces 
@@ -1681,6 +1683,10 @@ namespace Kratos
 				{
 					MomentResidual[j] += rRHSVector[index + j];
 				}
+
+				std::cout << "........................................." << std::endl;
+				KRATOS_WATCH(MomentResidual);
+				std::cout << "........................................." << std::endl;
 
 				GetGeometry()[i].UnSetLock();
 			}

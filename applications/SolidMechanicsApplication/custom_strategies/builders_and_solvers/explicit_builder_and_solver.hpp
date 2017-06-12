@@ -181,13 +181,14 @@ public:
 		 
                  (itElem)->CalculateMassMatrix(MassMatrix, rCurrentProcessInfo); 
 
+
                  const unsigned int dimension   = geometry.WorkingSpaceDimension();
 
                  index = 0;
                  for (unsigned int i = 0; i <geometry.size(); i++)
                  {
                      index = i*dimension;
-					 if (MassMatrix.size1() == 12) index = index * 2; //beam,rocco
+					 if (MassMatrix.size1() == 12 && geometry.size() == 2) index = index * 2; //beam get only trans. dofs
 
                      double& mass = geometry(i)->FastGetSolutionStepValue(NODAL_MASS);
 
@@ -205,7 +206,6 @@ public:
 				   {
 						mass += MassMatrix(index,index);
 				   }
-
                     geometry(i)->UnSetLock();
                  }
              }

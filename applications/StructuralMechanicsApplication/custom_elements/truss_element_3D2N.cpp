@@ -490,6 +490,7 @@ namespace Kratos
 		//resizing the matrices + create memory for LHS
 		rLeftHandSideMatrix = ZeroMatrix(LocalSize, LocalSize);
 		//creating LHS
+		std::cout << "---------------------------------------------->" << std::endl;
 		noalias(rLeftHandSideMatrix) = this->CreateElementStiffnessMatrix();
 		KRATOS_CATCH("")
 	}
