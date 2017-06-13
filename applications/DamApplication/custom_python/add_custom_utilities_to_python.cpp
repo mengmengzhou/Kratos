@@ -34,6 +34,7 @@ void  AddCustomUtilitiesToPython()
 
     class_< PendulumConvergenceUtility > ("PendulumConvergenceUtility", init<ModelPart&>())
     .def("CheckConvergence",&PendulumConvergenceUtility::CheckConvergence)
+    .def("CheckGlobalConvergence",&PendulumConvergenceUtility::CheckGlobalConvergence)
     ;
   
 }

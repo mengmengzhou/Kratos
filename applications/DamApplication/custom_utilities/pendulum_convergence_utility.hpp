@@ -49,7 +49,7 @@ public:
         KRATOS_TRY;
         Vector Result = ZeroVector(2);   
         Result.resize(2); 
-        double value_to_check = mr_model_part.GetNode(95).GetSolutionStepValue(DISPLACEMENT_X);
+        double value_to_check = mr_model_part.GetNode(173).GetSolutionStepValue(DISPLACEMENT_Y);
         double dif = value_to_check-reference;
 
         Result[1] = dif;
@@ -64,6 +64,35 @@ public:
 
 ///----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+    bool CheckGlobalConvergence(unsigned int number_of_pendulums, double tolerance, double reference)
+    {
+        KRATOS_TRY;
+        bool Result = false;   
+        Vector ConvergencePendulumsVector = ZeroVector (number_of_pendulums);
+        ConvergencePendulumsVector.resize(number_of_pendulums);
+
+        // Here a for to check all control points
+        for(unsigned int i = 0; i<number_of_pendulums; i++)
+        {
+            double value_to_check = mr_model_part.GetNode(173).GetSolutionStepValue(DISPLACEMENT_Y);
+            double dif = value_to_check-reference;
+            if(fabs(dif) < tolerance)
+                ConvergencePendulumsVector[i]= 1.0;
+        }
+        
+        for(unsigned int j = 0; j<number_of_pendulums; j++)
+        {
+            if (ConvergencePendulumsVector[j] > 0.5)
+                Result = true;
+            else 
+                break;
+        }
+        return Result;
+
+        KRATOS_CATCH("");
+    }
+
+///----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 protected:
 
     /// Member Variables

@@ -121,26 +121,27 @@ public:
     {
         KRATOS_TRY;
 
-        double tolerance = 0.0001;
-        double reference = 0.00555;
+        double tolerance = 0.01;
+        double reference = -0.0416059;
         Vector Vectorconvergence;
         Vectorconvergence.resize(2);
+        int factor = 1;
 
         Vectorconvergence = PendulumConvergenceUtility(mr_model_part).CheckConvergence(tolerance,reference);
+        this-> ComputingFactor(factor,Vectorconvergence[1]);
 
         KRATOS_WATCH(Vectorconvergence)
+        KRATOS_WATCH(factor)
 
-        if (Vectorconvergence[0] < 0.5 )
+        if(Vectorconvergence[0] < 0.5 )
         {
             Variable<double> var = KratosComponents< Variable<double> >::Get(mvariable_name);
             const int nnodes = mr_model_part.GetMesh(mmesh_id).Nodes().size();
-            double time = mr_model_part.GetProcessInfo()[TIME];
-            double myoung_1_iter = myoung_1/time;
-            
+
             if(nnodes != 0)
             {
                 ModelPart::NodesContainerType::iterator it_begin = mr_model_part.GetMesh(mmesh_id).NodesBegin();
-                    #pragma omp parallel for
+                #pragma omp parallel for
                 for(int i = 0; i<nnodes; i++)
                 {
                     ModelPart::NodesContainerType::iterator it = it_begin + i;
@@ -150,7 +151,7 @@ public:
                         it->Fix(var);
                     }
             
-                    double Young = myoung_1_iter + (myoung_2*it->Coordinate(1)) + (myoung_3*it->Coordinate(2)) + (myoung_4*it->Coordinate(3));
+                    double Young = myoung_1/factor + (myoung_2*it->Coordinate(1)) + (myoung_3*it->Coordinate(2)) + (myoung_4*it->Coordinate(3));
             
                     if(Young <= 0.0)
                     {                   
@@ -201,6 +202,28 @@ protected:
     double myoung_2;
     double myoung_3;
     double myoung_4;
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    void ComputingFactor(int& rfactor, double value )
+    {
+        KRATOS_TRY;
+
+        if(value > 0.038)
+            rfactor = 1;
+        
+        if(value < 0.038)
+            rfactor = 2;
+        
+        if(value < 0.035)
+            rfactor = 4;
+        
+        if(value < 0.025)
+            rfactor = 8;
+        
+            KRATOS_CATCH("");
+    }  
+
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
