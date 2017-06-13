@@ -380,7 +380,7 @@ public:
             auto& pMassMatrix = this->pGetMassMatrix();
 
             // mass matrix
-            pBuilderAndSolver->ResizeAndInitializeVectors(
+            pBuilderAndSolver->ResizeAndInitializeVectors(pScheme, 
                     pMassMatrix,
                     pDx,
                     pb,
@@ -389,7 +389,7 @@ public:
                     rModelPart.GetProcessInfo());
 
             // stiffness matrix
-            pBuilderAndSolver->ResizeAndInitializeVectors(
+            pBuilderAndSolver->ResizeAndInitializeVectors(pScheme, 
                     pStiffnessMatrix,
                     pDx,
                     pb,
