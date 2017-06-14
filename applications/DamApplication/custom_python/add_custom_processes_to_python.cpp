@@ -19,6 +19,7 @@
 
 // Processes
 #include "custom_processes/bofang_condition_temperature_process.hpp"
+#include "custom_processes/dam_reservoir_constant_temperature_process.hpp"
 #include "custom_processes/dam_hydro_condition_load_process.hpp"
 #include "custom_processes/dam_uplift_condition_load_process.hpp"
 #include "custom_processes/dam_uplift_circular_condition_load_process.hpp"
@@ -40,6 +41,10 @@ void  AddCustomProcessesToPython()
 {    
     // Bofang Process
     class_< BofangConditionTemperatureProcess, bases< Process >, boost::noncopyable > ( "BofangConditionTemperatureProcess",
+        init < ModelPart&, Parameters>());
+
+    // Uniform Reservoir Temperature Process
+    class_< DamReservoirConstantTemperatureProcess, bases< Process >, boost::noncopyable > ( "DamReservoirConstantTemperatureProcess",
         init < ModelPart&, Parameters>());
         
     // Hydrostatic condition
