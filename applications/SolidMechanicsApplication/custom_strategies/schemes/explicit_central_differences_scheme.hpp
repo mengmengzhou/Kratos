@@ -362,7 +362,7 @@ namespace Kratos
 					if (i->HasDofFor(ROTATION_X) && i->HasDofFor(ROTATION_Y) &&
 						i->HasDofFor(ROTATION_Z) && this->mRotDof3D == true)
 					{
-						this->mRotDof3D = false;
+						this->mRotDof3D = true;
 					}
 					else this->mRotDof3D = false;
 
@@ -435,7 +435,8 @@ namespace Kratos
 
 				for (ModelPart::NodeIterator i = i_begin; i != i_end; ++i)
 				{
-
+					array_1d<double, 3> testRESMOM1 = i->FastGetSolutionStepValue(MOMENT_RESIDUAL);
+					KRATOS_WATCH(testRESMOM1);
 
 					//Current step information "N+1" (before step update).
 
@@ -480,7 +481,12 @@ namespace Kratos
 					}//for DoF
 
 
+					KRATOS_WATCH(current_velocity);
+					KRATOS_WATCH(current_acceleration);
+					KRATOS_WATCH(middle_velocity);
+					KRATOS_WATCH(current_displacement);
 
+					std::cout << "--" << std::endl;
 
 					if (this->mRotDof3D == true)
 					{
@@ -494,7 +500,7 @@ namespace Kratos
 
 						//test rot mass entry
 						const double RotMass = 0.01;
-
+						current_residual_moment.clear();
 						array_1d<double, 3>& current_acceleration_angular = i->FastGetSolutionStepValue(ANGULAR_ACCELERATION);
 
 
@@ -528,6 +534,7 @@ namespace Kratos
 						KRATOS_WATCH(current_acceleration_angular);
 						KRATOS_WATCH(middle_velocity_angular);
 						KRATOS_WATCH(current_rotation);
+						std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
 					}
 
 				}//for Node 
