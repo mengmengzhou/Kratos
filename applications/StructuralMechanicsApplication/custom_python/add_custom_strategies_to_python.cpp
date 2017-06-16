@@ -30,6 +30,7 @@
 #include "custom_strategies/custom_strategies/residual_based_arc_length_strategy.hpp"
 #include "custom_strategies/custom_strategies/eigensolver_strategy.hpp"
 #include "custom_strategies/custom_strategies/formfinding_updated_reference_strategy.hpp"
+#include "custom_strategies/custom_strategies/formfinding_updated_reference_composition_strategy.hpp"
 
 // Schemes
 #include "solving_strategies/schemes/scheme.h"
