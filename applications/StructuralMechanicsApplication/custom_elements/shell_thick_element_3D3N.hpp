@@ -243,6 +243,12 @@ namespace Kratos
 
 			const bool parabolic_composite_transverse_shear_strains = false;
 
+			// DSGc3 ansatz coefficients
+			VectorType a5 = ZeroVector(9);
+			VectorType a6 = ZeroVector(9);
+			VectorType a8 = ZeroVector(9);
+			VectorType a9 = ZeroVector(9);
+
 			// ---------------------------------------
 			// Testing flags
 			// ---------------------------------------
@@ -255,8 +261,10 @@ namespace Kratos
 											testing! */
 
 			const bool ignore_shear_stabilization = false; /*!< flag to 
-											stabilize the transverse shear part of the							material matrix. This should be false unless 
+											stabilize the transverse shear part of the											material matrix. This should be false unless 
 											you are testing! */
+
+			const bool specialDSGc3 = true;
 
 			// ---------------------------------------
 			// calculation-variable data
@@ -327,6 +335,10 @@ namespace Kratos
 		void CalculateSectionResponse(CalculationData& data);
 
 		void InitializeCalculationData(CalculationData& data);
+
+		void CalculateDSGc3Contribution(CalculationData& data, MatrixType& rLeftHandSideMatrix);
+
+		void CalculateDSGc3AnsatzCoefficients(CalculationData& data);
 
 		void AddBodyForces(CalculationData& data, VectorType& rRightHandSideVector);
 

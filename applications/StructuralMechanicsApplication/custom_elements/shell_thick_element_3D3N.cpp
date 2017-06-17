@@ -1492,7 +1492,12 @@ namespace Kratos
 
 		//Shear components
 		//
-		if (data.basicTriCST == false)
+		if (data.specialDSGc3)
+		{
+			// Don't do anything here.
+			// The shear contribution will be added with 3GPs later on.
+		}
+		else if (data.basicTriCST == false)
 		{
 			// Use DSG method
 
@@ -1601,6 +1606,151 @@ namespace Kratos
 				data.LCS, data.globalDisplacements);
 	}
 
+	void ShellThickElement3D3N::CalculateDSGc3Contribution(CalculationData & data, MatrixType & rLeftHandSideMatrix)
+	{
+		CalculateDSGc3AnsatzCoefficients(data);
+
+		const double x1 = data.LCS0.X1();
+		const double y1 = data.LCS0.Y1();
+		const double x2 = data.LCS0.X2();
+		const double y2 = data.LCS0.Y2();
+		const double x3 = data.LCS0.X3();
+		const double y3 = data.LCS0.Y3();
+
+
+		// Material matrix data.D is already multiplied with A!!!
+		//const double dA = data.TotalArea / 3.0;
+		data.D /= 3.0;	// Corresponds to |J| = 2A with w_i = 1/6
+		
+		Matrix SuperB = Matrix(2, 9, 0.0);
+		double xp = 0.0;
+		double yp = 0.0;
+		double loc1, loc2, loc3;
+		for (size_t gauss_point = 0; gauss_point < 3; gauss_point++)
+		{
+			loc1 = data.gpLocations[gauss_point][0];
+			loc2 = data.gpLocations[gauss_point][1];
+			loc3 = data.gpLocations[gauss_point][2];
+
+			xp = loc3*x1 + loc1*x2 + loc2*x3;
+			yp = loc3*y1 + loc1*y2 + loc2*y3;
+
+			//xp = loc1;
+			//yp = loc2;
+
+			SuperB.clear();
+			for (size_t col = 0; col < 9; col++)
+			{
+				SuperB(0, col) = data.a8[col] + yp*(0.5*data.a5[col] - 0.5*data.a6[col]) - yp*(data.a8[col] + data.a9[col]);
+				SuperB(0, col) = data.a9[col] - xp*(0.5*data.a5[col] - 0.5*data.a6[col]) - xp*(data.a8[col] + data.a9[col]);
+			}
+			SuperB.clear();
+
+			// B mat from maple worksheet, with bubble mode
+			SuperB(0, 0) = -1.0 + 2.0*loc2;
+			SuperB(0, 1) = 1.0 - loc2;
+			SuperB(0, 2) = -1.0*loc2;
+			SuperB(0, 3) = 0.5 - loc2;
+			SuperB(0, 4) = 0.5 - 0.5*loc2;
+			SuperB(0, 5) = 0.5*loc2;
+			SuperB(0, 6) = 0.0;
+			SuperB(0, 7) = -0.5*loc2;
+			SuperB(0, 8) = -0.5*loc2;
+
+			SuperB(1, 0) = -1.0 + 2.0*loc1;
+			SuperB(1, 1) = -1.0*loc1;
+			SuperB(1, 2) = 1.0 - loc1;
+			SuperB(1, 3) = 0.0;
+			SuperB(1, 4) = -0.5*loc1;
+			SuperB(1, 5) = -0.5*loc1;
+			SuperB(1, 6) = 0.5 - loc1;
+			SuperB(1, 7) = 0.5*loc1;
+			SuperB(1, 8) = 0.5-0.5*loc1;
+
+			SuperB.clear();
+			// B mat from python with no bubble mode
+			SuperB(0, 0) = -1.0;
+			SuperB(0, 1) = 1.0;
+			SuperB(0, 2) = 0.0;
+			SuperB(0, 3) = -0.5*loc2 + 0.5;
+			SuperB(0, 4) = 0.5;
+			SuperB(0, 5) = 0.5*loc2;
+			SuperB(0, 6) = 0.5*loc2;
+			SuperB(0, 7) = -0.5*loc2;
+			SuperB(0, 8) = 0.0;
+
+			SuperB(1, 0) = -1.0;
+			SuperB(1, 1) = 0.0;
+			SuperB(1, 2) = 1.0;
+			SuperB(1, 3) = 0.5*loc1;
+			SuperB(1, 4) = 0.0;
+			SuperB(1, 5) = -0.5*loc1;
+			SuperB(1, 6) = 0.5 - 0.5*loc1;
+			SuperB(1, 7) = 0.5*loc1;
+			SuperB(1, 8) = 0.5;
+
+			data.B.clear();
+			// Transfer from Bletzinger B matrix to Kratos B matrix
+			// Dofs from [w1, w2, w3, px1, ...] to [w1, px1, py1, w2, ...]
+
+			for (size_t i = 0; i < 3; i++)
+			{
+				data.B(6, 2 + 6 * i) = SuperB(0, i);
+				data.B(6, 3 + 6 * i) = SuperB(0, 3 + i);
+				data.B(6, 4 + 6 * i) = SuperB(0, 6 + i);
+
+				data.B(7, 2 + 6 * i) = SuperB(1, i);
+				data.B(7, 3 + 6 * i) = SuperB(1, 3 + i);
+				data.B(7, 4 + 6 * i) = SuperB(1, 6 + i);
+
+
+			}
+
+			Matrix temp = Matrix(prod(trans(data.B), data.D));
+			rLeftHandSideMatrix += prod(temp, data.B);
+		}		
+	}
+
+	void ShellThickElement3D3N::CalculateDSGc3AnsatzCoefficients(CalculationData & data)
+	{
+		const double x1 = data.LCS0.X1();
+		const double y1 = data.LCS0.Y1();
+		const double x2 = data.LCS0.X2();
+		const double y2 = data.LCS0.Y2();
+		const double x3 = data.LCS0.X3();
+		const double y3 = data.LCS0.Y3();
+
+		data.a5[3] = -(x2 - x3) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
+		data.a5[4] = (x1 - x3) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
+		data.a5[5] = -(x1 - x2) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
+
+		data.a6[6] = (y2 - y3) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
+		data.a6[7] = -(y1 - y3) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
+		data.a6[8] = (y1 - y2) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
+
+		data.a8[0] = -(x2*y2 - x3*y3 - y2 + y3) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
+		data.a8[1] = (x1*y1 - x3*y3 - y1 + y3) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
+		data.a8[2] = -(x1*y1 - x2*y2 - y1 + y2) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
+		data.a8[3] = -(x1*x1 * x2*y2*y2 - x1*x1 * x2*y2*y3 - x1*x1 * x3*y2*y3 + x1*x1 * x3*y3*y3 - x1*x1 * y2*y2 + 2 * x1*x1 * y2*y3 - x1*x1 * y3*y3 - x1*x2*x2 * y1*y2 - x1*x2*x2 * y1*y3 + 2 * x1*x2*x2 * y2*y3 + 2 * x1*x2*x3*y1*y2 + 2 * x1*x2*x3*y1*y3 - 2 * x1*x2*x3*y2*y2 - 2 * x1*x2*x3*y3*y3 + x1*x2*y1*y2 - x1*x2*y1*y3 - 2 * x1*x2*y2*y3 + 2 * x1*x2*y3*y3 - x1*x3*x3 * y1*y2 - x1*x3*x3 * y1*y3 + 2 * x1*x3*x3 * y2*y3 - x1*x3*y1*y2 + x1*x3*y1*y3 + 2 * x1*x3*y2*y2 - 2 * x1*x3*y2*y3 - x2*x2 * x3*y2*y3 + x2*x2 * x3*y3*y3 + x2*x2 * y1*y3 - x2*x2 * y3*y3 + x2*x3*x3 * y2*y2 - x2*x3*x3 * y2*y3 - x2*x3*y1*y2 - x2*x3*y1*y3 + 2 * x2*x3*y2*y3 + x3*x3 * y1*y2 - x3*x3 * y2*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a8[4] = (x1*x1 * x2*y1*y2 - 2 * x1*x1 * x2*y1*y3 + x1*x1 * x2*y2*y3 + x1*x1 * x3*y1*y3 - x1*x1 * x3*y3*y3 - x1*x1 * y2*y3 + x1*x1 * y3*y3 - x1*x2*x2 * y1*y1 + x1*x2*x2 * y1*y3 + 2 * x1*x2*x3*y1*y1 - 2 * x1*x2*x3*y1*y2 - 2 * x1*x2*x3*y2*y3 + 2 * x1*x2*x3*y3*y3 - x1*x2*y1*y2 + 2 * x1*x2*y1*y3 + x1*x2*y2*y3 - 2 * x1*x2*y3*y3 - x1*x3*x3 * y1*y1 + x1*x3*x3 * y1*y3 + x1*x3*y1*y2 - 2 * x1*x3*y1*y3 + x1*x3*y2*y3 + x2*x2 * x3*y1*y3 - x2*x2 * x3*y3*y3 + x2*x2 * y1*y1 - 2 * x2*x2 * y1*y3 + x2*x2 * y3*y3 + x2*x3*x3 * y1*y2 - 2 * x2*x3*x3 * y1*y3 + x2*x3*x3 * y2*y3 - 2 * x2*x3*y1*y1 + x2*x3*y1*y2 + 2 * x2*x3*y1*y3 - x2*x3*y2*y3 + x3*x3 * y1*y1 - x3*x3 * y1*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a8[5] = (x1*x1 * x2*y1*y2 - x1*x1 * x2*y2*y2 - 2 * x1*x1 * x3*y1*y2 + x1*x1 * x3*y1*y3 + x1*x1 * x3*y2*y3 + x1*x1 * y2*y2 - x1*x1 * y2*y3 - x1*x2*x2 * y1*y1 + x1*x2*x2 * y1*y2 + 2 * x1*x2*x3*y1*y1 - 2 * x1*x2*x3*y1*y3 + 2 * x1*x2*x3*y2*y2 - 2 * x1*x2*x3*y2*y3 - 2 * x1*x2*y1*y2 + x1*x2*y1*y3 + x1*x2*y2*y3 - x1*x3*x3 * y1*y1 + x1*x3*x3 * y1*y2 + 2 * x1*x3*y1*y2 - x1*x3*y1*y3 - 2 * x1*x3*y2*y2 + x1*x3*y2*y3 - 2 * x2*x2 * x3*y1*y2 + x2*x2 * x3*y1*y3 + x2*x2 * x3*y2*y3 + x2*x2 * y1*y1 - x2*x2 * y1*y3 + x2*x3*x3 * y1*y2 - x2*x3*x3 * y2*y2 - 2 * x2*x3*y1*y1 + 2 * x2*x3*y1*y2 + x2*x3*y1*y3 - x2*x3*y2*y3 + x3*x3 * y1*y1 - 2 * x3*x3 * y1*y2 + x3*x3 * y2*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a8[6] = -(x1*x2*y1*y2*y2 - 2 * x1*x2*y1*y2*y3 + x1*x2*y1*y3*y3 + x1*x3*y1*y2*y2 - 2 * x1*x3*y1*y2*y3 + x1*x3*y1*y3*y3 - x1*y1*y2*y2 + 2 * x1*y1*y2*y3 - x1*y1*y3*y3 - x2*x2 * y1*y1 * y2 + 2 * x2*x2 * y1*y2*y3 - x2*x2 * y2*y3*y3 + x2*x3*y1*y1 * y2 + x2*x3*y1*y1 * y3 - 2 * x2*x3*y1*y2*y2 - 2 * x2*x3*y1*y3*y3 + x2*x3*y2*y2 * y3 + x2*x3*y2*y3*y3 + x2*y1*y1 * y2 - x2*y1*y1 * y3 - x2*y1*y2*y3 + x2*y1*y3*y3 - x3*x3 * y1*y1 * y3 + 2 * x3*x3 * y1*y2*y3 - x3*x3 * y2*y2 * y3 - x3*y1*y1 * y2 + x3*y1*y1 * y3 + x3*y1*y2*y2 - x3*y1*y2*y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a8[7] = (x1*x1 * y1*y2*y2 - 2 * x1*x1 * y1*y2*y3 + x1*x1 * y1*y3*y3 - x1*x2*y1*y1 * y2 + 2 * x1*x2*y1*y2*y3 - x1*x2*y2*y3*y3 + 2 * x1*x3*y1*y1 * y2 - x1*x3*y1*y1 * y3 - x1*x3*y1*y2*y2 - x1*x3*y1*y3*y3 - x1*x3*y2*y2 * y3 + 2 * x1*x3*y2*y3*y3 - x1*y1*y2*y2 + x1*y1*y2*y3 + x1*y2*y2 * y3 - x1*y2*y3*y3 - x2*x3*y1*y1 * y2 + 2 * x2*x3*y1*y2*y3 - x2*x3*y2*y3*y3 + x2*y1*y1 * y2 - 2 * x2*y1*y2*y3 + x2*y2*y3*y3 + x3*x3 * y1*y1 * y3 - 2 * x3*x3 * y1*y2*y3 + x3*x3 * y2*y2 * y3 - x3*y1*y1 * y2 + x3*y1*y2*y2 + x3*y1*y2*y3 - x3*y2*y2 * y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a8[8] = (x1*x1 * y1*y2*y2 - 2 * x1*x1 * y1*y2*y3 + x1*x1 * y1*y3*y3 - x1*x2*y1*y1 * y2 + 2 * x1*x2*y1*y1 * y3 - x1*x2*y1*y2*y2 - x1*x2*y1*y3*y3 + 2 * x1*x2*y2*y2 * y3 - x1*x2*y2*y3*y3 - x1*x3*y1*y1 * y3 + 2 * x1*x3*y1*y2*y3 - x1*x3*y2*y2 * y3 + x1*y1*y2*y3 - x1*y1*y3*y3 - x1*y2*y2 * y3 + x1*y2*y3*y3 + x2*x2 * y1*y1 * y2 - 2 * x2*x2 * y1*y2*y3 + x2*x2 * y2*y3*y3 - x2*x3*y1*y1 * y3 + 2 * x2*x3*y1*y2*y3 - x2*x3*y2*y2 * y3 - x2*y1*y1 * y3 + x2*y1*y2*y3 + x2*y1*y3*y3 - x2*y2*y3*y3 + x3*y1*y1 * y3 - 2 * x3*y1*y2*y3 + x3*y2*y2 * y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+
+
+		data.a9[0] = (x2*y2 - x2 - x3*y3 + x3) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
+		data.a9[1] = -(x1*y1 - x1 - x3*y3 + x3) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
+		data.a9[2] = (x1*y1 - x1 - x2*y2 + x2) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
+		data.a9[3] = (x1*x1 * x2*y2*y2 - x1*x1 * x2*y2*y3 - x1*x1 * x2*y2 + x1*x1 * x2*y3 - x1*x1 * x3*y2*y3 + x1*x1 * x3*y2 + x1*x1 * x3*y3*y3 - x1*x1 * x3*y3 - x1*x2*x2 * y1*y2 - x1*x2*x2 * y1*y3 + x1*x2*x2 * y1 + 2 * x1*x2*x2 * y2*y3 - x1*x2*x2 * y3 + 2 * x1*x2*x3*y1*y2 + 2 * x1*x2*x3*y1*y3 - 2 * x1*x2*x3*y1 - 2 * x1*x2*x3*y2*y2 + x1*x2*x3*y2 - 2 * x1*x2*x3*y3*y3 + x1*x2*x3*y3 - x1*x3*x3 * y1*y2 - x1*x3*x3 * y1*y3 + x1*x3*x3 * y1 + 2 * x1*x3*x3 * y2*y3 - x1*x3*x3 * y2 - x2*x2 * x3*y2*y3 + x2*x2 * x3*y3*y3 + x2*x3*x3 * y2*y2 - x2*x3*x3 * y2*y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a9[4] = -(x1*x1 * x2*y1*y2 - 2 * x1*x1 * x2*y1*y3 + x1*x1 * x2*y2*y3 - x1*x1 * x2*y2 + x1*x1 * x2*y3 + x1*x1 * x3*y1*y3 - x1*x1 * x3*y3*y3 - x1*x2*x2 * y1*y1 + x1*x2*x2 * y1*y3 + x1*x2*x2 * y1 - x1*x2*x2 * y3 + 2 * x1*x2*x3*y1*y1 - 2 * x1*x2*x3*y1*y2 - x1*x2*x3*y1 - 2 * x1*x2*x3*y2*y3 + 2 * x1*x2*x3*y2 + 2 * x1*x2*x3*y3*y3 - x1*x2*x3*y3 - x1*x3*x3 * y1*y1 + x1*x3*x3 * y1*y3 + x2*x2 * x3*y1*y3 - x2*x2 * x3*y1 - x2*x2 * x3*y3*y3 + x2*x2 * x3*y3 + x2*x3*x3 * y1*y2 - 2 * x2*x3*x3 * y1*y3 + x2*x3*x3 * y1 + x2*x3*x3 * y2*y3 - x2*x3*x3 * y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a9[5] = -(x1*x1 * x2*y1*y2 - x1*x1 * x2*y2*y2 - 2 * x1*x1 * x3*y1*y2 + x1*x1 * x3*y1*y3 + x1*x1 * x3*y2*y3 + x1*x1 * x3*y2 - x1*x1 * x3*y3 - x1*x2*x2 * y1*y1 + x1*x2*x2 * y1*y2 + 2 * x1*x2*x3*y1*y1 - 2 * x1*x2*x3*y1*y3 - x1*x2*x3*y1 + 2 * x1*x2*x3*y2*y2 - 2 * x1*x2*x3*y2*y3 - x1*x2*x3*y2 + 2 * x1*x2*x3*y3 - x1*x3*x3 * y1*y1 + x1*x3*x3 * y1*y2 + x1*x3*x3 * y1 - x1*x3*x3 * y2 - 2 * x2*x2 * x3*y1*y2 + x2*x2 * x3*y1*y3 + x2*x2 * x3*y1 + x2*x2 * x3*y2*y3 - x2*x2 * x3*y3 + x2*x3*x3 * y1*y2 - x2*x3*x3 * y1 - x2*x3*x3 * y2*y2 + x2*x3*x3 * y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a9[6] = (x1*x2*y1*y2*y2 - 2 * x1*x2*y1*y2*y3 - x1*x2*y1*y2 + x1*x2*y1*y3*y3 + x1*x2*y1*y3 + x1*x2*y2*y3 - x1*x2*y3*y3 + x1*x3*y1*y2*y2 - 2 * x1*x3*y1*y2*y3 + x1*x3*y1*y2 + x1*x3*y1*y3*y3 - x1*x3*y1*y3 - x1*x3*y2*y2 + x1*x3*y2*y3 - x2*x2 * y1*y1 * y2 + x2*x2 * y1*y1 + 2 * x2*x2 * y1*y2*y3 - 2 * x2*x2 * y1*y3 - x2*x2 * y2*y3*y3 + x2*x2 * y3*y3 + x2*x3*y1*y1 * y2 + x2*x3*y1*y1 * y3 - 2 * x2*x3*y1*y1 - 2 * x2*x3*y1*y2*y2 + 2 * x2*x3*y1*y2 - 2 * x2*x3*y1*y3*y3 + 2 * x2*x3*y1*y3 + x2*x3*y2*y2 * y3 + x2*x3*y2*y3*y3 - 2 * x2*x3*y2*y3 - x3*x3 * y1*y1 * y3 + x3*x3 * y1*y1 + 2 * x3*x3 * y1*y2*y3 - 2 * x3*x3 * y1*y2 - x3*x3 * y2*y2 * y3 + x3*x3 * y2*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a9[7] = -(x1*x1 * y1*y2*y2 - 2 * x1*x1 * y1*y2*y3 + x1*x1 * y1*y3*y3 - x1*x1 * y2*y2 + 2 * x1*x1 * y2*y3 - x1*x1 * y3*y3 - x1*x2*y1*y1 * y2 + 2 * x1*x2*y1*y2*y3 + x1*x2*y1*y2 - x1*x2*y1*y3 - x1*x2*y2*y3*y3 - x1*x2*y2*y3 + x1*x2*y3*y3 + 2 * x1*x3*y1*y1 * y2 - x1*x3*y1*y1 * y3 - x1*x3*y1*y2*y2 - 2 * x1*x3*y1*y2 - x1*x3*y1*y3*y3 + 2 * x1*x3*y1*y3 - x1*x3*y2*y2 * y3 + 2 * x1*x3*y2*y2 + 2 * x1*x3*y2*y3*y3 - 2 * x1*x3*y2*y3 - x2*x3*y1*y1 * y2 + x2*x3*y1*y1 + 2 * x2*x3*y1*y2*y3 - x2*x3*y1*y2 - x2*x3*y1*y3 - x2*x3*y2*y3*y3 + x2*x3*y2*y3 + x3*x3 * y1*y1 * y3 - x3*x3 * y1*y1 - 2 * x3*x3 * y1*y2*y3 + 2 * x3*x3 * y1*y2 + x3*x3 * y2*y2 * y3 - x3*x3 * y2*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+		data.a9[8] = -(x1*x1 * y1*y2*y2 - 2 * x1*x1 * y1*y2*y3 + x1*x1 * y1*y3*y3 - x1*x1 * y2*y2 + 2 * x1*x1 * y2*y3 - x1*x1 * y3*y3 - x1*x2*y1*y1 * y2 + 2 * x1*x2*y1*y1 * y3 - x1*x2*y1*y2*y2 + 2 * x1*x2*y1*y2 - x1*x2*y1*y3*y3 - 2 * x1*x2*y1*y3 + 2 * x1*x2*y2*y2 * y3 - x1*x2*y2*y3*y3 - 2 * x1*x2*y2*y3 + 2 * x1*x2*y3*y3 - x1*x3*y1*y1 * y3 + 2 * x1*x3*y1*y2*y3 - x1*x3*y1*y2 + x1*x3*y1*y3 - x1*x3*y2*y2 * y3 + x1*x3*y2*y2 - x1*x3*y2*y3 + x2*x2 * y1*y1 * y2 - x2*x2 * y1*y1 - 2 * x2*x2 * y1*y2*y3 + 2 * x2*x2 * y1*y3 + x2*x2 * y2*y3*y3 - x2*x2 * y3*y3 - x2*x3*y1*y1 * y3 + x2*x3*y1*y1 + 2 * x2*x3*y1*y2*y3 - x2*x3*y1*y2 - x2*x3*y1*y3 - x2*x3*y2*y2 * y3 + x2*x3*y2*y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
+
+	}
+
 	void ShellThickElement3D3N::AddBodyForces(CalculationData& data, VectorType& rRightHandSideVector)
 	{
 		// TODO p2 update this when results is sorted out
@@ -1698,6 +1848,10 @@ namespace Kratos
 		data.D *= data.TotalArea;
 		BTD = prod(trans(data.B), data.D);
 		noalias(rLeftHandSideMatrix) += prod(BTD, data.B);
+		if (data.specialDSGc3)
+		{
+			CalculateDSGc3Contribution(data, rLeftHandSideMatrix);
+		}
 
 		//add in z_rot artificial stiffness
 		double z_rot_multiplier = 0.001;
