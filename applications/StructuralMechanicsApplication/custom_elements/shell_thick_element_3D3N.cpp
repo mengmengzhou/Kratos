@@ -1608,7 +1608,7 @@ namespace Kratos
 
 	void ShellThickElement3D3N::CalculateDSGc3Contribution(CalculationData & data, MatrixType & rLeftHandSideMatrix)
 	{
-		CalculateDSGc3AnsatzCoefficients(data);
+		//CalculateDSGc3AnsatzCoefficients(data);
 
 		const double x1 = data.LCS0.X1();
 		const double y1 = data.LCS0.Y1();
@@ -1619,7 +1619,7 @@ namespace Kratos
 
 
 		// Material matrix data.D is already multiplied with A!!!
-		//const double dA = data.TotalArea / 3.0;
+		//double dA = data.TotalArea / 3.0;
 		data.D /= 3.0;	// Corresponds to |J| = 2A with w_i = 1/6
 		
 		Matrix SuperB = Matrix(2, 9, 0.0);
@@ -1632,12 +1632,14 @@ namespace Kratos
 			loc2 = data.gpLocations[gauss_point][1];
 			loc3 = data.gpLocations[gauss_point][2];
 
+			//std::cout << "\nGPs = " << data.gpLocations[gauss_point] << std::endl;
+
 			xp = loc3*x1 + loc1*x2 + loc2*x3;
 			yp = loc3*y1 + loc1*y2 + loc2*y3;
 
 			//xp = loc1;
 			//yp = loc2;
-
+			/*
 			SuperB.clear();
 			for (size_t col = 0; col < 9; col++)
 			{
@@ -1645,8 +1647,12 @@ namespace Kratos
 				SuperB(0, col) = data.a9[col] - xp*(0.5*data.a5[col] - 0.5*data.a6[col]) - xp*(data.a8[col] + data.a9[col]);
 			}
 			SuperB.clear();
+			*/
 
-			// B mat from maple worksheet, with bubble mode
+			
+
+
+			// B mat with bubble mode
 			SuperB(0, 0) = -1.0 + 2.0*loc2;
 			SuperB(0, 1) = 1.0 - loc2;
 			SuperB(0, 2) = -1.0*loc2;
@@ -1667,8 +1673,36 @@ namespace Kratos
 			SuperB(1, 7) = 0.5*loc1;
 			SuperB(1, 8) = 0.5-0.5*loc1;
 
+			
+			// Inverse jacobian entries
+			double dAlpha_dx = (y3 - y1) / (2.0*data.TotalArea);
+			double dBeta_dx = (y1 - y2) / (2.0*data.TotalArea);
+			double dAlpha_dy = (x1 - x3) / (2.0*data.TotalArea);
+			double dBeta_dy = (x2 - x1) / (2.0*data.TotalArea);
+			
 			SuperB.clear();
 			// B mat from python with no bubble mode
+			SuperB(0, 0) = -1.0;
+			SuperB(0, 1) = 1.0;
+			SuperB(0, 2) = 0.0;
+			SuperB(0, 3) = -0.5*loc2 + 0.5 * dAlpha_dx;
+			SuperB(0, 4) = 0.5 * dAlpha_dx;
+			SuperB(0, 5) = 0.5*loc2* dAlpha_dx;
+			SuperB(0, 6) = 0.5*loc2 * dAlpha_dy;
+			SuperB(0, 7) = -0.5*loc2* dAlpha_dy;
+			SuperB(0, 8) = 0.0* dAlpha_dy;
+
+			SuperB(1, 0) = -1.0;
+			SuperB(1, 1) = 0.0;
+			SuperB(1, 2) = 1.0;
+			SuperB(1, 3) = 0.5*loc1 * dBeta_dx;
+			SuperB(1, 4) = 0.0* dBeta_dx;
+			SuperB(1, 5) = -0.5*loc1* dBeta_dx;
+			SuperB(1, 6) = 0.5 - 0.5*loc1*dBeta_dy;
+			SuperB(1, 7) = 0.5*loc1*dBeta_dy;
+			SuperB(1, 8) = 0.5*dBeta_dy;
+
+			/*
 			SuperB(0, 0) = -1.0;
 			SuperB(0, 1) = 1.0;
 			SuperB(0, 2) = 0.0;
@@ -1688,7 +1722,36 @@ namespace Kratos
 			SuperB(1, 6) = 0.5 - 0.5*loc1;
 			SuperB(1, 7) = 0.5*loc1;
 			SuperB(1, 8) = 0.5;
+			*/
+			//SuperB *= (data.TotalArea);
 
+			// Last test - inverse jacobians baked in
+			double a = x2 - x1;
+			double b = y2 - y1;
+			double c = y3 - y1;
+			double d = x3 - x1;
+			Matrix BSuper = Matrix(2, 9, 0.0);
+			BSuper(0, 0) = -2.0*b*loc1 + 1.0*b + 2.0*c*loc2 - 1.0*c;
+			BSuper(0, 1) = 1.0*b*loc1 - 1.0*c*loc2 + 1.0*c;
+			BSuper(0, 2) = 1.0*b*loc1 - 1.0*b - 1.0*c*loc2;
+			BSuper(0, 3) = 1.0*b*loc1 - 1.0*c*loc2 + 0.5*c;
+			BSuper(0, 4) = 0.5*b*loc1 - 0.5*c*loc2 + 0.5*c;
+			BSuper(0, 5) = -0.5*b*loc1 + 0.5*c*loc2;
+			BSuper(0, 6) = -0.5*b;
+			BSuper(0, 7) = 0.5*b*loc1 - 0.5*c*loc2;
+			BSuper(0, 8) = 0.5*b*loc1 - 0.5*b - 0.5*c*loc2;
+			BSuper(1, 0) = 2.0*a*loc1 - 1.0*a - 2.0*d*loc2 + 1.0*d;
+			BSuper(1, 1) = -1.0*a*loc1 + 1.0*d*loc2 - 1.0*d;
+			BSuper(1, 2) = -1.0*a*loc1 + 1.0*a + 1.0*d*loc2;
+			BSuper(1, 3) = -0.5*d;
+			BSuper(1, 4) = -0.5*a*loc1 + 0.5*d*loc2 - 0.5*d;
+			BSuper(1, 5) = -0.5*a*loc1 + 0.5*d*loc2;
+			BSuper(1, 6) = -1.0*a*loc1 + 0.5*a + 1.0*d*loc2;
+			BSuper(1, 7) = 0.5*a*loc1 - 0.5*d*loc2;
+			BSuper(1, 8) = -0.5*a*loc1 + 0.5*a + 0.5*d*loc2;
+			BSuper /= (2.0*data.TotalArea);
+			SuperB.clear();
+			SuperB = Matrix(BSuper);
 			data.B.clear();
 			// Transfer from Bletzinger B matrix to Kratos B matrix
 			// Dofs from [w1, w2, w3, px1, ...] to [w1, px1, py1, w2, ...]
