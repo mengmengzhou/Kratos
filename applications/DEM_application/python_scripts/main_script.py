@@ -368,8 +368,8 @@ class Solution(object):
         pass
 
     def AfterSolveOperations(self):
-        if (hasattr(DEM_parameters, "AnalyticParticle")):
-            if (DEM_parameters.AnalyticParticle):
+        if (hasattr(DEM_parameters, "PostNormalImpactVelocity")):
+            if (DEM_parameters.PostNormalImpactVelocity):
                 self.particle_watcher.MakeMeasurements(self.analytic_model_part)
                 time_to_print = self.time - self.time_old_print
                 if (DEM_parameters.OutputTimeStep - time_to_print < 1e-2 * self.dt):

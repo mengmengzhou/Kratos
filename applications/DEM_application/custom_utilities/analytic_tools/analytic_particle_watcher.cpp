@@ -68,7 +68,7 @@ void AnalyticParticleWatcher::SetNodalMaxImpactVelocities(ModelPart& analytic_mo
         particle_database.GetMaxVelocities(db_normal_impact_velocity, db_tangential_impact_velocity);
 
         // get current nodal values
-        double& current_max_normal_velocity = particle.GetGeometry()[0].FastGetSolutionStepValue(NORMAL_IMPACT_VELOCITY);//set initial value somewhere
+        double& current_max_normal_velocity = particle.GetGeometry()[0].FastGetSolutionStepValue(NORMAL_IMPACT_VELOCITY);
         double& current_max_tangential_velocity = particle.GetGeometry()[0].FastGetSolutionStepValue(TANGENTIAL_IMPACT_VELOCITY);
 
         // choose max between current and database
