@@ -310,7 +310,7 @@ public:
 			FEAST_Settings["perform_stochastic_estimate"].SetBool(false);
 		}
 		
-		bool printM = false;
+		bool printM = true;
 		if (printM)
 		{
 			std::cout << "\nPrinting Kg in feast_solver.h\n" << std::endl;
