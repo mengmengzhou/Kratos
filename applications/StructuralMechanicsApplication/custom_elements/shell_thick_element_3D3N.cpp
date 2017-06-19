@@ -1617,62 +1617,35 @@ namespace Kratos
 		const double x3 = data.LCS0.X3();
 		const double y3 = data.LCS0.Y3();
 
+		const double x12 = data.LCS0.X1() - data.LCS0.X2();
+		const double x23 = data.LCS0.X2() - data.LCS0.X3();
+		const double x31 = data.LCS0.X3() - data.LCS0.X1();
+		const double x21 = -x12;
+		const double x32 = -x23;
+		const double x13 = -x31;
+
+		const double y12 = data.LCS0.Y1() - data.LCS0.Y2();
+		const double y23 = data.LCS0.Y2() - data.LCS0.Y3();
+		const double y31 = data.LCS0.Y3() - data.LCS0.Y1();
+		const double y21 = -y12;
+
+		const double y13 = -y31;
+
+		
+
 
 		// Material matrix data.D is already multiplied with A!!!
 		//double dA = data.TotalArea / 3.0;
 		data.D /= 3.0;	// Corresponds to |J| = 2A with w_i = 1/6
 		
 		Matrix SuperB = Matrix(2, 9, 0.0);
-		double xp = 0.0;
-		double yp = 0.0;
+
 		double loc1, loc2, loc3;
 		for (size_t gauss_point = 0; gauss_point < 3; gauss_point++)
 		{
 			loc1 = data.gpLocations[gauss_point][0];
 			loc2 = data.gpLocations[gauss_point][1];
 			loc3 = data.gpLocations[gauss_point][2];
-
-			//std::cout << "\nGPs = " << data.gpLocations[gauss_point] << std::endl;
-
-			xp = loc3*x1 + loc1*x2 + loc2*x3;
-			yp = loc3*y1 + loc1*y2 + loc2*y3;
-
-			//xp = loc1;
-			//yp = loc2;
-			/*
-			SuperB.clear();
-			for (size_t col = 0; col < 9; col++)
-			{
-				SuperB(0, col) = data.a8[col] + yp*(0.5*data.a5[col] - 0.5*data.a6[col]) - yp*(data.a8[col] + data.a9[col]);
-				SuperB(0, col) = data.a9[col] - xp*(0.5*data.a5[col] - 0.5*data.a6[col]) - xp*(data.a8[col] + data.a9[col]);
-			}
-			SuperB.clear();
-			*/
-
-			
-
-
-			// B mat with bubble mode
-			SuperB(0, 0) = -1.0 + 2.0*loc2;
-			SuperB(0, 1) = 1.0 - loc2;
-			SuperB(0, 2) = -1.0*loc2;
-			SuperB(0, 3) = 0.5 - loc2;
-			SuperB(0, 4) = 0.5 - 0.5*loc2;
-			SuperB(0, 5) = 0.5*loc2;
-			SuperB(0, 6) = 0.0;
-			SuperB(0, 7) = -0.5*loc2;
-			SuperB(0, 8) = -0.5*loc2;
-
-			SuperB(1, 0) = -1.0 + 2.0*loc1;
-			SuperB(1, 1) = -1.0*loc1;
-			SuperB(1, 2) = 1.0 - loc1;
-			SuperB(1, 3) = 0.0;
-			SuperB(1, 4) = -0.5*loc1;
-			SuperB(1, 5) = -0.5*loc1;
-			SuperB(1, 6) = 0.5 - loc1;
-			SuperB(1, 7) = 0.5*loc1;
-			SuperB(1, 8) = 0.5-0.5*loc1;
-
 			
 			// Inverse jacobian entries
 			double dAlpha_dx = (y3 - y1) / (2.0*data.TotalArea);
@@ -1680,50 +1653,7 @@ namespace Kratos
 			double dAlpha_dy = (x1 - x3) / (2.0*data.TotalArea);
 			double dBeta_dy = (x2 - x1) / (2.0*data.TotalArea);
 			
-			SuperB.clear();
-			// B mat from python with no bubble mode
-			SuperB(0, 0) = -1.0;
-			SuperB(0, 1) = 1.0;
-			SuperB(0, 2) = 0.0;
-			SuperB(0, 3) = -0.5*loc2 + 0.5 * dAlpha_dx;
-			SuperB(0, 4) = 0.5 * dAlpha_dx;
-			SuperB(0, 5) = 0.5*loc2* dAlpha_dx;
-			SuperB(0, 6) = 0.5*loc2 * dAlpha_dy;
-			SuperB(0, 7) = -0.5*loc2* dAlpha_dy;
-			SuperB(0, 8) = 0.0* dAlpha_dy;
 
-			SuperB(1, 0) = -1.0;
-			SuperB(1, 1) = 0.0;
-			SuperB(1, 2) = 1.0;
-			SuperB(1, 3) = 0.5*loc1 * dBeta_dx;
-			SuperB(1, 4) = 0.0* dBeta_dx;
-			SuperB(1, 5) = -0.5*loc1* dBeta_dx;
-			SuperB(1, 6) = 0.5 - 0.5*loc1*dBeta_dy;
-			SuperB(1, 7) = 0.5*loc1*dBeta_dy;
-			SuperB(1, 8) = 0.5*dBeta_dy;
-
-			/*
-			SuperB(0, 0) = -1.0;
-			SuperB(0, 1) = 1.0;
-			SuperB(0, 2) = 0.0;
-			SuperB(0, 3) = -0.5*loc2 + 0.5;
-			SuperB(0, 4) = 0.5;
-			SuperB(0, 5) = 0.5*loc2;
-			SuperB(0, 6) = 0.5*loc2;
-			SuperB(0, 7) = -0.5*loc2;
-			SuperB(0, 8) = 0.0;
-
-			SuperB(1, 0) = -1.0;
-			SuperB(1, 1) = 0.0;
-			SuperB(1, 2) = 1.0;
-			SuperB(1, 3) = 0.5*loc1;
-			SuperB(1, 4) = 0.0;
-			SuperB(1, 5) = -0.5*loc1;
-			SuperB(1, 6) = 0.5 - 0.5*loc1;
-			SuperB(1, 7) = 0.5*loc1;
-			SuperB(1, 8) = 0.5;
-			*/
-			//SuperB *= (data.TotalArea);
 
 			// Last test - inverse jacobians baked in
 			double a = x2 - x1;
@@ -1768,6 +1698,38 @@ namespace Kratos
 
 
 			}
+
+			bool use_dsg = true;
+			if (use_dsg)
+			{
+				data.B.clear();
+				double A = data.TotalArea;
+				//node 1
+				data.B(6, 2) = b - c;
+				data.B(6, 4) = A;
+
+				data.B(7, 2) = d - a;
+				data.B(7, 3) = -1.0 * A;
+
+				//node 2
+				data.B(6, 8) = c;
+				data.B(6, 9) = -1.0 * b*c / 2.0;
+				data.B(6, 10) = a*c / 2.0;
+
+				data.B(7, 8) = -1.0 * d;
+				data.B(7, 9) = b*d / 2.0;
+				data.B(7, 10) = -1.0 * a*d / 2.0;
+
+				//node 3
+				data.B(6, 14) = -1.0 * b;
+				data.B(6, 15) = b*c / 2.0;
+				data.B(6, 16) = b*d / 2.0;
+
+				data.B(7, 14) = a;
+				data.B(7, 15) = -1.0 * a*c / 2.0;
+				data.B(7, 16) = a*d / 2.0;
+			}
+
 
 			Matrix temp = Matrix(prod(trans(data.B), data.D));
 			rLeftHandSideMatrix += prod(temp, data.B);

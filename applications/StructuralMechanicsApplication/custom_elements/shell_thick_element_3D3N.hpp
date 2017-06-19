@@ -264,7 +264,7 @@ namespace Kratos
 											stabilize the transverse shear part of the											material matrix. This should be false unless 
 											you are testing! */
 
-			const bool specialDSGc3 = true;
+			const bool specialDSGc3 = false;
 
 			// ---------------------------------------
 			// calculation-variable data

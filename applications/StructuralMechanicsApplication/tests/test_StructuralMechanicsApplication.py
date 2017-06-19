@@ -24,6 +24,8 @@ from SmallTests import ShellT3ThinDrillingRollUpTests as TShellT3ThinDrillingRol
 from SmallTests import EigenQ4Thick2x2PlateTests as TEigenQ4Thick2x2PlateTests
 from SmallTests import EigenTL3D8NCubeTests as TEigenTL3D8NCubeTests
 from SmallTests import ShellThinQ4MembraneTest as TShellThinQ4MembraneTest
+# ShellThickElement3D3N tests
+from SmallTests import ShellThickElement3D3NLinearStaticTests as TShellT3ThickLinearStaticTests
 
 ## NIGTHLY TESTS
 # Shell test
@@ -50,52 +52,54 @@ def AssambleTestSuites():
 
     # Create a test suit with the selected tests (Small tests):
     smallSuite = suites['small']
-    # Basic moving mesh test
-    smallSuite.addTest(TSimpleMeshMovingTest('test_execution'))
-    # Dynamic basic tests
-    smallSuite.addTest(TDynamicBossakTests('test_execution'))
-    smallSuite.addTest(TDynamicNewmarkTests('test_execution'))
-    # Patch test Small Displacements
-    smallSuite.addTest(TSDTwoDShearQuaPatchTest('test_execution'))
-    smallSuite.addTest(TSDTwoDShearTriPatchTest('test_execution'))
-    smallSuite.addTest(TSDTwoDTensionQuaPatchTest('test_execution'))
-    smallSuite.addTest(TSDTwoDTensionTriPatchTest('test_execution'))
-    smallSuite.addTest(TSDThreeDShearHexaPatchTest('test_execution'))
-    smallSuite.addTest(TSDThreeDShearTetraPatchTest('test_execution'))
-    smallSuite.addTest(TSDThreeDTensionHexaPatchTest('test_execution'))
-    smallSuite.addTest(TSDThreeDTensionTetraPatchTest('test_execution'))
-    # Patch test Total Lagrangian
-    smallSuite.addTest(TTLTwoDShearQuaPatchTest('test_execution'))
-    smallSuite.addTest(TTLTwoDShearTriPatchTest('test_execution'))
-    smallSuite.addTest(TTLTwoDTensionQuaPatchTest('test_execution'))
-    smallSuite.addTest(TTLTwoDTensionTriPatchTest('test_execution'))
-    smallSuite.addTest(TTLThreeDShearHexaPatchTest('test_execution'))
-    smallSuite.addTest(TTLThreeDShearTetraPatchTest('test_execution'))
-    smallSuite.addTest(TTLThreeDTensionHexaPatchTest('test_execution'))
-    smallSuite.addTest(TTLThreeDTensionTetraPatchTest('test_execution'))
-    # Patch test Updated Lagrangian
-    smallSuite.addTest(TULTwoDShearQuaPatchTest('test_execution'))
-    smallSuite.addTest(TULTwoDShearTriPatchTest('test_execution'))
-    smallSuite.addTest(TULTwoDTensionQuaPatchTest('test_execution'))
-    smallSuite.addTest(TULTwoDTensionTriPatchTest('test_execution'))
-    smallSuite.addTest(TULThreeDShearHexaPatchTest('test_execution'))
-    smallSuite.addTest(TULThreeDShearTetraPatchTest('test_execution'))
-    smallSuite.addTest(TULThreeDTensionHexaPatchTest('test_execution'))
-    smallSuite.addTest(TULThreeDTensionTetraPatchTest('test_execution'))
-    # SPRISM tests
-    smallSuite.addTest(TSprismMembranePatchTests('test_execution'))
-    smallSuite.addTest(TSprismBendingPatchTests('test_execution'))
-    smallSuite.addTest(TShellQ4ThinTensionTests('test_execution'))
-    smallSuite.addTest(TShellQ4ThinBendingRollUpTests('test_execution'))
-    smallSuite.addTest(TShellQ4ThinDrillingRollUpTests('test_execution'))
-    smallSuite.addTest(TShellQ4ThickBendingRollUpTests('test_execution'))
-    smallSuite.addTest(TShellQ4ThickDrillingRollUpTests('test_execution'))
-    smallSuite.addTest(TShellT3ThinBendingRollUpTests('test_execution'))
-    smallSuite.addTest(TShellT3ThinDrillingRollUpTests('test_execution'))
-    # Eigenvalues tests
-    smallSuite.addTest(TEigenQ4Thick2x2PlateTests('test_execution'))
-    smallSuite.addTest(TEigenTL3D8NCubeTests('test_execution'))
-    smallSuite.addTest(TShellThinQ4MembraneTest('test_execution'))    
+#    # Basic moving mesh test
+#    smallSuite.addTest(TSimpleMeshMovingTest('test_execution'))
+#    # Dynamic basic tests
+#    smallSuite.addTest(TDynamicBossakTests('test_execution'))
+#    smallSuite.addTest(TDynamicNewmarkTests('test_execution'))
+#    # Patch test Small Displacements
+#    smallSuite.addTest(TSDTwoDShearQuaPatchTest('test_execution'))
+#    smallSuite.addTest(TSDTwoDShearTriPatchTest('test_execution'))
+#    smallSuite.addTest(TSDTwoDTensionQuaPatchTest('test_execution'))
+#    smallSuite.addTest(TSDTwoDTensionTriPatchTest('test_execution'))
+#    smallSuite.addTest(TSDThreeDShearHexaPatchTest('test_execution'))
+#    smallSuite.addTest(TSDThreeDShearTetraPatchTest('test_execution'))
+#    smallSuite.addTest(TSDThreeDTensionHexaPatchTest('test_execution'))
+#    smallSuite.addTest(TSDThreeDTensionTetraPatchTest('test_execution'))
+#    # Patch test Total Lagrangian
+#    smallSuite.addTest(TTLTwoDShearQuaPatchTest('test_execution'))
+#    smallSuite.addTest(TTLTwoDShearTriPatchTest('test_execution'))
+#    smallSuite.addTest(TTLTwoDTensionQuaPatchTest('test_execution'))
+#    smallSuite.addTest(TTLTwoDTensionTriPatchTest('test_execution'))
+#    smallSuite.addTest(TTLThreeDShearHexaPatchTest('test_execution'))
+#    smallSuite.addTest(TTLThreeDShearTetraPatchTest('test_execution'))
+#    smallSuite.addTest(TTLThreeDTensionHexaPatchTest('test_execution'))
+#    smallSuite.addTest(TTLThreeDTensionTetraPatchTest('test_execution'))
+#    # Patch test Updated Lagrangian
+#    smallSuite.addTest(TULTwoDShearQuaPatchTest('test_execution'))
+#    smallSuite.addTest(TULTwoDShearTriPatchTest('test_execution'))
+#    smallSuite.addTest(TULTwoDTensionQuaPatchTest('test_execution'))
+#    smallSuite.addTest(TULTwoDTensionTriPatchTest('test_execution'))
+#    smallSuite.addTest(TULThreeDShearHexaPatchTest('test_execution'))
+#    smallSuite.addTest(TULThreeDShearTetraPatchTest('test_execution'))
+#    smallSuite.addTest(TULThreeDTensionHexaPatchTest('test_execution'))
+#    smallSuite.addTest(TULThreeDTensionTetraPatchTest('test_execution'))
+#    # SPRISM tests
+#    smallSuite.addTest(TSprismMembranePatchTests('test_execution'))
+#    smallSuite.addTest(TSprismBendingPatchTests('test_execution'))
+#    smallSuite.addTest(TShellQ4ThinTensionTests('test_execution'))
+#    smallSuite.addTest(TShellQ4ThinBendingRollUpTests('test_execution'))
+#    smallSuite.addTest(TShellQ4ThinDrillingRollUpTests('test_execution'))
+#    smallSuite.addTest(TShellQ4ThickBendingRollUpTests('test_execution'))
+#    smallSuite.addTest(TShellQ4ThickDrillingRollUpTests('test_execution'))
+#    smallSuite.addTest(TShellT3ThinBendingRollUpTests('test_execution'))
+#    smallSuite.addTest(TShellT3ThinDrillingRollUpTests('test_execution'))
+#    # Eigenvalues tests
+#    smallSuite.addTest(TEigenQ4Thick2x2PlateTests('test_execution'))
+#    smallSuite.addTest(TEigenTL3D8NCubeTests('test_execution'))
+#    smallSuite.addTest(TShellThinQ4MembraneTest('test_execution'))    
+    # ShellThickElement3D3N tests
+    smallSuite.addTest(TShellT3ThickLinearStaticTests('test_execution'))
 
     # Create a test suit with the selected tests plus all small tests
     nightSuite = suites['nightly']
@@ -116,44 +120,45 @@ def AssambleTestSuites():
     allSuite = suites['all']
     allSuite.addTests(
         KratosUnittest.TestLoader().loadTestsFromTestCases([
-            TSimpleMeshMovingTest,
-            TDynamicBossakTests,
-            TDynamicNewmarkTests,
-            TSDTwoDShearQuaPatchTest,
-            TSDTwoDShearTriPatchTest,
-            TSDTwoDTensionQuaPatchTest,
-            TSDTwoDTensionTriPatchTest,
-            TSDThreeDShearHexaPatchTest,
-            TSDThreeDShearTetraPatchTest,
-            TSDThreeDTensionHexaPatchTest,
-            TSDThreeDTensionTetraPatchTest,
-            TTLTwoDShearQuaPatchTest,
-            TTLTwoDShearTriPatchTest,
-            TTLTwoDTensionQuaPatchTest,
-            TTLTwoDTensionTriPatchTest,
-            TTLThreeDShearHexaPatchTest,
-            TTLThreeDShearTetraPatchTest,
-            TTLThreeDTensionHexaPatchTest,
-            TTLThreeDTensionTetraPatchTest,
-            TULTwoDShearQuaPatchTest,
-            TULTwoDShearTriPatchTest,
-            TULTwoDTensionQuaPatchTest,
-            TULTwoDTensionTriPatchTest,
-            TULThreeDShearHexaPatchTest,
-            TULThreeDShearTetraPatchTest,
-            TULThreeDTensionHexaPatchTest,
-            TULThreeDTensionTetraPatchTest,
-            TSprismMembranePatchTests,
-            TSprismBendingPatchTests,
-            TShellQ4ThickBendingRollUpTests,
-            TShellQ4ThinTensionTests,
-            TShellQ4ThinBendingRollUpTests,
-            TShellQ4ThinDrillingRollUpTests,
-            TShellQ4ThickDrillingRollUpTests,
-            TShellT3ThinBendingRollUpTests,
-            TShellT3ThinDrillingRollUpTests,
-            TShellT3IsotropicScordelisTests,
-            TShellThinQ4MembraneTest
+#            TSimpleMeshMovingTest,
+#            TDynamicBossakTests,
+#            TDynamicNewmarkTests,
+#            TSDTwoDShearQuaPatchTest,
+#            TSDTwoDShearTriPatchTest,
+#            TSDTwoDTensionQuaPatchTest,
+#            TSDTwoDTensionTriPatchTest,
+#            TSDThreeDShearHexaPatchTest,
+#            TSDThreeDShearTetraPatchTest,
+#            TSDThreeDTensionHexaPatchTest,
+#            TSDThreeDTensionTetraPatchTest,
+#            TTLTwoDShearQuaPatchTest,
+#            TTLTwoDShearTriPatchTest,
+#            TTLTwoDTensionQuaPatchTest,
+#            TTLTwoDTensionTriPatchTest,
+#            TTLThreeDShearHexaPatchTest,
+#            TTLThreeDShearTetraPatchTest,
+#            TTLThreeDTensionHexaPatchTest,
+#            TTLThreeDTensionTetraPatchTest,
+#            TULTwoDShearQuaPatchTest,
+#            TULTwoDShearTriPatchTest,
+#            TULTwoDTensionQuaPatchTest,
+#            TULTwoDTensionTriPatchTest,
+#            TULThreeDShearHexaPatchTest,
+#            TULThreeDShearTetraPatchTest,
+#            TULThreeDTensionHexaPatchTest,
+#            TULThreeDTensionTetraPatchTest,
+#            TSprismMembranePatchTests,
+#            TSprismBendingPatchTests,
+#            TShellQ4ThickBendingRollUpTests,
+#            TShellQ4ThinTensionTests,
+#            TShellQ4ThinBendingRollUpTests,
+#            TShellQ4ThinDrillingRollUpTests,
+#            TShellQ4ThickDrillingRollUpTests,
+#            TShellT3ThinBendingRollUpTests,
+#            TShellT3ThinDrillingRollUpTests,
+#            TShellT3IsotropicScordelisTests,
+#            TShellThinQ4MembraneTest,
+            TShellT3ThickLinearStaticTests
             ######TSprismPanTests
         ])
     )
