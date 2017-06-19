@@ -172,3 +172,9 @@ class ShellThinQ4MembraneTest(StructuralMechanichsTestFactory):
 
 class ShellThickElement3D3NLinearStaticTests(StructuralMechanichsTestFactory):
     file_name = "ShellThickElement3D3N_tests/linear_static_ShellThickElement3D3N_test"
+
+class ShellThinElement3D4NLinearStaticTests(StructuralMechanichsTestFactory):
+    file_name = "ShellThinElement3D4N_tests/linear_static_ShellThinElement3D4N_test"
+
+class ShellThinElement3D4NNonLinearStaticTests(StructuralMechanichsTestFactory):
+    file_name = "ShellThinElement3D4N_tests/nonlinear_static_ShellThinElement3D4N_test"

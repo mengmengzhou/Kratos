@@ -26,6 +26,9 @@ from SmallTests import EigenTL3D8NCubeTests as TEigenTL3D8NCubeTests
 from SmallTests import ShellThinQ4MembraneTest as TShellThinQ4MembraneTest
 # ShellThickElement3D3N tests
 from SmallTests import ShellThickElement3D3NLinearStaticTests as TShellT3ThickLinearStaticTests
+# ShellThinElement3D4N tests
+from SmallTests import ShellThinElement3D4NLinearStaticTests as TShellQ4ThinLinearStaticTests
+from SmallTests import ShellThinElement3D4NNonLinearStaticTests as TShellQ4ThinNonLinearStaticTests
 
 ## NIGTHLY TESTS
 # Shell test
@@ -100,6 +103,10 @@ def AssambleTestSuites():
 #    smallSuite.addTest(TShellThinQ4MembraneTest('test_execution'))    
     # ShellThickElement3D3N tests
     smallSuite.addTest(TShellT3ThickLinearStaticTests('test_execution'))
+    # ShellThinElement3D4N tests
+    smallSuite.addTest(TShellQ4ThinLinearStaticTests('test_execution'))
+    smallSuite.addTest(TShellQ4ThinNonLinearStaticTests('test_execution'))
+    
 
     # Create a test suit with the selected tests plus all small tests
     nightSuite = suites['nightly']
@@ -158,7 +165,9 @@ def AssambleTestSuites():
 #            TShellT3ThinDrillingRollUpTests,
 #            TShellT3IsotropicScordelisTests,
 #            TShellThinQ4MembraneTest,
-            TShellT3ThickLinearStaticTests
+            TShellT3ThickLinearStaticTests,
+            TShellQ4ThinLinearStaticTests,
+            TShellQ4ThinNonLinearStaticTests
             ######TSprismPanTests
         ])
     )
