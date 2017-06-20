@@ -84,16 +84,14 @@ class Solution:
 
         # Moving to the recently created folder
         os.chdir(self.main_path)
-        [post_path, data_and_results, graphs_path, MPI_results] = self.alg.procedures.CreateDirectories(str(self.main_path), str(self.pp.CFD_DEM.problem_name))
-        swim_proc.CopyInputFilesIntoFolder(self.main_path, post_path)
-
+        self.alg.CreateDirectories(run_code)
         self.alg.AddExtraVariables()
-        [post_path, data_and_results, graphs_path, MPI_results] = self.alg.procedures.CreateDirectories(str(self.main_path), str(self.pp.CFD_DEM.problem_name))
+        swim_proc.CopyInputFilesIntoFolder(self.main_path, self.alg.post_path)
 
         os.chdir(self.main_path)
 
         # Initialize GiD-IO
-        self.demio = DEM_procedures.DEMIo(self.pp.CFD_DEM, post_path)
+        self.demio = DEM_procedures.DEMIo(self.pp.CFD_DEM, self.alg.post_path)
         self.demio.AddGlobalVariables()
         self.demio.AddSpheresVariables()
         self.demio.AddFEMBoundaryVariables()
@@ -108,7 +106,7 @@ class Solution:
                              self.pp.CFD_DEM.ContactMeshOption)
 
         self.demio.SetOutputName(self.pp.CFD_DEM.problem_name)
-        os.chdir(post_path)
+        os.chdir(self.alg.post_path)
         self.demio.InitializeMesh(self.alg.all_model_parts)
 
         #Setting up the BoundingBox
@@ -282,9 +280,9 @@ class Solution:
 
         first_print = True; index_5 = 1; index_10 = 1; index_50 = 1; control = 0.0
 
-        if (self.pp.CFD_DEM.ModelDataInfo == "ON"):
-            os.chdir(data_and_results)
-            if (self.pp.CFD_DEM.ContactMeshOption == "ON"):
+        if self.pp.CFD_DEM.ModelDataInfo == "ON":
+            os.chdir(self.alg.data_and_results)
+            if self.pp.CFD_DEM.ContactMeshOption == "ON":
                 (coordination_number) = self.alg.procedures.ModelData(self.alg.spheres_model_part, self.alg.solver) # Calculates the mean number of neighbours the mean radius, etc..
                 self.alg.KRATOSprint ("Coordination Number: " + str(coordination_number) + "\n")
                 os.chdir(self.main_path)
@@ -304,7 +302,7 @@ class Solution:
 
         # choosing the directory in which we want to work (print to)
 
-        os.chdir(post_path)
+        os.chdir(self.alg.post_path)
 
         def yield_DEM_time(current_time, current_time_plus_increment, delta_time):
             current_time += delta_time
@@ -524,12 +522,12 @@ class Solution:
                     self.alg.projection_module.ProjectFromParticles()
 
             #### PRINTING GRAPHS ####
-            os.chdir(graphs_path)
+            os.chdir(self.alg.graphs_path)
             # measuring mean velocities in a certain control volume (the 'velocity trap')
             if self.pp.CFD_DEM.VelocityTrapOption:
                 post_utils_DEM.ComputeMeanVelocitiesinTrap("Average_Velocity.txt", time)
 
-            os.chdir(post_path)
+            os.chdir(self.alg.post_path)
 
             # coupling checks (debugging)
             if debug_info_counter.Tick():

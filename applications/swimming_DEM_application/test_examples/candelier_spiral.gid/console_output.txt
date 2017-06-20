@@ -1,0 +1,681 @@
+Importing    KratosExternalSolversApplication
+Importing    KratosMeshingApplication
+Importing    KratosDEMApplication
+Importing    KratosFluidDynamicsApplication
+Importing    KratosSolidMechanicsApplication
+Importing    KratosIncompressibleFluidApplication
+Importing    KratosSwimmingDEMApplication
+Running under OpenMP........
+Running under OpenMP........
+
+Global Damping parameter not found! No damping will be applied...
+
+variables for the vms monolithic solver added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+
+Initializing Problem...
+self.Parameters.IntegrationScheme Hybrid_Bashforth
+self.Parameters.do_search_neighbours False
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+dofs for the vms monolithic solver added correctly
+
+Initializing Problem...
+Construction monolithic solver finished
+WARNING: smoother_type not prescribed for AMGCL solver, setting it to ILU0
+WARNING: krylov_type not prescribed for AMGCL solver, setting it to GMRES
+Initialization monolithic solver finished
+[]
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.16
+ELAPSED TIME =  0.9542019367218018
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.32
+ELAPSED TIME =  2.6480586528778076
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.48
+ELAPSED TIME =  4.32627272605896
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+Importing    KratosExternalSolversApplication
+Importing    KratosMeshingApplication
+Importing    KratosDEMApplication
+Importing    KratosFluidDynamicsApplication
+Importing    KratosSolidMechanicsApplication
+Importing    KratosIncompressibleFluidApplication
+Importing    KratosSwimmingDEMApplication
+Running under OpenMP........
+Running under OpenMP........
+
+Global Damping parameter not found! No damping will be applied...
+
+variables for the vms monolithic solver added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+
+Initializing Problem...
+self.Parameters.IntegrationScheme Hybrid_Bashforth
+self.Parameters.do_search_neighbours False
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+dofs for the vms monolithic solver added correctly
+
+Initializing Problem...
+Construction monolithic solver finished
+WARNING: smoother_type not prescribed for AMGCL solver, setting it to ILU0
+WARNING: krylov_type not prescribed for AMGCL solver, setting it to GMRES
+Initialization monolithic solver finished
+[]
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.16
+ELAPSED TIME =  0.41853904724121094
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.32
+ELAPSED TIME =  0.47998642921447754
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.48
+ELAPSED TIME =  0.5421223640441895
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.64
+ELAPSED TIME =  0.6092047691345215
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.8
+ELAPSED TIME =  0.6745352745056152
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.9600000000000001
+ELAPSED TIME =  0.7394039630889893
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  1.12
+ELAPSED TIME =  0.8089861869812012
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+
+*************************************************************
+CALCULATIONS FINISHED. THE SIMULATION ENDED SUCCESSFULLY.
+Elapsed time: 0.87934 s 
+per fluid time step: 0.78513 s 
+per DEM time step: 0.00785 s
+*************************************************************
+
+
+Global Damping parameter not found! No damping will be applied...
+
+variables for the vms monolithic solver added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+
+Initializing Problem...
+self.Parameters.IntegrationScheme Hybrid_Bashforth
+self.Parameters.do_search_neighbours False
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+dofs for the vms monolithic solver added correctly
+
+Initializing Problem...
+Construction monolithic solver finished
+WARNING: smoother_type not prescribed for AMGCL solver, setting it to ILU0
+WARNING: krylov_type not prescribed for AMGCL solver, setting it to GMRES
+Initialization monolithic solver finished
+[]
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.16
+ELAPSED TIME =  0.039472341537475586
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.32
+ELAPSED TIME =  0.09994983673095703
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.48
+ELAPSED TIME =  0.16247320175170898
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.64
+ELAPSED TIME =  0.23008060455322266
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.8
+ELAPSED TIME =  0.2958817481994629
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.9600000000000001
+ELAPSED TIME =  0.36090636253356934
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  1.12
+ELAPSED TIME =  0.42974042892456055
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+
+*************************************************************
+CALCULATIONS FINISHED. THE SIMULATION ENDED SUCCESSFULLY.
+Elapsed time: 0.49662 s 
+per fluid time step: 0.44341 s 
+per DEM time step: 0.00443 s
+*************************************************************
+
+
+-----------------------
+Candelier tests results
+-----------------------
+No history force, Daitche: : OK
+relative radial error:       6.22265639930366e-05
+All forces, Daitche: : OK
+relative radial error: 5.385122387614502e-05
+-----------------------
+
+Importing    KratosExternalSolversApplication
+Importing    KratosMeshingApplication
+Importing    KratosDEMApplication
+Importing    KratosFluidDynamicsApplication
+Importing    KratosSolidMechanicsApplication
+Importing    KratosIncompressibleFluidApplication
+Importing    KratosSwimmingDEMApplication
+Running under OpenMP........
+Running under OpenMP........
+
+Global Damping parameter not found! No damping will be applied...
+
+variables for the vms monolithic solver added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+
+Initializing Problem...
+self.Parameters.IntegrationScheme Hybrid_Bashforth
+self.Parameters.do_search_neighbours False
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+dofs for the vms monolithic solver added correctly
+
+Initializing Problem...
+Construction monolithic solver finished
+WARNING: smoother_type not prescribed for AMGCL solver, setting it to ILU0
+WARNING: krylov_type not prescribed for AMGCL solver, setting it to GMRES
+Initialization monolithic solver finished
+[]
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.16
+ELAPSED TIME =  1.6925349235534668
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.32
+ELAPSED TIME =  3.4355099201202393
+
+Solving DEM... ( 1 elements )
+Importing    KratosExternalSolversApplication
+Importing    KratosMeshingApplication
+Importing    KratosDEMApplication
+Importing    KratosFluidDynamicsApplication
+Importing    KratosSolidMechanicsApplication
+Importing    KratosIncompressibleFluidApplication
+Importing    KratosSwimmingDEMApplication
+Running under OpenMP........
+Running under OpenMP........
+
+Global Damping parameter not found! No damping will be applied...
+
+variables for the vms monolithic solver added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+
+Initializing Problem...
+self.Parameters.IntegrationScheme Hybrid_Bashforth
+self.Parameters.do_search_neighbours False
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+dofs for the vms monolithic solver added correctly
+
+Initializing Problem...
+Construction monolithic solver finished
+WARNING: smoother_type not prescribed for AMGCL solver, setting it to ILU0
+WARNING: krylov_type not prescribed for AMGCL solver, setting it to GMRES
+Initialization monolithic solver finished
+[]
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.16
+ELAPSED TIME =  0.420107364654541
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.32
+ELAPSED TIME =  0.48133158683776855
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.48
+ELAPSED TIME =  0.5435667037963867
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.64
+ELAPSED TIME =  0.6119399070739746
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.8
+ELAPSED TIME =  0.6763448715209961
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.9600000000000001
+ELAPSED TIME =  0.7413568496704102
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  1.12
+ELAPSED TIME =  0.8126804828643799
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+
+*************************************************************
+CALCULATIONS FINISHED. THE SIMULATION ENDED SUCCESSFULLY.
+Elapsed time: 0.92626 s 
+per fluid time step: 0.82702 s 
+per DEM time step: 0.00827 s
+*************************************************************
+
+
+Global Damping parameter not found! No damping will be applied...
+
+variables for the vms monolithic solver added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+
+Initializing Problem...
+self.Parameters.IntegrationScheme Hybrid_Bashforth
+self.Parameters.do_search_neighbours False
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+dofs for the vms monolithic solver added correctly
+
+Initializing Problem...
+Construction monolithic solver finished
+WARNING: smoother_type not prescribed for AMGCL solver, setting it to ILU0
+WARNING: krylov_type not prescribed for AMGCL solver, setting it to GMRES
+Initialization monolithic solver finished
+[]
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.16
+ELAPSED TIME =  0.06327700614929199
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.32
+ELAPSED TIME =  0.13474321365356445
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.48
+ELAPSED TIME =  0.19963479042053223
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.64
+ELAPSED TIME =  0.2673611640930176
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.8
+ELAPSED TIME =  0.331646203994751
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.9600000000000001
+ELAPSED TIME =  0.39752721786499023
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  1.12
+ELAPSED TIME =  0.4677853584289551
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+
+*************************************************************
+CALCULATIONS FINISHED. THE SIMULATION ENDED SUCCESSFULLY.
+Elapsed time: 0.53540 s 
+per fluid time step: 0.47804 s 
+per DEM time step: 0.00478 s
+*************************************************************
+
+
+-----------------------
+Candelier tests results
+-----------------------
+No history force, Daitche: : OK
+relative radial error:       6.22265639930366e-05
+All forces, Daitche: : OK
+relative radial error: 5.385122387614502e-05
+-----------------------
+
+Importing    KratosExternalSolversApplication
+Importing    KratosMeshingApplication
+Importing    KratosDEMApplication
+Importing    KratosFluidDynamicsApplication
+Importing    KratosSolidMechanicsApplication
+Importing    KratosIncompressibleFluidApplication
+Importing    KratosSwimmingDEMApplication
+Running under OpenMP........
+Running under OpenMP........
+
+Global Damping parameter not found! No damping will be applied...
+
+Importing    KratosExternalSolversApplication
+Importing    KratosMeshingApplication
+Importing    KratosDEMApplication
+Importing    KratosFluidDynamicsApplication
+Importing    KratosSolidMechanicsApplication
+Importing    KratosIncompressibleFluidApplication
+Importing    KratosSwimmingDEMApplication
+Running under OpenMP........
+Running under OpenMP........
+
+Global Damping parameter not found! No damping will be applied...
+
+variables for the vms monolithic solver added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+
+Initializing Problem...
+self.Parameters.IntegrationScheme Hybrid_Bashforth
+self.Parameters.do_search_neighbours False
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+dofs for the vms monolithic solver added correctly
+
+Initializing Problem...
+Construction monolithic solver finished
+WARNING: smoother_type not prescribed for AMGCL solver, setting it to ILU0
+WARNING: krylov_type not prescribed for AMGCL solver, setting it to GMRES
+Initialization monolithic solver finished
+[]
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.16
+ELAPSED TIME =  1.9513483047485352
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.32
+ELAPSED TIME =  2.042052984237671
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.48
+ELAPSED TIME =  2.1126465797424316
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.64
+ELAPSED TIME =  2.1923859119415283
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.8
+ELAPSED TIME =  2.269444227218628
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.9600000000000001
+ELAPSED TIME =  2.340052366256714
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  1.12
+ELAPSED TIME =  2.417682647705078
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+
+*************************************************************
+CALCULATIONS FINISHED. THE SIMULATION ENDED SUCCESSFULLY.
+Elapsed time: 2.49174 s 
+per fluid time step: 2.22477 s 
+per DEM time step: 0.02225 s
+*************************************************************
+
+
+Global Damping parameter not found! No damping will be applied...
+
+variables for the vms monolithic solver added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+DOFs for the DEM solution added correctly
+
+Initializing Problem...
+self.Parameters.IntegrationScheme Hybrid_Bashforth
+self.Parameters.do_search_neighbours False
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+dofs for the vms monolithic solver added correctly
+
+Initializing Problem...
+Construction monolithic solver finished
+WARNING: smoother_type not prescribed for AMGCL solver, setting it to ILU0
+WARNING: krylov_type not prescribed for AMGCL solver, setting it to GMRES
+Initialization monolithic solver finished
+[]
+Initialization Complete
+
+Main loop starting...
+Total number of TIME STEPs expected in the calculation: 100
+
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.16
+ELAPSED TIME =  0.06664776802062988
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.32
+ELAPSED TIME =  0.13766717910766602
+
+Solving DEM... ( 1 elements )
+
+ TIME =  0.48
+ELAPSED TIME =  0.209000825881958
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  0.64
+ELAPSED TIME =  0.29273438453674316
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.8
+ELAPSED TIME =  0.3630385398864746
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+ TIME =  0.9600000000000001
+ELAPSED TIME =  0.4299924373626709
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+*******************  PRINTING RESULTS FOR GID  ***************************
+
+ TIME =  1.12
+ELAPSED TIME =  0.5027875900268555
+
+Solving Fluid... ( 1122 elements )
+Solving DEM... ( 1 elements )
+
+
+*************************************************************
+CALCULATIONS FINISHED. THE SIMULATION ENDED SUCCESSFULLY.
+Elapsed time: 0.57336 s 
+per fluid time step: 0.51193 s 
+per DEM time step: 0.00512 s
+*************************************************************
+
+
+-----------------------
+Candelier tests results
+-----------------------
+No history force, Daitche: : OK
+relative radial error:       6.22265639930366e-05
+All forces, Daitche: : OK
+relative radial error: 5.385122387614502e-05
+-----------------------
+

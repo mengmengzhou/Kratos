@@ -84,6 +84,7 @@ class Algorithm(BaseAlgorithm):
         self.pp.CFD_DEM.print_FLUID_FRACTION_GRADIENT_PROJECTED_option = 0
         self.pp.CFD_DEM.print_VORTICITY_option = 1
         self.pp.CFD_DEM.print_MATERIAL_ACCELERATION_option = True
+        self.pp.CFD_DEM.print_DISPERSE_FRACTION_option = False
         self.pp.CFD_DEM.calculate_diffusivity_option = False
         self.pp.CFD_DEM.print_CONDUCTIVITY_option = False
         self.pp.CFD_DEM.filter_velocity_option = False
@@ -114,14 +115,15 @@ class Algorithm(BaseAlgorithm):
     def SetDoSolveDEMVariable(self):
         self.pp.do_solve_dem = not self.pp.CFD_DEM.flow_in_porous_DEM_medium_option
 
-    def SetCustomBetaParamters(self, dictionary):
+    def SetCustomBetaParamters(self, dictionary): # this method is ugly. The way to go is to have all input parameters as a dictionary
         if len(dictionary) == 0:
             return
         else: # assign the specified values to the specified variables
             var_names = [k for k in dictionary.keys()]
             var_values = [k for k in dictionary.values()]
+
             for name, value in zip(var_names, var_values):
-                globals()['self.pp.CFD_DEM.' + name] = value
+                setattr(self.pp.CFD_DEM, name, value)
 
     def SetUpResultsDatabase(self):
         pass
@@ -148,7 +150,7 @@ class Algorithm(BaseAlgorithm):
     def FluidInitialize(self):
         self.fluid_solver.Initialize()
 
-    def AddExtraVariables(self):
+    def AddExtraVariables(self, run_code = ''):
         spheres_model_part = self.all_model_parts.Get('SpheresPart')
         fluid_model_part = self.all_model_parts.Get('FluidPart')
 
@@ -174,13 +176,15 @@ class Algorithm(BaseAlgorithm):
         # }
         # self.ReadFluidModelPart()
         # Creating necessary directories
-        [post_path, data_and_results, graphs_path, MPI_results] = self.procedures.CreateDirectories(str(self.main_path), str(self.pp.CFD_DEM.problem_name))
 
         vars_man.AddNodalVariables(spheres_model_part, self.pp.dem_vars)
         vars_man.AddNodalVariables(self.rigid_face_model_part, self.pp.rigid_faces_vars)
         vars_man.AddNodalVariables(self.DEM_inlet_model_part, self.pp.inlet_vars)
         # adding extra process info variables
         vars_man.AddingExtraProcessInfoVariables(self.pp, fluid_model_part, spheres_model_part)
+
+    def CreateDirectories(self, run_code = ''):
+        [self.post_path, self.data_and_results, self.graphs_path, self.MPI_results] = self.procedures.CreateDirectories(str(self.main_path), str(self.pp.CFD_DEM.problem_name), run_code)
 
     def SetFluidBufferSizeAndAddAdditionalDofs(self):
         spheres_model_part = self.all_model_parts.Get('SpheresPart')
@@ -356,4 +360,7 @@ class Algorithm(BaseAlgorithm):
         self.projection_module.ApplyForwardCouplingOfVelocityOnly()
 
     def PerformFinalOperations(self, time = None):
+        pass
+
+    def GetReturnValue(self):
         pass
