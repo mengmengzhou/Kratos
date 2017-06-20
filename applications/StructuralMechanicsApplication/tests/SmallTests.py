@@ -172,9 +172,24 @@ class ShellThinQ4MembraneTest(StructuralMechanichsTestFactory):
 
 class ShellThickElement3D3NLinearStaticTests(StructuralMechanichsTestFactory):
     file_name = "ShellThickElement3D3N_tests/linear_static_ShellThickElement3D3N_test"
+    
+class ShellThickElement3D3NNonLinearStaticTests(StructuralMechanichsTestFactory):
+    file_name = "ShellThickElement3D3N_tests/nonlinear_static_ShellThickElement3D3N_test"
+    
+class ShellThickElement3D3NLinearDynamicTests(StructuralMechanichsTestFactory):
+    file_name = "ShellThickElement3D3N_tests/linear_dynamic_ShellThickElement3D3N_test"
+    
+class ShellThickElement3D3NNonLinearDynamicTests(StructuralMechanichsTestFactory):
+    file_name = "ShellThickElement3D3N_tests/nonlinear_dynamic_ShellThickElement3D3N_test"
 
 class ShellThinElement3D4NLinearStaticTests(StructuralMechanichsTestFactory):
     file_name = "ShellThinElement3D4N_tests/linear_static_ShellThinElement3D4N_test"
 
 class ShellThinElement3D4NNonLinearStaticTests(StructuralMechanichsTestFactory):
     file_name = "ShellThinElement3D4N_tests/nonlinear_static_ShellThinElement3D4N_test"
+    
+class ShellThinElement3D4NLinearDynamicTests(StructuralMechanichsTestFactory):
+    file_name = "ShellThinElement3D4N_tests/linear_dynamic_ShellThinElement3D4N_test"
+    
+class ShellThinElement3D4NNonLinearDynamicTests(StructuralMechanichsTestFactory):
+    file_name = "ShellThinElement3D4N_tests/nonlinear_dynamic_ShellThinElement3D4N_test"

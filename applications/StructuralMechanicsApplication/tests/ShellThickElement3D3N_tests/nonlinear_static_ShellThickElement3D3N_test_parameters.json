@@ -1,6 +1,6 @@
 {
     "problem_data"             : {
-        "problem_name"    : "nonlinear_static_ShellThinElement3D4N_test",
+        "problem_name"    : "nonlinear_static_ShellThickElement3D3N_test",
         "model_part_name" : "Structure",
         "domain_size"     : 3,
         "time_step"       : 0.125,
@@ -15,7 +15,7 @@
         "analysis_type"                      : "Non-Linear",
         "model_import_settings"              : {
             "input_type"     : "mdpa",
-            "input_filename" : "ShellThinElement3D4N_tests/nonlinear_static_ShellThinElement3D4N_test"
+            "input_filename" : "ShellThickElement3D3N_tests/nonlinear_static_ShellThickElement3D3N_test"
         },
         "line_search"                        : true,
         "convergence_criterion"              : "Residual_criterion",
@@ -148,7 +148,7 @@
         "process_name"          : "FromJsonCheckResultProcess",
         "Parameters"            : {
             "check_variables"  : ["DISPLACEMENT_Y"],
-            "input_file_name"  : "ShellThinElement3D4N_tests/nonlinear_static_ShellThinElement3D4N_test_results.json",
+            "input_file_name"  : "ShellThickElement3D3N_tests/nonlinear_static_ShellThickElement3D3N_test_results.json",
             "model_part_name"  : "PointLoad3D_point_load",
             "time_frequency"   : 0.01
         }
@@ -162,7 +162,7 @@
         "process_name"          : "JsonOutputProcess",
         "Parameters"            : {
             "output_variables" : ["DISPLACEMENT_Y"],
-            "output_file_name" : "ShellThinElement3D4N_tests/nonlinear_static_ShellThinElement3D4N_test_results.json",
+            "output_file_name" : "ShellThickElement3D3N_tests/nonlinear_static_ShellThickElement3D3N_test_results.json",
             "model_part_name"  : "PointLoad3D_point_load",
             "time_frequency"   : 0.01
         }
