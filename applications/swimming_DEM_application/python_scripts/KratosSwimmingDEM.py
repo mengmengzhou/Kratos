@@ -59,16 +59,26 @@ else:
     import DEM_material_test_script
     print("Running under OpenMP........")
 
-class Solution:
-    import swimming_DEM_algorithm
-    def __init__(self, algorithm = swimming_DEM_algorithm, varying_parameters = dict()):
+class Solution(object):
+    def __enter__ (self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        pass
+
+    def __init__(self, alg = None, varying_parameters = dict()):
         import DEM_explicit_solver_var as DEM_parameters
         import ProjectParameters as pp
         self.main_path = os.getcwd()
         self.pp = pp
         self.pp.main_path = os.getcwd()
         self.pp.CFD_DEM = DEM_parameters
-        self.alg = algorithm.Algorithm(self.pp)
+        self.alg = alg
+
+        if self.alg == None: # pick the default one
+            import swimming_DEM_algorithm
+            self.alg = algorithm.Algorithm(self.pp)
+
         self.alg.SetCustomBetaParamters(varying_parameters)
 
     def Run(self):

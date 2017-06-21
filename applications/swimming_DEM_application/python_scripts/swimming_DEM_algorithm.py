@@ -13,6 +13,12 @@ import DEM_explicit_solver_var as DEM_parameters
 BaseAlgorithm = DEM_algorithm.Solution
 
 class Algorithm(BaseAlgorithm):
+    def __enter__ (self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        pass
+
     def __init__(self, pp):
         self.StartTimer()
         self.pp = pp
