@@ -14,6 +14,8 @@
 #include "includes/kratos_parameters.h"
 #include "processes/process.h"
 
+#include "custom_utilities/pendulum_convergence_utility.hpp"
+
 #include "dam_application_variables.h"
 
 namespace Kratos
@@ -31,7 +33,7 @@ public:
     /// Constructor
     DamNodalYoungModulusProcess(ModelPart& model_part,
                                 Parameters rParameters
-                                ) : Process(Flags()) , mr_model_part(model_part)
+                                ) : Process(Flags()) , mr_model_part(model_part) , mrParameters(rParameters)
     {
         KRATOS_TRY
 			 
@@ -117,41 +119,58 @@ public:
 
     void ExecuteInitializeSolutionStep()
     {
-        
         KRATOS_TRY;
-        
-        Variable<double> var = KratosComponents< Variable<double> >::Get(mvariable_name);
-        const int nnodes = mr_model_part.GetMesh(mmesh_id).Nodes().size();
-                
-        if(nnodes != 0)
+
+        double tolerance = 0.01;
+        double reference = -0.0416059;
+        Vector Vectorconvergence;
+        Vectorconvergence.resize(2);
+        int factor = 1;
+
+        Vectorconvergence = PendulumConvergenceUtility(mr_model_part).CheckConvergence(tolerance,reference);
+        this-> ComputingFactor(factor,Vectorconvergence[1]);
+
+        KRATOS_WATCH(Vectorconvergence)
+        KRATOS_WATCH(factor)
+
+        if(Vectorconvergence[0] < 0.5 )
         {
-            ModelPart::NodesContainerType::iterator it_begin = mr_model_part.GetMesh(mmesh_id).NodesBegin();
-        
-            #pragma omp parallel for
-            for(int i = 0; i<nnodes; i++)
+            Variable<double> var = KratosComponents< Variable<double> >::Get(mvariable_name);
+            const int nnodes = mr_model_part.GetMesh(mmesh_id).Nodes().size();
+
+            if(nnodes != 0)
             {
-                ModelPart::NodesContainerType::iterator it = it_begin + i;
-                
-                if(mis_fixed)
+                ModelPart::NodesContainerType::iterator it_begin = mr_model_part.GetMesh(mmesh_id).NodesBegin();
+                #pragma omp parallel for
+                for(int i = 0; i<nnodes; i++)
                 {
-                    it->Fix(var);
-                }
+                    ModelPart::NodesContainerType::iterator it = it_begin + i;
+            
+                    if(mis_fixed)
+                    {
+                        it->Fix(var);
+                    }
+            
+                    double Young = myoung_1/factor + (myoung_2*it->Coordinate(1)) + (myoung_3*it->Coordinate(2)) + (myoung_4*it->Coordinate(3));
+            
+                    if(Young <= 0.0)
+                    {                   
+                        it->FastGetSolutionStepValue(var) = 0.0;
                 
-                double Young = myoung_1 + (myoung_2*it->Coordinate(1)) + (myoung_3*it->Coordinate(2)) + (myoung_4*it->Coordinate(3));
-                
-                if(Young <= 0.0)
-                {                   
-                    it->FastGetSolutionStepValue(var) = 0.0;
-                    
+                    }
+                    else
+                        it->FastGetSolutionStepValue(var) = Young;
                 }
-                else
-                    it->FastGetSolutionStepValue(var) = Young;
             }
+
         }
+
         
-        KRATOS_CATCH("");
-    }
-    
+            KRATOS_CATCH("");
+    }  
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
     /// Turn back information as a string.
     std::string Info() const
     {
@@ -174,8 +193,8 @@ public:
 protected:
 
     /// Member Variables
-
     ModelPart& mr_model_part;
+    Parameters& mrParameters;
     std::size_t mmesh_id;
     std::string mvariable_name;
     bool mis_fixed;
@@ -183,6 +202,28 @@ protected:
     double myoung_2;
     double myoung_3;
     double myoung_4;
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    void ComputingFactor(int& rfactor, double value )
+    {
+        KRATOS_TRY;
+
+        if(value > 0.038)
+            rfactor = 1;
+        
+        if(value < 0.038)
+            rfactor = 2;
+        
+        if(value < 0.035)
+            rfactor = 4;
+        
+        if(value < 0.025)
+            rfactor = 8;
+        
+            KRATOS_CATCH("");
+    }  
+
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

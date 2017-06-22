@@ -17,8 +17,7 @@ class ImposeNodalYoungModulusProcess(Process):
         model_part = Model[settings["model_part_name"].GetString()]
         settings.AddEmptyValue("is_fixed").SetBool(True)
                                 
-        self.process = DamNodalYoungModulusProcess(model_part, settings) 
-                 
+        self.process = DamNodalYoungModulusProcess(model_part, settings)           
                  
     def ExecuteInitialize(self):
 
