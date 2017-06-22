@@ -2,7 +2,7 @@
 
 import KratosMultiphysics.KratosUnittest as KratosUnittest
 from KratosMultiphysics import *
-#from KratosMultiphysics.SolidMechanicsApplication import *
+from KratosMultiphysics.FluidDynamicsApplication import *
 
 def GetFilePath(fileName):
     return os.path.dirname(os.path.realpath(__file__)) + "/" + fileName
@@ -12,9 +12,9 @@ class TestMaterialsInput(KratosUnittest.TestCase):
 
     def test_input(self):
         try:
-            import KratosMultiphysics.SolidMechanicsApplication
+            import KratosMultiphysics.StructuralMechanicsApplication
         except:
-            self.skipTest("KratosMultiphysics.SolidMechanicsApplication is not available")
+            self.skipTest("KratosMultiphysics.StructuralMechanicsApplication is not available")
         
         
         model_part = ModelPart("Main")

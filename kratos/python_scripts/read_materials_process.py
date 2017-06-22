@@ -33,7 +33,24 @@ class ReadMaterialsProcess(Process):
         
         print("finished reading materials")
         
-    def _GetItemFromModule(self,my_string):
+    def _GetVariable(self,my_string):
+        splitted = my_string.split(".")
+        if(len(splitted) == 0):
+            raise Exception("something wrong. Trying to split the string "+my_string)
+        if(len(splitted) == 1):
+            return KratosGlobals.GetVariable(my_string)
+        else:
+            module_name = ""
+            for i in range(len(splitted)-1):
+                module_name += splitted[i] 
+                if i != len(splitted)-2:
+                    module_name += "."
+
+            #TODO: check if the application is already registered
+            module = importlib.import_module(module_name)
+            return KratosGlobals.GetVariable(splitted[-1]) #getattr(module,splitted[-1]) 
+            
+    def _GetConstitutiveLaw(self,my_string):
         splitted = my_string.split(".")
         if(len(splitted) == 0):
             raise Exception("something wrong. Trying to split the string "+my_string)
@@ -47,9 +64,7 @@ class ReadMaterialsProcess(Process):
                     module_name += "."
 
             module = importlib.import_module(module_name)
-            return getattr(module,splitted[-1]) 
-            
-            
+            return getattr(module,splitted[-1])             
             
     def _AssignPropertyBlock(self, data):
         model_part = self.Model[data["model_part_name"]]
@@ -73,23 +88,25 @@ class ReadMaterialsProcess(Process):
 
         #read constitutive law and assign it to prop
         if "Variables" in mat["constitutive_law"].keys(): #pass the list of variables when constructing the constitutive law
-           constitutive_law = self._GetItemFromModule( mat["constitutive_law"]["name"])(mat["constitutive_law"]["Variables"])
+           print(mat["constitutive_law"].keys())
+           err
+           constitutive_law = self._GetVariable( mat["constitutive_law"]["name"])(mat["constitutive_law"]["Variables"])
         else:
-           constitutive_law = self._GetItemFromModule( mat["constitutive_law"]["name"])()
+           constitutive_law = self._GetConstitutiveLaw( mat["constitutive_law"]["name"])()
            
         prop.SetValue(CONSTITUTIVE_LAW, constitutive_law)
         
         #read variables 
         for key, value in mat["Variables"].items():
-            var = self._GetItemFromModule(key)
+            var = self._GetVariable(key)
             prop.SetValue( var, value)
 
         #read table
         for key, table in mat["Tables"].items():
             table_name = key
 
-            input_var = self._GetItemFromModule(table["input_variable"])
-            output_var = self._GetItemFromModule(table["output_variable"])
+            input_var = self._GetVariable(table["input_variable"])
+            output_var = self._GetVariable(table["output_variable"])
 
             new_table = PiecewiseLinearTable()
             for i in range(len(table["data"])):
