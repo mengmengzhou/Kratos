@@ -702,17 +702,52 @@ namespace Kratos
 		if (rValues.size() != OPT_NUM_GP)
 			rValues.resize(OPT_NUM_GP);
 
-		if (rVariable == VON_MISES_STRESS ||
+
+		int caseId = -1;
+		if (rVariable == TSAI_WU_RESERVE_FACTOR)
+		{
+			caseId = 10;
+		}
+		else if (rVariable == VON_MISES_STRESS ||
 			rVariable == VON_MISES_STRESS_TOP_SURFACE ||
 			rVariable == VON_MISES_STRESS_MIDDLE_SURFACE ||
 			rVariable == VON_MISES_STRESS_BOTTOM_SURFACE)
+		{
+			caseId = 20;
+		}
+		else if (rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY)
+		{
+			caseId = 30;
+		}
+		else if (rVariable == SHELL_ELEMENT_BENDING_ENERGY)
+		{
+			caseId = 31;
+		}
+		else if (rVariable == SHELL_ELEMENT_SHEAR_ENERGY)
+		{
+			caseId = 32;
+		}
+		else if (rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY_FRACTION)
+		{
+			caseId = 33;
+		}
+		else if (rVariable == SHELL_ELEMENT_BENDING_ENERGY_FRACTION)
+		{
+			caseId = 34;
+		}
+		else if (rVariable == SHELL_ELEMENT_SHEAR_ENERGY_FRACTION)
+		{
+			caseId = 35;
+		}
+
+
+		if (caseId > 19)
 		{
 			// Initialize common calculation variables
 			CalculationData data(mpCoordinateTransformation, rCurrentProcessInfo);
 			data.CalculateLHS = true;
 			data.CalculateRHS = true;
 			InitializeCalculationData(data);
-			double von_mises_top, von_mises_mid, von_mises_bottom;
 
 			// Get the current displacements in global coordinate system and 
 			// transform to reference local system
@@ -734,72 +769,49 @@ namespace Kratos
 			// ensure stabilization is used on the transverse shear part
 			// of the material matrix
 
-			// recover stresses
-			CalculateStressesFromForceResultants(data.generalizedStresses,
-				section->GetThickness());
 
-			// account for orientation
-			if (section->GetOrientationAngle() != 0.0)
+			double resultDouble = 0.0;
+
+			if (caseId > 29)
 			{
-				Matrix R(8, 8);
-				section->GetRotationMatrixForGeneralizedStresses
-				(-(section->GetOrientationAngle()), R);
-				data.generalizedStresses = prod(R, data.generalizedStresses);
+				// Energy calcs
+				CalculateShellElementEnergy(data, rVariable, resultDouble);
 			}
+			else if (caseId > 19)
+			{
+				//Von mises calcs
 
-			// calc von mises stresses at top, mid and bottom surfaces for
-			// thick shell
-			double sxx, syy, sxy, sxz, syz;
+				// recover stresses
+				CalculateStressesFromForceResultants(data.generalizedStresses,
+					section->GetThickness());
 
-			// top surface: membrane and +bending contributions
-			//				(no transverse shear)
-			sxx = data.generalizedStresses[0] + data.generalizedStresses[3];
-			syy = data.generalizedStresses[1] + data.generalizedStresses[4];
-			sxy = data.generalizedStresses[2] + data.generalizedStresses[5];
-			von_mises_top = sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy;
+				// account for orientation
+				if (section->GetOrientationAngle() != 0.0)
+				{
+					Matrix R(8, 8);
+					section->GetRotationMatrixForGeneralizedStresses
+					(-(section->GetOrientationAngle()), R);
+					data.generalizedStresses = prod(R, data.generalizedStresses);
+				}
 
-			// mid surface: membrane and transverse shear contributions
-			//				(no bending)
-			sxx = data.generalizedStresses[0];
-			syy = data.generalizedStresses[1];
-			sxy = data.generalizedStresses[2];
-			sxz = data.generalizedStresses[6];
-			syz = data.generalizedStresses[7];
-			von_mises_mid = sxx*sxx - sxx*syy + syy*syy +
-				3.0*(sxy*sxy + sxz*sxz + syz*syz);
-
-			// bottom surface:	membrane and -bending contributions
-			//					(no transverse shear)
-			sxx = data.generalizedStresses[0] - data.generalizedStresses[3];
-			syy = data.generalizedStresses[1] - data.generalizedStresses[4];
-			sxy = data.generalizedStresses[2] - data.generalizedStresses[5];
-			von_mises_bottom = sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy;
-
+				CalculateVonMisesStress(data, rVariable, resultDouble);
+			}
+			else
+			{
+				KRATOS_ERROR <<
+					"Error: ELEMENT ShellThinElement3D4N, METHOD GetValueOnIntegrationPoints(double)"
+					<< std::endl;
+			}
 
 			// loop over gauss points - for output only
 			for (unsigned int gauss_point = 0; gauss_point < OPT_NUM_GP; ++gauss_point)
 			{
-				// Output requested quantity
-				if (rVariable == VON_MISES_STRESS_TOP_SURFACE)
-				{
-					rValues[gauss_point] = sqrt(von_mises_top);
-				}
-				else if (rVariable == VON_MISES_STRESS_MIDDLE_SURFACE)
-				{
-					rValues[gauss_point] = sqrt(von_mises_mid);
-				}
-				else if (rVariable == VON_MISES_STRESS_BOTTOM_SURFACE)
-				{
-					rValues[gauss_point] = sqrt(von_mises_bottom);
-				}
-				else if (rVariable == VON_MISES_STRESS)
-				{
-					// take the greatest value and output
-					rValues[gauss_point] =
-						sqrt(std::max(von_mises_top,
-							std::max(von_mises_mid, von_mises_bottom)));
-				}
+				// store the result calculated
+				rValues[gauss_point] = resultDouble;
 			}
+			
+
+			
 		}
 		else if (rVariable == TSAI_WU_RESERVE_FACTOR)
 		{
@@ -1188,6 +1200,118 @@ namespace Kratos
 		return std::min(tsai_reserve_factor_bottom, tsai_reserve_factor_top);
 	}
 
+	void ShellThickElement3D3N::CalculateVonMisesStress(const CalculationData & data, const Variable<double>& rVariable, double & rVon_Mises_Result)
+	{
+		// calc von mises stresses at top, mid and bottom surfaces for
+		// thick shell
+		double sxx, syy, sxy, sxz, syz;
+		double von_mises_top, von_mises_mid, von_mises_bottom;
+		// top surface: membrane and +bending contributions
+		//				(no transverse shear)
+		sxx = data.generalizedStresses[0] + data.generalizedStresses[3];
+		syy = data.generalizedStresses[1] + data.generalizedStresses[4];
+		sxy = data.generalizedStresses[2] + data.generalizedStresses[5];
+		von_mises_top = sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy;
+
+		// mid surface: membrane and transverse shear contributions
+		//				(no bending)
+		sxx = data.generalizedStresses[0];
+		syy = data.generalizedStresses[1];
+		sxy = data.generalizedStresses[2];
+		sxz = data.generalizedStresses[6];
+		syz = data.generalizedStresses[7];
+		von_mises_mid = sxx*sxx - sxx*syy + syy*syy +
+			3.0*(sxy*sxy + sxz*sxz + syz*syz);
+
+		// bottom surface:	membrane and -bending contributions
+		//					(no transverse shear)
+		sxx = data.generalizedStresses[0] - data.generalizedStresses[3];
+		syy = data.generalizedStresses[1] - data.generalizedStresses[4];
+		sxy = data.generalizedStresses[2] - data.generalizedStresses[5];
+		von_mises_bottom = sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy;
+
+
+		
+			// Output requested quantity
+			if (rVariable == VON_MISES_STRESS_TOP_SURFACE)
+			{
+				rVon_Mises_Result = sqrt(von_mises_top);
+			}
+			else if (rVariable == VON_MISES_STRESS_MIDDLE_SURFACE)
+			{
+				rVon_Mises_Result = sqrt(von_mises_mid);
+			}
+			else if (rVariable == VON_MISES_STRESS_BOTTOM_SURFACE)
+			{
+				rVon_Mises_Result = sqrt(von_mises_bottom);
+			}
+			else if (rVariable == VON_MISES_STRESS)
+			{
+				// take the greatest value and output
+				rVon_Mises_Result =
+					sqrt(std::max(von_mises_top,
+						std::max(von_mises_mid, von_mises_bottom)));
+			}
+		
+	}
+
+	void ShellThickElement3D3N::CalculateShellElementEnergy(const CalculationData & data, const Variable<double>& rVariable, double & rEnergy_Result)
+	{
+		// At each Gauss Point the energy of that Gauss Point's weighted area
+		// dA*w_i is output. This means that the total energy of the element is
+		// the sum of the Gauss Point energies. Accordingly, the total energy of
+		// the system is the sum of Gauss Point energies over all elements.
+
+		bool is_fraction_calc = false;
+		double totalEnergy = 1.0;
+
+		if (rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY_FRACTION ||
+			rVariable == SHELL_ELEMENT_BENDING_ENERGY_FRACTION ||
+			rVariable == SHELL_ELEMENT_SHEAR_ENERGY_FRACTION)
+		{
+			// need to calculate total energy over current dA first
+			totalEnergy = inner_prod(data.generalizedStresses, data.generalizedStrains)*data.TotalArea/3.0;
+			is_fraction_calc = true;
+		}
+
+		if (rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY || rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY_FRACTION)
+		{
+			for (size_t i = 0; i < 3; i++)
+			{
+				rEnergy_Result += data.generalizedStresses[i] * data.generalizedStrains[i] * data.TotalArea / 3.0;
+			}
+
+			if (is_fraction_calc)
+			{
+				rEnergy_Result /= totalEnergy;
+			}
+		}
+		else if (rVariable == SHELL_ELEMENT_BENDING_ENERGY || rVariable == SHELL_ELEMENT_BENDING_ENERGY_FRACTION)
+		{
+			for (size_t i = 3; i < 6; i++)
+			{
+				rEnergy_Result += data.generalizedStresses[i] * data.generalizedStrains[i] * data.TotalArea / 3.0;
+			}
+
+			if (is_fraction_calc)
+			{
+				rEnergy_Result /= totalEnergy;
+			}
+		}
+		else if (rVariable == SHELL_ELEMENT_SHEAR_ENERGY || rVariable == SHELL_ELEMENT_SHEAR_ENERGY_FRACTION)
+		{
+			for (size_t i = 6; i < 8; i++)
+			{
+				rEnergy_Result += data.generalizedStresses[i] * data.generalizedStrains[i] * data.TotalArea / 3.0;
+			}
+
+			if (is_fraction_calc)
+			{
+				rEnergy_Result /= totalEnergy;
+			}
+		}
+	}
+
 	void ShellThickElement3D3N::CheckGeneralizedStressOrStrainOutput(const Variable<Matrix>& rVariable, int & ijob, bool & bGlobal)
 	{
 		if (rVariable == SHELL_STRAIN)
@@ -1353,7 +1477,6 @@ namespace Kratos
 		if (data.basicTriCST == false &&
 			data.ignore_shear_stabilization == false)
 		{
-			//std::cout << "applying shhear stbailization" << std::endl;
 			//add in shear stabilization
 			data.shearStabilisation = (data.hMean*data.hMean)
 				/ (data.hMean*data.hMean + data.alpha*data.h_e*data.h_e);
@@ -1361,6 +1484,11 @@ namespace Kratos
 			data.D(6, 7) *= data.shearStabilisation;
 			data.D(7, 6) *= data.shearStabilisation;
 			data.D(7, 7) *= data.shearStabilisation;
+		}
+
+		if (data.ignore_shear_stabilization)
+		{
+			std::cout << "Not applying shear stabilisation to shear part of material matrix!" << std::endl;
 		}
 	}
 
@@ -1608,7 +1736,7 @@ namespace Kratos
 
 	void ShellThickElement3D3N::CalculateDSGc3Contribution(CalculationData & data, MatrixType & rLeftHandSideMatrix)
 	{
-		//CalculateDSGc3AnsatzCoefficients(data);
+		std::cout << "\n==============================\nUsing Super DSGc3 formulation\n==============================\n" << std::endl;
 
 		const double x1 = data.LCS0.X1();
 		const double y1 = data.LCS0.Y1();
@@ -1617,163 +1745,223 @@ namespace Kratos
 		const double x3 = data.LCS0.X3();
 		const double y3 = data.LCS0.Y3();
 
-		const double x12 = data.LCS0.X1() - data.LCS0.X2();
-		const double x23 = data.LCS0.X2() - data.LCS0.X3();
-		const double x31 = data.LCS0.X3() - data.LCS0.X1();
-		const double x21 = -x12;
-		const double x32 = -x23;
-		const double x13 = -x31;
+		// Geometric quantities
+		const double a = x2 - x1;
+		const double b = y2 - y1;
+		const double c = y3 - y1;
+		const double d = x3 - x1;
 
-		const double y12 = data.LCS0.Y1() - data.LCS0.Y2();
-		const double y23 = data.LCS0.Y2() - data.LCS0.Y3();
-		const double y31 = data.LCS0.Y3() - data.LCS0.Y1();
-		const double y21 = -y12;
-
-		const double y13 = -y31;
-
-		
-
+		bool use_quartic_integration = false;
+		int numberGPs = 3;
+		if (use_quartic_integration)
+		{
+			numberGPs = 7;
+		}
 
 		// Material matrix data.D is already multiplied with A!!!
-		//double dA = data.TotalArea / 3.0;
-		data.D /= 3.0;	// Corresponds to |J| = 2A with w_i = 1/6
+		//double dA = data.TotalArea / 3.0 (Corresponds to |J| = 2A with w_i = 1/6)
+		//data.D /= 3.0;	
+		data.D *= 2.0; //now data.D is D*detJ
+
+		std::vector< array_1d<double, 3> > quarticGPLocations;
+		quarticGPLocations.resize(7);
+		quarticGPLocations.clear();
+		for (size_t i = 0; i < 7; i++)
+		{
+			quarticGPLocations[i].clear();
+		}
+		Vector quarticGPweights = Vector(7, 0.0);
+
+		quarticGPweights[0] = 1.0 / 40.0;
+
+		quarticGPLocations[1][0] = 0.5;
+		quarticGPweights[1] = 1.0 / 15.0;
+
+		quarticGPLocations[2][0] = 1.0;
+		quarticGPweights[2] = 1.0 / 40.0;
+
+		quarticGPLocations[3][0] = 0.5;
+		quarticGPLocations[3][1] = 0.5;
+		quarticGPweights[3] = 1.0 / 15.0;
+
+		quarticGPLocations[4][1] = 1.0;
+		quarticGPweights[4] = 1.0 / 40.0;
+
+		quarticGPLocations[5][1] = 0.5;
+		quarticGPweights[5] = 1.0 / 15.0;
+
+		quarticGPLocations[6][0] = 0.3;
+		quarticGPLocations[6][1] = 0.3;
+		quarticGPweights[6] = 9.0 / 40.0;
+
+		
+
+		Matrix shearD = Matrix(2, 2,0.0);
+		shearD.clear();
+		shearD(0, 0) = data.D(6, 6);
+		shearD(1, 1) = data.D(7, 7);
+
+		Matrix shearK = Matrix(9, 9, 0.0);
+		shearK.clear();
 		
 		Matrix SuperB = Matrix(2, 9, 0.0);
-
+		
 		double loc1, loc2, loc3;
-		for (size_t gauss_point = 0; gauss_point < 3; gauss_point++)
+		for (size_t gauss_point = 0; gauss_point < numberGPs; gauss_point++)
 		{
-			loc1 = data.gpLocations[gauss_point][0];
-			loc2 = data.gpLocations[gauss_point][1];
-			loc3 = data.gpLocations[gauss_point][2];
-			
-			// Inverse jacobian entries
-			double dAlpha_dx = (y3 - y1) / (2.0*data.TotalArea);
-			double dBeta_dx = (y1 - y2) / (2.0*data.TotalArea);
-			double dAlpha_dy = (x1 - x3) / (2.0*data.TotalArea);
-			double dBeta_dy = (x2 - x1) / (2.0*data.TotalArea);
 			
 
+			if (use_quartic_integration)
+			{
+				loc1 = quarticGPLocations[gauss_point][0];
+				loc2 = quarticGPLocations[gauss_point][1];
+			}
+			else
+			{
+				loc1 = data.gpLocations[gauss_point][0];
+				loc2 = data.gpLocations[gauss_point][1];
+			}
 
-			// Last test - inverse jacobians baked in
-			double a = x2 - x1;
-			double b = y2 - y1;
-			double c = y3 - y1;
-			double d = x3 - x1;
+			bool reduced_integration = false;
+			if (reduced_integration)
+			{
+				std::cout << "Using reduced integraton on superDSG" << std::endl;
+				loc1 = 0.5;
+				loc2 = 0.5;
+			}
+			
+			
+			
+			
+
+			// Modified B-matrix
 			Matrix BSuper = Matrix(2, 9, 0.0);
-			BSuper(0, 0) = -2.0*b*loc1 + 1.0*b + 2.0*c*loc2 - 1.0*c;
-			BSuper(0, 1) = 1.0*b*loc1 - 1.0*c*loc2 + 1.0*c;
-			BSuper(0, 2) = 1.0*b*loc1 - 1.0*b - 1.0*c*loc2;
-			BSuper(0, 3) = 1.0*b*loc1 - 1.0*c*loc2 + 0.5*c;
-			BSuper(0, 4) = 0.5*b*loc1 - 0.5*c*loc2 + 0.5*c;
-			BSuper(0, 5) = -0.5*b*loc1 + 0.5*c*loc2;
-			BSuper(0, 6) = -0.5*b;
-			BSuper(0, 7) = 0.5*b*loc1 - 0.5*c*loc2;
-			BSuper(0, 8) = 0.5*b*loc1 - 0.5*b - 0.5*c*loc2;
-			BSuper(1, 0) = 2.0*a*loc1 - 1.0*a - 2.0*d*loc2 + 1.0*d;
-			BSuper(1, 1) = -1.0*a*loc1 + 1.0*d*loc2 - 1.0*d;
-			BSuper(1, 2) = -1.0*a*loc1 + 1.0*a + 1.0*d*loc2;
-			BSuper(1, 3) = -0.5*d;
-			BSuper(1, 4) = -0.5*a*loc1 + 0.5*d*loc2 - 0.5*d;
-			BSuper(1, 5) = -0.5*a*loc1 + 0.5*d*loc2;
-			BSuper(1, 6) = -1.0*a*loc1 + 0.5*a + 1.0*d*loc2;
-			BSuper(1, 7) = 0.5*a*loc1 - 0.5*d*loc2;
-			BSuper(1, 8) = -0.5*a*loc1 + 0.5*a + 0.5*d*loc2;
-			BSuper /= (2.0*data.TotalArea);
-			SuperB.clear();
-			SuperB = Matrix(BSuper);
+
+			bool use_cartesian_bmat = false;
+			if (use_cartesian_bmat)
+			{
+				// without bubble mode
+
+				BSuper(0, 0) = -1.00000000000000;
+				BSuper(0, 1) = 1.00000000000000;
+				BSuper(0, 2) = 0.0;
+				BSuper(0, 3) = -1.0*loc1*x2 - 0.5*loc1*y2 - 1.0*loc2*x3 - 0.5*loc2*y3 + 1.0*x1*(loc1 + loc2 - 1.0) + 0.5*y1*(loc1 + loc2 - 1.0) + 1.0;
+				BSuper(0, 4) = 0.500000000000000;
+				BSuper(0, 5) = 1.0*loc1*x2 + 0.5*loc1*y2 + 1.0*loc2*x3 + 0.5*loc2*y3 - 1.0*x1*(loc1 + loc2 - 1.0) - 0.5*y1*(loc1 + loc2 - 1.0) - 0.5;
+				BSuper(0, 6) = 1.0*loc1*x2 + 0.5*loc1*y2 + 1.0*loc2*x3 + 0.5*loc2*y3 - 1.0*x1*(loc1 + loc2 - 1.0) - 0.5*y1*(loc1 + loc2 - 1.0) - 0.5;
+				BSuper(0, 7) = -1.0*loc1*x2 - 0.5*loc1*y2 - 1.0*loc2*x3 - 0.5*loc2*y3 + 1.0*x1*(loc1 + loc2 - 1.0) + 0.5*y1*(loc1 + loc2 - 1.0) + 0.5;
+				BSuper(0, 8) = 0.0;
+				BSuper(1, 0) = -1.00000000000000;
+				BSuper(1, 1) = 0.0;
+				BSuper(1, 2) = 1.00000000000000;
+				BSuper(1, 3) = 0.5*loc1*x2 + 0.5*loc2*x3 - 0.5*x1*(loc1 + loc2 - 1.0);
+				BSuper(1, 4) = 0.0;
+				BSuper(1, 5) = -0.5*loc1*x2 - 0.5*loc2*x3 + 0.5*x1*(loc1 + loc2 - 1.0);
+				BSuper(1, 6) = -0.5*loc1*x2 - 0.5*loc2*x3 + 0.5*x1*(loc1 + loc2 - 1.0) + 0.5;
+				BSuper(1, 7) = 0.5*loc1*x2 + 0.5*loc2*x3 - 0.5*x1*(loc1 + loc2 - 1.0);
+				BSuper(1, 8) = 0.500000000000000;
+
+				BSuper /= (2.0*data.TotalArea);
+			}
+			else
+			{
+				bool bubble_mode = true;
+
+				if (bubble_mode)
+				{
+					// Minimal energy bubble mode employed
+
+					BSuper(0, 0) = -2.0*b*loc1 + 1.0*b + 2.0*c*loc2 - 1.0*c;
+					BSuper(0, 1) = 1.0*b*loc1 - 1.0*c*loc2 + 1.0*c;
+					BSuper(0, 2) = 1.0*b*loc1 - 1.0*b - 1.0*c*loc2;
+					BSuper(0, 3) = 1.0*b*loc1 - 1.0*c*loc2 + 0.5*c;
+					BSuper(0, 4) = 0.5*b*loc1 - 0.5*c*loc2 + 0.5*c;
+					BSuper(0, 5) = -0.5*b*loc1 + 0.5*c*loc2;
+					BSuper(0, 6) = -0.5*b;
+					BSuper(0, 7) = 0.5*b*loc1 - 0.5*c*loc2;
+					BSuper(0, 8) = 0.5*b*loc1 - 0.5*b - 0.5*c*loc2;
+					BSuper(1, 0) = 2.0*a*loc1 - 1.0*a - 2.0*d*loc2 + 1.0*d;
+					BSuper(1, 1) = -1.0*a*loc1 + 1.0*d*loc2 - 1.0*d;
+					BSuper(1, 2) = -1.0*a*loc1 + 1.0*a + 1.0*d*loc2;
+					BSuper(1, 3) = -0.5*d;
+					BSuper(1, 4) = -0.5*a*loc1 + 0.5*d*loc2 - 0.5*d;
+					BSuper(1, 5) = -0.5*a*loc1 + 0.5*d*loc2;
+					BSuper(1, 6) = -1.0*a*loc1 + 0.5*a + 1.0*d*loc2;
+					BSuper(1, 7) = 0.5*a*loc1 - 0.5*d*loc2;
+					BSuper(1, 8) = -0.5*a*loc1 + 0.5*a + 0.5*d*loc2;
+				}
+				else
+				{
+					// No bubble mode included
+
+					BSuper(0, 0) = 1.0*b - 1.0*c;
+					BSuper(0, 1) = 1.0*c;
+					BSuper(0, 2) = -1.0*b;
+					BSuper(0, 3) = -1.5*b*loc1*loc1 - 3.0*b*loc1*loc2 + 1.5*b*loc1 + 3.0*c*loc1*loc2 + 1.5*c*loc2*loc2 - 1.5*c*loc2 + 0.5*c;
+					BSuper(0, 4) = 0.5*c;
+					BSuper(0, 5) = 1.5*b*loc1*loc1 + 3.0*b*loc1*loc2 - 1.5*b*loc1 - 3.0*c*loc1*loc2 - 1.5*c*loc2*loc2 + 1.5*c*loc2;
+					BSuper(0, 6) = 1.5*b*loc1*loc1 + 3.0*b*loc1*loc2 - 1.5*b*loc1 - 0.5*b - 3.0*c*loc1*loc2 - 1.5*c*loc2*loc2 + 1.5*c*loc2;
+					BSuper(0, 7) = -1.5*b*loc1*loc1 - 3.0*b*loc1*loc2 + 1.5*b*loc1 + 3.0*c*loc1*loc2 + 1.5*c*loc2*loc2 - 1.5*c*loc2;
+					BSuper(0, 8) = -0.5*b;
+					BSuper(1, 0) = -1.0*a + 1.0*d;
+					BSuper(1, 1) = -1.0*d;
+					BSuper(1, 2) = 1.0*a;
+					BSuper(1, 3) = -1.5*a*loc1*loc1 - 3.0*a*loc1*loc2 + 1.5*a*loc1 + 3.0*d*loc1*loc2 + 1.5*d*loc2*loc2 - 1.5*d*loc2 - 0.5*d;
+					BSuper(1, 4) = -0.5*d;
+					BSuper(1, 5) = 1.5*a*loc1*loc1 + 3.0*a*loc1*loc2 - 1.5*a*loc1 - 3.0*d*loc1*loc2 - 1.5*d*loc2*loc2 + 1.5*d*loc2;
+					BSuper(1, 6) = 1.5*a*loc1*loc1 + 3.0*a*loc1*loc2 - 1.5*a*loc1 + 0.5*a - 3.0*d*loc1*loc2 - 1.5*d*loc2*loc2 + 1.5*d*loc2;
+					BSuper(1, 7) = -1.5*a*loc1*loc1 - 3.0*a*loc1*loc2 + 1.5*a*loc1 + 3.0*d*loc1*loc2 + 1.5*d*loc2*loc2 - 1.5*d*loc2;
+					BSuper(1, 8) = 0.5*a;
+				}
+				BSuper /= (2.0*data.TotalArea);
+			}
+
+			
+
+			
+
+			//comparison K matrix, in Bletzinger DOF ordering
+			Matrix temp2 = Matrix(prod(trans(BSuper), shearD));
+			shearK += prod(temp2, BSuper);
+
 			data.B.clear();
+
 			// Transfer from Bletzinger B matrix to Kratos B matrix
 			// Dofs from [w1, w2, w3, px1, ...] to [w1, px1, py1, w2, ...]
-
 			for (size_t i = 0; i < 3; i++)
 			{
-				data.B(6, 2 + 6 * i) = SuperB(0, i);
-				data.B(6, 3 + 6 * i) = SuperB(0, 3 + i);
-				data.B(6, 4 + 6 * i) = SuperB(0, 6 + i);
+				data.B(6, 2 + 6 * i) = BSuper(0, i);			// w
+				data.B(6, 3 + 6 * i) = BSuper(0, 3 + i);	// phix
+				data.B(6, 4 + 6 * i) = BSuper(0, 6 + i);	// phiy
 
-				data.B(7, 2 + 6 * i) = SuperB(1, i);
-				data.B(7, 3 + 6 * i) = SuperB(1, 3 + i);
-				data.B(7, 4 + 6 * i) = SuperB(1, 6 + i);
+				data.B(7, 2 + 6 * i) = BSuper(1, i);		// w
+				data.B(7, 3 + 6 * i) = BSuper(1, 3 + i);	// phix
+				data.B(7, 4 + 6 * i) = BSuper(1, 6 + i);	// phiy
 
 
 			}
 
-			bool use_dsg = true;
-			if (use_dsg)
+			// Add to stiffness matrix
+			Matrix temp;
+			if (use_quartic_integration)
 			{
-				data.B.clear();
-				double A = data.TotalArea;
-				//node 1
-				data.B(6, 2) = b - c;
-				data.B(6, 4) = A;
-
-				data.B(7, 2) = d - a;
-				data.B(7, 3) = -1.0 * A;
-
-				//node 2
-				data.B(6, 8) = c;
-				data.B(6, 9) = -1.0 * b*c / 2.0;
-				data.B(6, 10) = a*c / 2.0;
-
-				data.B(7, 8) = -1.0 * d;
-				data.B(7, 9) = b*d / 2.0;
-				data.B(7, 10) = -1.0 * a*d / 2.0;
-
-				//node 3
-				data.B(6, 14) = -1.0 * b;
-				data.B(6, 15) = b*c / 2.0;
-				data.B(6, 16) = b*d / 2.0;
-
-				data.B(7, 14) = a;
-				data.B(7, 15) = -1.0 * a*c / 2.0;
-				data.B(7, 16) = a*d / 2.0;
+				temp = Matrix(prod(trans(data.B), data.D*quarticGPweights[gauss_point]));
 			}
-
-
-			Matrix temp = Matrix(prod(trans(data.B), data.D));
+			else
+			{
+				temp = Matrix(prod(trans(data.B), data.D/6.0));
+			}
+			
 			rLeftHandSideMatrix += prod(temp, data.B);
-		}		
-	}
 
-	void ShellThickElement3D3N::CalculateDSGc3AnsatzCoefficients(CalculationData & data)
-	{
-		const double x1 = data.LCS0.X1();
-		const double y1 = data.LCS0.Y1();
-		const double x2 = data.LCS0.X2();
-		const double y2 = data.LCS0.Y2();
-		const double x3 = data.LCS0.X3();
-		const double y3 = data.LCS0.Y3();
-
-		data.a5[3] = -(x2 - x3) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
-		data.a5[4] = (x1 - x3) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
-		data.a5[5] = -(x1 - x2) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
-
-		data.a6[6] = (y2 - y3) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
-		data.a6[7] = -(y1 - y3) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
-		data.a6[8] = (y1 - y2) / (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2);
-
-		data.a8[0] = -(x2*y2 - x3*y3 - y2 + y3) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
-		data.a8[1] = (x1*y1 - x3*y3 - y1 + y3) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
-		data.a8[2] = -(x1*y1 - x2*y2 - y1 + y2) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
-		data.a8[3] = -(x1*x1 * x2*y2*y2 - x1*x1 * x2*y2*y3 - x1*x1 * x3*y2*y3 + x1*x1 * x3*y3*y3 - x1*x1 * y2*y2 + 2 * x1*x1 * y2*y3 - x1*x1 * y3*y3 - x1*x2*x2 * y1*y2 - x1*x2*x2 * y1*y3 + 2 * x1*x2*x2 * y2*y3 + 2 * x1*x2*x3*y1*y2 + 2 * x1*x2*x3*y1*y3 - 2 * x1*x2*x3*y2*y2 - 2 * x1*x2*x3*y3*y3 + x1*x2*y1*y2 - x1*x2*y1*y3 - 2 * x1*x2*y2*y3 + 2 * x1*x2*y3*y3 - x1*x3*x3 * y1*y2 - x1*x3*x3 * y1*y3 + 2 * x1*x3*x3 * y2*y3 - x1*x3*y1*y2 + x1*x3*y1*y3 + 2 * x1*x3*y2*y2 - 2 * x1*x3*y2*y3 - x2*x2 * x3*y2*y3 + x2*x2 * x3*y3*y3 + x2*x2 * y1*y3 - x2*x2 * y3*y3 + x2*x3*x3 * y2*y2 - x2*x3*x3 * y2*y3 - x2*x3*y1*y2 - x2*x3*y1*y3 + 2 * x2*x3*y2*y3 + x3*x3 * y1*y2 - x3*x3 * y2*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a8[4] = (x1*x1 * x2*y1*y2 - 2 * x1*x1 * x2*y1*y3 + x1*x1 * x2*y2*y3 + x1*x1 * x3*y1*y3 - x1*x1 * x3*y3*y3 - x1*x1 * y2*y3 + x1*x1 * y3*y3 - x1*x2*x2 * y1*y1 + x1*x2*x2 * y1*y3 + 2 * x1*x2*x3*y1*y1 - 2 * x1*x2*x3*y1*y2 - 2 * x1*x2*x3*y2*y3 + 2 * x1*x2*x3*y3*y3 - x1*x2*y1*y2 + 2 * x1*x2*y1*y3 + x1*x2*y2*y3 - 2 * x1*x2*y3*y3 - x1*x3*x3 * y1*y1 + x1*x3*x3 * y1*y3 + x1*x3*y1*y2 - 2 * x1*x3*y1*y3 + x1*x3*y2*y3 + x2*x2 * x3*y1*y3 - x2*x2 * x3*y3*y3 + x2*x2 * y1*y1 - 2 * x2*x2 * y1*y3 + x2*x2 * y3*y3 + x2*x3*x3 * y1*y2 - 2 * x2*x3*x3 * y1*y3 + x2*x3*x3 * y2*y3 - 2 * x2*x3*y1*y1 + x2*x3*y1*y2 + 2 * x2*x3*y1*y3 - x2*x3*y2*y3 + x3*x3 * y1*y1 - x3*x3 * y1*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a8[5] = (x1*x1 * x2*y1*y2 - x1*x1 * x2*y2*y2 - 2 * x1*x1 * x3*y1*y2 + x1*x1 * x3*y1*y3 + x1*x1 * x3*y2*y3 + x1*x1 * y2*y2 - x1*x1 * y2*y3 - x1*x2*x2 * y1*y1 + x1*x2*x2 * y1*y2 + 2 * x1*x2*x3*y1*y1 - 2 * x1*x2*x3*y1*y3 + 2 * x1*x2*x3*y2*y2 - 2 * x1*x2*x3*y2*y3 - 2 * x1*x2*y1*y2 + x1*x2*y1*y3 + x1*x2*y2*y3 - x1*x3*x3 * y1*y1 + x1*x3*x3 * y1*y2 + 2 * x1*x3*y1*y2 - x1*x3*y1*y3 - 2 * x1*x3*y2*y2 + x1*x3*y2*y3 - 2 * x2*x2 * x3*y1*y2 + x2*x2 * x3*y1*y3 + x2*x2 * x3*y2*y3 + x2*x2 * y1*y1 - x2*x2 * y1*y3 + x2*x3*x3 * y1*y2 - x2*x3*x3 * y2*y2 - 2 * x2*x3*y1*y1 + 2 * x2*x3*y1*y2 + x2*x3*y1*y3 - x2*x3*y2*y3 + x3*x3 * y1*y1 - 2 * x3*x3 * y1*y2 + x3*x3 * y2*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a8[6] = -(x1*x2*y1*y2*y2 - 2 * x1*x2*y1*y2*y3 + x1*x2*y1*y3*y3 + x1*x3*y1*y2*y2 - 2 * x1*x3*y1*y2*y3 + x1*x3*y1*y3*y3 - x1*y1*y2*y2 + 2 * x1*y1*y2*y3 - x1*y1*y3*y3 - x2*x2 * y1*y1 * y2 + 2 * x2*x2 * y1*y2*y3 - x2*x2 * y2*y3*y3 + x2*x3*y1*y1 * y2 + x2*x3*y1*y1 * y3 - 2 * x2*x3*y1*y2*y2 - 2 * x2*x3*y1*y3*y3 + x2*x3*y2*y2 * y3 + x2*x3*y2*y3*y3 + x2*y1*y1 * y2 - x2*y1*y1 * y3 - x2*y1*y2*y3 + x2*y1*y3*y3 - x3*x3 * y1*y1 * y3 + 2 * x3*x3 * y1*y2*y3 - x3*x3 * y2*y2 * y3 - x3*y1*y1 * y2 + x3*y1*y1 * y3 + x3*y1*y2*y2 - x3*y1*y2*y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a8[7] = (x1*x1 * y1*y2*y2 - 2 * x1*x1 * y1*y2*y3 + x1*x1 * y1*y3*y3 - x1*x2*y1*y1 * y2 + 2 * x1*x2*y1*y2*y3 - x1*x2*y2*y3*y3 + 2 * x1*x3*y1*y1 * y2 - x1*x3*y1*y1 * y3 - x1*x3*y1*y2*y2 - x1*x3*y1*y3*y3 - x1*x3*y2*y2 * y3 + 2 * x1*x3*y2*y3*y3 - x1*y1*y2*y2 + x1*y1*y2*y3 + x1*y2*y2 * y3 - x1*y2*y3*y3 - x2*x3*y1*y1 * y2 + 2 * x2*x3*y1*y2*y3 - x2*x3*y2*y3*y3 + x2*y1*y1 * y2 - 2 * x2*y1*y2*y3 + x2*y2*y3*y3 + x3*x3 * y1*y1 * y3 - 2 * x3*x3 * y1*y2*y3 + x3*x3 * y2*y2 * y3 - x3*y1*y1 * y2 + x3*y1*y2*y2 + x3*y1*y2*y3 - x3*y2*y2 * y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a8[8] = (x1*x1 * y1*y2*y2 - 2 * x1*x1 * y1*y2*y3 + x1*x1 * y1*y3*y3 - x1*x2*y1*y1 * y2 + 2 * x1*x2*y1*y1 * y3 - x1*x2*y1*y2*y2 - x1*x2*y1*y3*y3 + 2 * x1*x2*y2*y2 * y3 - x1*x2*y2*y3*y3 - x1*x3*y1*y1 * y3 + 2 * x1*x3*y1*y2*y3 - x1*x3*y2*y2 * y3 + x1*y1*y2*y3 - x1*y1*y3*y3 - x1*y2*y2 * y3 + x1*y2*y3*y3 + x2*x2 * y1*y1 * y2 - 2 * x2*x2 * y1*y2*y3 + x2*x2 * y2*y3*y3 - x2*x3*y1*y1 * y3 + 2 * x2*x3*y1*y2*y3 - x2*x3*y2*y2 * y3 - x2*y1*y1 * y3 + x2*y1*y2*y3 + x2*y1*y3*y3 - x2*y2*y3*y3 + x3*y1*y1 * y3 - 2 * x3*y1*y2*y3 + x3*y2*y2 * y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-
-
-		data.a9[0] = (x2*y2 - x2 - x3*y3 + x3) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
-		data.a9[1] = -(x1*y1 - x1 - x3*y3 + x3) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
-		data.a9[2] = (x1*y1 - x1 - x2*y2 + x2) / (x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2);
-		data.a9[3] = (x1*x1 * x2*y2*y2 - x1*x1 * x2*y2*y3 - x1*x1 * x2*y2 + x1*x1 * x2*y3 - x1*x1 * x3*y2*y3 + x1*x1 * x3*y2 + x1*x1 * x3*y3*y3 - x1*x1 * x3*y3 - x1*x2*x2 * y1*y2 - x1*x2*x2 * y1*y3 + x1*x2*x2 * y1 + 2 * x1*x2*x2 * y2*y3 - x1*x2*x2 * y3 + 2 * x1*x2*x3*y1*y2 + 2 * x1*x2*x3*y1*y3 - 2 * x1*x2*x3*y1 - 2 * x1*x2*x3*y2*y2 + x1*x2*x3*y2 - 2 * x1*x2*x3*y3*y3 + x1*x2*x3*y3 - x1*x3*x3 * y1*y2 - x1*x3*x3 * y1*y3 + x1*x3*x3 * y1 + 2 * x1*x3*x3 * y2*y3 - x1*x3*x3 * y2 - x2*x2 * x3*y2*y3 + x2*x2 * x3*y3*y3 + x2*x3*x3 * y2*y2 - x2*x3*x3 * y2*y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a9[4] = -(x1*x1 * x2*y1*y2 - 2 * x1*x1 * x2*y1*y3 + x1*x1 * x2*y2*y3 - x1*x1 * x2*y2 + x1*x1 * x2*y3 + x1*x1 * x3*y1*y3 - x1*x1 * x3*y3*y3 - x1*x2*x2 * y1*y1 + x1*x2*x2 * y1*y3 + x1*x2*x2 * y1 - x1*x2*x2 * y3 + 2 * x1*x2*x3*y1*y1 - 2 * x1*x2*x3*y1*y2 - x1*x2*x3*y1 - 2 * x1*x2*x3*y2*y3 + 2 * x1*x2*x3*y2 + 2 * x1*x2*x3*y3*y3 - x1*x2*x3*y3 - x1*x3*x3 * y1*y1 + x1*x3*x3 * y1*y3 + x2*x2 * x3*y1*y3 - x2*x2 * x3*y1 - x2*x2 * x3*y3*y3 + x2*x2 * x3*y3 + x2*x3*x3 * y1*y2 - 2 * x2*x3*x3 * y1*y3 + x2*x3*x3 * y1 + x2*x3*x3 * y2*y3 - x2*x3*x3 * y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a9[5] = -(x1*x1 * x2*y1*y2 - x1*x1 * x2*y2*y2 - 2 * x1*x1 * x3*y1*y2 + x1*x1 * x3*y1*y3 + x1*x1 * x3*y2*y3 + x1*x1 * x3*y2 - x1*x1 * x3*y3 - x1*x2*x2 * y1*y1 + x1*x2*x2 * y1*y2 + 2 * x1*x2*x3*y1*y1 - 2 * x1*x2*x3*y1*y3 - x1*x2*x3*y1 + 2 * x1*x2*x3*y2*y2 - 2 * x1*x2*x3*y2*y3 - x1*x2*x3*y2 + 2 * x1*x2*x3*y3 - x1*x3*x3 * y1*y1 + x1*x3*x3 * y1*y2 + x1*x3*x3 * y1 - x1*x3*x3 * y2 - 2 * x2*x2 * x3*y1*y2 + x2*x2 * x3*y1*y3 + x2*x2 * x3*y1 + x2*x2 * x3*y2*y3 - x2*x2 * x3*y3 + x2*x3*x3 * y1*y2 - x2*x3*x3 * y1 - x2*x3*x3 * y2*y2 + x2*x3*x3 * y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a9[6] = (x1*x2*y1*y2*y2 - 2 * x1*x2*y1*y2*y3 - x1*x2*y1*y2 + x1*x2*y1*y3*y3 + x1*x2*y1*y3 + x1*x2*y2*y3 - x1*x2*y3*y3 + x1*x3*y1*y2*y2 - 2 * x1*x3*y1*y2*y3 + x1*x3*y1*y2 + x1*x3*y1*y3*y3 - x1*x3*y1*y3 - x1*x3*y2*y2 + x1*x3*y2*y3 - x2*x2 * y1*y1 * y2 + x2*x2 * y1*y1 + 2 * x2*x2 * y1*y2*y3 - 2 * x2*x2 * y1*y3 - x2*x2 * y2*y3*y3 + x2*x2 * y3*y3 + x2*x3*y1*y1 * y2 + x2*x3*y1*y1 * y3 - 2 * x2*x3*y1*y1 - 2 * x2*x3*y1*y2*y2 + 2 * x2*x3*y1*y2 - 2 * x2*x3*y1*y3*y3 + 2 * x2*x3*y1*y3 + x2*x3*y2*y2 * y3 + x2*x3*y2*y3*y3 - 2 * x2*x3*y2*y3 - x3*x3 * y1*y1 * y3 + x3*x3 * y1*y1 + 2 * x3*x3 * y1*y2*y3 - 2 * x3*x3 * y1*y2 - x3*x3 * y2*y2 * y3 + x3*x3 * y2*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a9[7] = -(x1*x1 * y1*y2*y2 - 2 * x1*x1 * y1*y2*y3 + x1*x1 * y1*y3*y3 - x1*x1 * y2*y2 + 2 * x1*x1 * y2*y3 - x1*x1 * y3*y3 - x1*x2*y1*y1 * y2 + 2 * x1*x2*y1*y2*y3 + x1*x2*y1*y2 - x1*x2*y1*y3 - x1*x2*y2*y3*y3 - x1*x2*y2*y3 + x1*x2*y3*y3 + 2 * x1*x3*y1*y1 * y2 - x1*x3*y1*y1 * y3 - x1*x3*y1*y2*y2 - 2 * x1*x3*y1*y2 - x1*x3*y1*y3*y3 + 2 * x1*x3*y1*y3 - x1*x3*y2*y2 * y3 + 2 * x1*x3*y2*y2 + 2 * x1*x3*y2*y3*y3 - 2 * x1*x3*y2*y3 - x2*x3*y1*y1 * y2 + x2*x3*y1*y1 + 2 * x2*x3*y1*y2*y3 - x2*x3*y1*y2 - x2*x3*y1*y3 - x2*x3*y2*y3*y3 + x2*x3*y2*y3 + x3*x3 * y1*y1 * y3 - x3*x3 * y1*y1 - 2 * x3*x3 * y1*y2*y3 + 2 * x3*x3 * y1*y2 + x3*x3 * y2*y2 * y3 - x3*x3 * y2*y2) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-		data.a9[8] = -(x1*x1 * y1*y2*y2 - 2 * x1*x1 * y1*y2*y3 + x1*x1 * y1*y3*y3 - x1*x1 * y2*y2 + 2 * x1*x1 * y2*y3 - x1*x1 * y3*y3 - x1*x2*y1*y1 * y2 + 2 * x1*x2*y1*y1 * y3 - x1*x2*y1*y2*y2 + 2 * x1*x2*y1*y2 - x1*x2*y1*y3*y3 - 2 * x1*x2*y1*y3 + 2 * x1*x2*y2*y2 * y3 - x1*x2*y2*y3*y3 - 2 * x1*x2*y2*y3 + 2 * x1*x2*y3*y3 - x1*x3*y1*y1 * y3 + 2 * x1*x3*y1*y2*y3 - x1*x3*y1*y2 + x1*x3*y1*y3 - x1*x3*y2*y2 * y3 + x1*x3*y2*y2 - x1*x3*y2*y3 + x2*x2 * y1*y1 * y2 - x2*x2 * y1*y1 - 2 * x2*x2 * y1*y2*y3 + 2 * x2*x2 * y1*y3 + x2*x2 * y2*y3*y3 - x2*x2 * y3*y3 - x2*x3*y1*y1 * y3 + x2*x3*y1*y1 + 2 * x2*x3*y1*y2*y3 - x2*x3*y1*y2 - x2*x3*y1*y3 - x2*x3*y2*y2 * y3 + x2*x3*y2*y3) / (2 * (x1*y2 - x1*y3 - x2*y1 + x2*y3 + x3*y1 - x3*y2)*(x1*x2*y1 - x1*x2*y2 - x1*x3*y1 + x1*x3*y3 - x1*y1*y2 + x1*y1*y3 + x1*y2 - x1*y3 + x2*x3*y2 - x2*x3*y3 + x2*y1*y2 - x2*y1 - x2*y2*y3 + x2*y3 - x3*y1*y3 + x3*y1 + x3*y2*y3 - x3*y2));
-
+			
+		}
+		if (use_quartic_integration)
+		{
+			std::cout << "local shear K printout isnt updated for quartic integration" << std::endl;
+		}
+		//printMatrix(shearK, "Printing element shear K to Bletzinger Maple DOFs!");
+		
 	}
 
 	void ShellThickElement3D3N::AddBodyForces(CalculationData& data, VectorType& rRightHandSideVector)
@@ -2303,7 +2491,7 @@ namespace Kratos
 			std::cout << "| ";
 			for (unsigned j = 0; j < matrixIn.size2(); ++j)
 			{
-				std::cout << std::fixed << std::setprecision(1) << std::setw(8) << matrixIn(i, j) << " | ";
+				std::cout << std::fixed << std::setprecision(2) << std::setw(8) << matrixIn(i, j) << " | ";
 			}
 			std::cout << std::endl;
 		}

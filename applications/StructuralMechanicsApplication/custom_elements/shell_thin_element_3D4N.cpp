@@ -821,10 +821,46 @@ namespace Kratos
 	{
 		KRATOS_TRY;
 
-		if (rVariable == VON_MISES_STRESS ||
+		int caseId = -1;
+		if (rVariable == TSAI_WU_RESERVE_FACTOR)
+		{
+			caseId = 10;
+		}
+		else if (rVariable == VON_MISES_STRESS ||
 			rVariable == VON_MISES_STRESS_TOP_SURFACE ||
 			rVariable == VON_MISES_STRESS_MIDDLE_SURFACE ||
 			rVariable == VON_MISES_STRESS_BOTTOM_SURFACE)
+		{
+			caseId = 20;
+		}
+		else if (rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY)
+		{
+			caseId = 30;
+		}
+		else if (rVariable == SHELL_ELEMENT_BENDING_ENERGY)
+		{
+			caseId = 31;
+		}
+		else if (rVariable == SHELL_ELEMENT_SHEAR_ENERGY)
+		{
+			caseId = 32;
+		}
+		else if (rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY_FRACTION)
+		{
+			caseId = 33;
+		}
+		else if (rVariable == SHELL_ELEMENT_BENDING_ENERGY_FRACTION)
+		{
+			caseId = 34;
+		}
+		else if (rVariable == SHELL_ELEMENT_SHEAR_ENERGY_FRACTION)
+		{
+			caseId = 35;
+		}
+
+
+
+		if (caseId > 19)
 		{
 			// resize output
 			size_t size = 4;
@@ -855,7 +891,7 @@ namespace Kratos
 			}
 			data.localDisplacements = prod(Rdisp, data.globalDisplacements);
 
-			double von_mises_top, von_mises_mid, von_mises_bottom;
+			
 			// loop over gauss points
 			for (unsigned int gauss_point = 0; gauss_point < size; ++gauss_point)
 			{
@@ -871,65 +907,41 @@ namespace Kratos
 				ShellCrossSection::Pointer & section = mSections[gauss_point];
 				CalculateSectionResponse(data);
 
-				// recover stresses
-				CalculateStressesFromForceResultants(data.generalizedStresses,
-					section->GetThickness());
+				double resultDouble = 0.0;
 
-				// account for orientation
-				if (section->GetOrientationAngle() != 0.0)
+				if (caseId > 29)
 				{
-					Matrix R(6, 6);
-					section->GetRotationMatrixForGeneralizedStresses
-					(-(section->GetOrientationAngle()), R);
-					data.generalizedStresses = prod(R, data.generalizedStresses);
+					// Energy calcs
+					CalculateShellElementEnergy(data, rVariable, resultDouble);
+				}
+				else if (caseId > 19)
+				{
+					//Von mises calcs
+
+					// recover stresses
+					CalculateStressesFromForceResultants(data.generalizedStresses,
+						section->GetThickness());
+
+					// account for orientation
+					if (section->GetOrientationAngle() != 0.0)
+					{
+						Matrix R(6, 6);
+						section->GetRotationMatrixForGeneralizedStresses
+						(-(section->GetOrientationAngle()), R);
+						data.generalizedStresses = prod(R, data.generalizedStresses);
+					}
+
+					CalculateVonMisesStress(data, rVariable, resultDouble);
+				}
+				else
+				{
+					KRATOS_ERROR <<
+						"Error: ELEMENT ShellThinElement3D4N, METHOD GetValueOnIntegrationPoints(double)"
+						<< std::endl;
 				}
 
-				// calc von mises stresses at top mid and bottom surfaces for
-				// thin shell
-				double sxx, syy, sxy;
-
-				// top surface: membrane and +bending contributions
-				//				(no transverse shear)
-				sxx = data.generalizedStresses[0] + data.generalizedStresses[3];
-				syy = data.generalizedStresses[1] + data.generalizedStresses[4];
-				sxy = data.generalizedStresses[2] + data.generalizedStresses[5];
-				von_mises_top = sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy;
-
-				// mid surface: membrane only contributions
-				//				(no bending or transverse shear)
-				sxx = data.generalizedStresses[0];
-				syy = data.generalizedStresses[1];
-				sxy = data.generalizedStresses[2];
-				von_mises_mid = sxx*sxx - sxx*syy + syy*syy +
-					3.0*(sxy*sxy);
-
-				// bottom surface:	membrane and -bending contributions
-				//					(no transverse shear)
-				sxx = data.generalizedStresses[0] - data.generalizedStresses[3];
-				syy = data.generalizedStresses[1] - data.generalizedStresses[4];
-				sxy = data.generalizedStresses[2] - data.generalizedStresses[5];
-				von_mises_bottom = sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy;
-
-				// Output requested quantity
-				if (rVariable == VON_MISES_STRESS_TOP_SURFACE)
-				{
-					rValues[gauss_point] = sqrt(von_mises_top);
-				}
-				else if (rVariable == VON_MISES_STRESS_MIDDLE_SURFACE)
-				{
-					rValues[gauss_point] = sqrt(von_mises_mid);
-				}
-				else if (rVariable == VON_MISES_STRESS_BOTTOM_SURFACE)
-				{
-					rValues[gauss_point] = sqrt(von_mises_bottom);
-				}
-				else if (rVariable == VON_MISES_STRESS)
-				{
-					// take the greatest value and output
-					rValues[gauss_point] =
-						sqrt(std::max(von_mises_top,
-							std::max(von_mises_mid, von_mises_bottom)));
-				}
+				// store the result calculated
+				rValues[gauss_point] = resultDouble;
 			}
 		}
 		else if (rVariable == TSAI_WU_RESERVE_FACTOR)
@@ -1300,6 +1312,106 @@ namespace Kratos
 
 		// Return min of both surfaces as the result for the whole ply
 		return std::min(tsai_reserve_factor_bottom, tsai_reserve_factor_top);
+	}
+
+	void ShellThinElement3D4N::CalculateVonMisesStress(const CalculationData & data, const Variable<double>& rVariable, double & rVon_Mises_Result)
+	{
+		// calc von mises stresses at top mid and bottom surfaces for
+		// thin shell
+		double von_mises_top, von_mises_mid, von_mises_bottom;
+		double sxx, syy, sxy;
+
+		// top surface: membrane and +bending contributions
+		//				(no transverse shear)
+		sxx = data.generalizedStresses[0] + data.generalizedStresses[3];
+		syy = data.generalizedStresses[1] + data.generalizedStresses[4];
+		sxy = data.generalizedStresses[2] + data.generalizedStresses[5];
+		von_mises_top = sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy;
+
+		// mid surface: membrane only contributions
+		//				(no bending or transverse shear)
+		sxx = data.generalizedStresses[0];
+		syy = data.generalizedStresses[1];
+		sxy = data.generalizedStresses[2];
+		von_mises_mid = sxx*sxx - sxx*syy + syy*syy +
+			3.0*(sxy*sxy);
+
+		// bottom surface:	membrane and bending contributions
+		//					(no transverse shear)
+		sxx = data.generalizedStresses[0] - data.generalizedStresses[3];
+		syy = data.generalizedStresses[1] - data.generalizedStresses[4];
+		sxy = data.generalizedStresses[2] - data.generalizedStresses[5];
+		von_mises_bottom = sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy;
+
+		// Output requested quantity
+		if (rVariable == VON_MISES_STRESS_TOP_SURFACE)
+		{
+			rVon_Mises_Result = sqrt(von_mises_top);
+		}
+		else if (rVariable == VON_MISES_STRESS_MIDDLE_SURFACE)
+		{
+			rVon_Mises_Result = sqrt(von_mises_mid);
+		}
+		else if (rVariable == VON_MISES_STRESS_BOTTOM_SURFACE)
+		{
+			rVon_Mises_Result = sqrt(von_mises_bottom);
+		}
+		else if (rVariable == VON_MISES_STRESS)
+		{
+			// take the greatest value and output
+			rVon_Mises_Result =
+				sqrt(std::max(von_mises_top,
+					std::max(von_mises_mid, von_mises_bottom)));
+		}
+	}
+
+	void ShellThinElement3D4N::CalculateShellElementEnergy(const CalculationData & data, const Variable<double>& rVariable, double & rEnergy_Result)
+	{
+		// At each Gauss Point the energy of that Gauss Point's weighted area
+		// dA*w_i is output. This means that the total energy of the element is
+		// the sum of the Gauss Point energies. Accordingly, the total energy of
+		// the system is the sum of Gauss Point energies over all elements.
+
+		bool is_fraction_calc = false;
+		double totalEnergy = 1.0;
+
+		if (rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY_FRACTION ||
+			rVariable == SHELL_ELEMENT_BENDING_ENERGY_FRACTION ||
+			rVariable == SHELL_ELEMENT_SHEAR_ENERGY_FRACTION)
+		{
+			// need to calculate total energy over current dA first
+			totalEnergy = inner_prod(data.generalizedStresses, data.generalizedStrains)*data.dA[data.gpIndex];
+			is_fraction_calc = true;
+		}
+
+		if (rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY || rVariable == SHELL_ELEMENT_MEMBRANE_ENERGY_FRACTION)
+		{
+			for (size_t i = 0; i < 3; i++)
+			{
+				rEnergy_Result += data.generalizedStresses[i] * data.generalizedStrains[i]* data.dA[data.gpIndex];
+			}
+
+			if (is_fraction_calc)
+			{
+				rEnergy_Result /= totalEnergy;
+			}
+		}
+		else if (rVariable == SHELL_ELEMENT_BENDING_ENERGY || rVariable == SHELL_ELEMENT_BENDING_ENERGY_FRACTION)
+		{
+			for (size_t i = 3; i < 6; i++)
+			{
+				rEnergy_Result += data.generalizedStresses[i] * data.generalizedStrains[i]* data.dA[data.gpIndex];
+			}
+
+			if (is_fraction_calc)
+			{
+				rEnergy_Result /= totalEnergy;
+			}
+		}
+		else if (rVariable == SHELL_ELEMENT_SHEAR_ENERGY || rVariable == SHELL_ELEMENT_SHEAR_ENERGY_FRACTION)
+		{
+			rEnergy_Result = 0.0;
+		}
 	}
 
 	void ShellThinElement3D4N::CheckGeneralizedStressOrStrainOutput(const Variable<Matrix>& rVariable, int & ijob, bool & bGlobal)
