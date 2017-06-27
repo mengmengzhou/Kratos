@@ -271,7 +271,6 @@ class CADMapper
         		NodeType::Pointer gauss_point_i = Node < 3 > ::Pointer(new Node<3>(PointNumber, ip_coordinates ));
 
         		// Search nearest cad neighbor of current integration point
-        		NodeType resulting_nearest_point;
         		NodeType::Pointer nearest_point = nodes_tree.SearchNearestPoint( *gauss_point_i );
 
 				// Recover CAD information of nearest point
@@ -1197,7 +1196,6 @@ class CADMapper
 		for (ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i != mr_fe_model_part.NodesEnd(); ++node_i)
 		{
 			unsigned int mapping_id = node_i->GetValue(MAPPING_MATRIX_ID);
-
 			dx[3*mapping_id+0] = node_i->GetValue(SHAPE_CHANGE_ABSOLUTE_X);
 			dx[3*mapping_id+1] = node_i->GetValue(SHAPE_CHANGE_ABSOLUTE_Y);
 			dx[3*mapping_id+2] = node_i->GetValue(SHAPE_CHANGE_ABSOLUTE_Z);
@@ -1767,7 +1765,7 @@ class CADMapper
 			for( size_t i = 0; i < distance.size( ); i++)
 			{
 				average = average + distance[i];
-				if( distance[i] > max )
+				if( distance[i] > max ) 
 				{
 					max = distance[i];
 				}
@@ -1776,6 +1774,272 @@ class CADMapper
 			average = average / distance.size();
 		}
 	}
+
+    // --------------------------------------------------------------------------
+    void compute_a_matrix(const unsigned int u_resolution, const unsigned int v_resolution)
+	{
+		// 1st step: compute CAD points closer to FE-nodes
+		// 1.1: Create for each patch coarse cloud of CAD points in x-y space for neighbor search later 
+		// Each correspondingly created point is stored in a list.
+		// Further lists in the same order are created to store the respective u & v parameter as well as the patch id
+		// As list iterator we use a counter for the number of CAD nodes
+		unsigned int cad_node_counter = 0;
+		NodeVector list_of_cad_nodes;
+		DoubleVector list_of_us_of_cad_nodes;
+		DoubleVector list_of_vs_of_cad_nodes;
+		IntVector list_of_patch_itrs_of_cad_nodes;
+
+		//Loop over all surface of all patches / faces
+		for (unsigned int patch_itr = 0; patch_itr < m_patches.size(); patch_itr++)
+		{
+			// Get relevant data
+			unsigned int patch_id =  m_patches[patch_itr].GetId();
+			DoubleVector& knot_vec_u_i = m_patches[patch_itr].GetSurface().GetKnotVectorU();
+			DoubleVector& knot_vec_v_i = m_patches[patch_itr].GetSurface().GetKnotVectorV();
+			std::cout << "\n> Processing Patch with brep_id " << patch_id << std::endl;
+
+			// Pre-calculations
+			unsigned int knot_vector_u_dimension = knot_vec_u_i.size();
+			unsigned int knot_vector_v_dimension = knot_vec_v_i.size();
+
+			double u_min = knot_vec_u_i[0];
+			double u_max = knot_vec_u_i[knot_vector_u_dimension-1];
+			double v_min = knot_vec_v_i[0];
+			double v_max = knot_vec_v_i[knot_vector_v_dimension-1];
+
+			double delta_u = (u_max-u_min) / u_resolution;
+			double delta_v = (v_max-v_min) / v_resolution;
+
+			// Loop over all u & v according to specified resolution
+			for(unsigned int i=1; i<u_resolution; i++)
+			{
+				// current u-value
+				double u_i = u_min + i*delta_u;
+
+				for(unsigned int j=1; j<v_resolution; j++)
+				{
+					// current v-value
+					double v_j = v_min + j*delta_v;
+
+					// Check if u_i and v_j represent a point inside the closed boundary loop
+					array_1d<double, 2> point_of_interest;
+					point_of_interest[0] = u_i;
+					point_of_interest[1] = v_j;
+					bool point_is_inside = m_patches[patch_itr].CheckIfPointIsInside(point_of_interest);
+
+					if(point_is_inside)
+					{
+						// compute unique point in CAD-model for given u&v
+						++cad_node_counter;					
+						Point<3> cad_point_coordinates;
+						m_patches[patch_itr].GetSurface().EvaluateSurfacePoint(cad_point_coordinates, u_i, v_j);
+
+						// Add id to point --> node. Add node to list of CAD nodes
+						NodeType::Pointer new_cad_node = Node < 3 > ::Pointer(new Node<3>(cad_node_counter, cad_point_coordinates));
+						list_of_cad_nodes.push_back(new_cad_node);
+
+						// Store for cad node the corresponding cad information in separate vectors
+						list_of_us_of_cad_nodes.push_back(u_i);
+						list_of_vs_of_cad_nodes.push_back(v_j);
+						list_of_patch_itrs_of_cad_nodes.push_back(patch_itr);
+					}
+				}
+			}
+		}
+		// 1.2: Construct KD-Tree with all cad nodes
+		std::cout << "\n> Starting construction of search-tree..." << std::endl;
+		boost::timer timer;
+        typedef Bucket< 3, NodeType, NodeVector, NodeType::Pointer, NodeIterator, DistanceIterator > BucketType;
+        typedef Tree< KDTreePartition<BucketType> > tree;
+        int bucket_size = 20;
+        tree nodes_tree(list_of_cad_nodes.begin(), list_of_cad_nodes.end(), bucket_size);
+		std::cout << "> Time needed for constructing search-tree: " << timer.elapsed() << " s" << std::endl;
+		// 1.3: Evaluate nearest CAD nodes for all FEM nodes. Flag corresponding control points as relevant for mapping
+		// loop over nodes
+		NodeVector list_of_nearest_points;
+		DoubleVector list_of_u_of_nearest_points;
+		DoubleVector list_of_v_of_nearest_points;
+		DoubleVector list_of_span_u_of_nearest_points;
+		DoubleVector list_of_span_v_of_nearest_points;		
+		IntVector list_of_patch_of_nearest_points;
+		// Loop over all nodes of fe-model-part and find corresponding closest neighbors of cad-model
+		std::cout << "\n> Starting to identify neighboring CAD points..." << std::endl;
+		boost::timer timer_2;
+	    for(ModelPart::NodesContainerType::iterator node_itr = mr_fe_model_part.NodesBegin(); node_itr!=mr_fe_model_part.NodesEnd(); node_itr++)
+		{	
+            // Get node information
+            ModelPart::NodeType& node_i = *node_itr;
+            array_1d<double,3>  i_coord = node_i.Coordinates();
+
+
+
+        	// Search nearest cad neighbor of current integration point
+        	NodeType::Pointer nearest_point = nodes_tree.SearchNearestPoint( node_i ); 
+
+			// Recover CAD information of nearest point
+			double u_of_nearest_point = list_of_us_of_cad_nodes[nearest_point->Id()-1];
+			double v_of_nearest_point = list_of_vs_of_cad_nodes[nearest_point->Id()-1];
+			int patch_itr_of_nearest_point = list_of_patch_itrs_of_cad_nodes[nearest_point->Id()-1];
+
+			// Perform Newton-Raphson for detailed search
+
+			// Initialize P: point on the mesh
+			Vector P = ZeroVector(3);
+			P(0) = i_coord[0]; 
+			P(1) = i_coord[1];
+			P(2) = i_coord[2];
+			// Initialize Q_k: point on the CAD surface
+			Vector Q_k = ZeroVector(3);
+			Q_k(0) = nearest_point->X();
+			Q_k(1) = nearest_point->Y();
+			Q_k(2) = nearest_point->Z();
+			// Initialize what's needed in the Newton-Raphson iteration				
+			Vector Q_minus_P = ZeroVector(3); // Distance between current Q_k and P
+			Matrix myHessian = ZeroMatrix(2,2);
+			Vector myGradient = ZeroVector(2);
+			double det_H = 0;
+			Matrix InvH = ZeroMatrix(2,2);				
+			double u_k = u_of_nearest_point;
+			double v_k = v_of_nearest_point;
+			Point<3> newtonRaphPoint;
+
+				double norm_deltau = 100000000;
+				unsigned int k = 0;
+				unsigned int max_itr = 50;
+				while (norm_deltau > 1e-5)
+				{
+					// The distance between Q (on the CAD surface) and P (on the FE-mesh) is evaluated
+					Q_minus_P(0) = Q_k(0) - P(0);
+					Q_minus_P(1) = Q_k(1) - P(1);
+					Q_minus_P(2) = Q_k(2) - P(2);
+
+					// The distance is used to compute Hessian and gradient
+					m_patches[patch_itr_of_nearest_point].GetSurface().EvaluateGradientsForClosestPointSearch(Q_minus_P, myHessian, myGradient , u_k, v_k);
+
+					// u_k and v_k are updated
+					MathUtils<double>::InvertMatrix( myHessian, InvH, det_H );
+					Vector deltau = prod(InvH,myGradient);
+					u_k -= deltau(0);
+					v_k -= deltau(1);
+
+					// Q is updated
+					m_patches[patch_itr_of_nearest_point].GetSurface().EvaluateSurfacePoint(newtonRaphPoint, u_k, v_k);
+					Q_k(0) = newtonRaphPoint[0];
+					Q_k(1) = newtonRaphPoint[1];
+					Q_k(2) = newtonRaphPoint[2];
+					norm_deltau = norm_2(deltau);
+
+					k++;
+
+					if(k>max_itr)
+					{
+						std::cout << "WARNING!!! Newton-Raphson to find closest point did not converge in the following number of iterations: " << k-1 << std::endl;
+						KRATOS_WATCH(Q_k);
+						KRATOS_WATCH(P);
+					}
+				}
+
+				// Update nearest point
+				u_of_nearest_point = u_k;
+				v_of_nearest_point = v_k;
+				nearest_point->X() = Q_k(0);
+				nearest_point->Y() = Q_k(1);
+				nearest_point->Z() = Q_k(2);
+
+				// Compute and store span of each parameter to avoid redundant computations later
+				IntVector knot_span_nearest_point = m_patches[patch_itr_of_nearest_point].GetSurface().GetKnotSpan(u_of_nearest_point, v_of_nearest_point);
+
+				// Set flag to mark control point as relevant for mapping
+				int span_u_of_np = knot_span_nearest_point[0];
+				int span_v_of_np = knot_span_nearest_point[1];
+				m_patches[patch_itr_of_nearest_point].GetSurface().FlagControlPointsForMapping(span_u_of_np, span_v_of_np, u_of_nearest_point, v_of_nearest_point);
+
+				// Store information about nearest point in vector for recovery in the same loop later when the mapping matrix is constructed
+				list_of_nearest_points.push_back(nearest_point);
+				list_of_u_of_nearest_points.push_back(u_of_nearest_point);
+				list_of_v_of_nearest_points.push_back(v_of_nearest_point);
+				list_of_span_u_of_nearest_points.push_back(span_u_of_np);
+				list_of_span_v_of_nearest_points.push_back(span_v_of_np);				
+				list_of_patch_of_nearest_points.push_back(patch_itr_of_nearest_point);
+
+			
+		}
+		std::cout << "> Time needed for identify neighboring CAD points: " << timer_2.elapsed() << " s" << std::endl;
+
+		// 2nd step: construct matrix
+		// Count relevant control points and assign each a unique mapping matrix Id (iterator over points)
+		
+		// First we identify relevant control points affecting the cad points on the surface
+		m_n_control_points = 0; 
+		m_n_relevant_control_points = 0;
+		unsigned int mapping_matrix_id = 0;
+		for (PatchVector::iterator patch_i = m_patches.begin(); patch_i != m_patches.end(); ++patch_i)
+		{
+			for (ControlPointVector::iterator cp_i = patch_i->GetSurface().GetControlPoints().begin(); cp_i != patch_i->GetSurface().GetControlPoints().end(); ++cp_i)
+			{
+				if(cp_i->IsRelevantForMapping())
+				{
+					cp_i->SetMappingMatrixId(mapping_matrix_id);
+					++m_n_relevant_control_points;
+					++mapping_matrix_id;
+				}
+				++m_n_control_points;
+			}
+		}
+		std::cout << "\n> Number of control points in total = " << m_n_control_points << "." << std::endl;
+		std::cout << "\n> Number of control points relevant for mapping = " << m_n_relevant_control_points << ".\n" << std::endl;
+
+		// Count FE nodes and assign each a unique mapping matrix id (iterator over nodes)
+		m_n_relevant_fem_points = 0;
+		for (ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i != mr_fe_model_part.NodesEnd(); ++node_i)
+		{
+			node_i->SetValue(MAPPING_MATRIX_ID,m_n_relevant_fem_points); // ??? A_MAPPING_MATRIX
+			m_n_relevant_fem_points++;
+		}
+		
+		// Initialize a matrix
+		double number_of_FE_dofs = 3 * m_n_relevant_fem_points;
+		double number_of_CAD_dofs = 3 * m_n_relevant_control_points;
+		m_a_matrix.resize(number_of_FE_dofs, number_of_CAD_dofs);
+		m_a_matrix.clear();
+
+		// Compute a matrix
+	    for(ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i!=mr_fe_model_part.NodesEnd(); node_i++)
+		{
+				// Get the corresponding id of FE-node in the matrix			
+				int row_id = node_i->GetValue(MAPPING_MATRIX_ID); // ?? A_MAPPING_MATRIX
+				
+				// Recover information about nearest CAD point				
+				double u_of_nearest_point = list_of_u_of_nearest_points[row_id];
+				double v_of_nearest_point = list_of_v_of_nearest_points[row_id];
+				unsigned int span_u_of_nearest_point = list_of_span_u_of_nearest_points[row_id];
+				unsigned int span_v_of_nearest_point = list_of_span_v_of_nearest_points[row_id];
+				unsigned int patch_itr_of_nearest_point = list_of_patch_of_nearest_points[row_id];
+				
+				// Get CAD-shape-function-value for all control points affecting the nearest cad point
+				matrix<double> R_CAD_Pi;
+				m_patches[patch_itr_of_nearest_point].GetSurface().EvaluateNURBSFunctions( span_u_of_nearest_point,
+																						   span_v_of_nearest_point,
+																						   u_of_nearest_point, 
+																						   v_of_nearest_point,
+																						   R_CAD_Pi );
+				
+				// Get the corresponding id of control points in the matrix
+				matrix<unsigned int> mapping_matrix_ids_cad = m_patches[patch_itr_of_nearest_point].GetSurface().GetMappingMatrixIds( span_u_of_nearest_point, span_v_of_nearest_point, u_of_nearest_point, v_of_nearest_point);
+
+				// Assemble a matrix
+				for(unsigned int i=0; i<mapping_matrix_ids_cad.size2();i++)
+				{
+					for(unsigned int j=0; j<mapping_matrix_ids_cad.size1();j++)
+					{
+						unsigned int col_id = mapping_matrix_ids_cad(j,i);
+						double R_i = R_CAD_Pi(j,i);
+						m_a_matrix(row_id,col_id) = R_i;	
+					}
+				}
+		}
+	}
+
     // ==============================================================================
 
     /// Turn back information as a string.
@@ -1815,6 +2079,7 @@ class CADMapper
 	unsigned int m_n_relevant_fem_points;
     SparseMatrixType m_mapping_matrix_CAD_CAD;
 	SparseMatrixType m_mapping_matrix_CAD_FEM;
+	SparseMatrixType m_a_matrix; // rectangular NURBS matrix
 	Vector m_mapping_rhs_vector;
 	const Condition::GeometryType::IntegrationMethod m_integration_method = GeometryData::GI_GAUSS_5;
 
