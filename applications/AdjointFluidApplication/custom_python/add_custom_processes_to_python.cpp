@@ -21,6 +21,7 @@
 #include "processes/process.h"
 #include "custom_processes/output_primal_solution_process.h"
 #include "custom_processes/input_primal_solution_process.h"
+#include "custom_processes/output_objective_value_process.h"
 #include "includes/model_part.h"
 
 namespace Kratos
@@ -39,6 +40,14 @@ void AddCustomProcessesToPython()
 
     class_< InputPrimalSolutionProcess, bases<Process> >
     ("InputPrimalSolutionProcess", init<ModelPart&, Parameters&>())
+    ;
+
+    class_<OutputObjectiveValueProcess<2>, bases<Process> >
+    ("OutputObjectiveValueProcess2D", init<ModelPart&, Parameters&>())
+    ;
+
+    class_<OutputObjectiveValueProcess<3>, bases<Process> >
+    ("OutputObjectiveValueProcess3D", init<ModelPart&, Parameters&>())
     ;
 }
 

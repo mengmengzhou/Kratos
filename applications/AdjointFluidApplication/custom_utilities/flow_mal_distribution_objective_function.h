@@ -4,6 +4,7 @@
 //					 license: AdjointFluidApplication/license.txt
 //
 //  Main authors:    Michael Andre, https://github.com/msandre
+//                   Suneth Warnakulasuriya
 //
 
 #if !defined(KRATOS_FLOW_MAL_DISTRIBUTION_OBJECTIVE_FUNCTION)
@@ -491,6 +492,75 @@ private:
         mAverageVelocity /= mAverageSurfaceArea;
         mAverageSurfaceArea /= mN;
     }
+
+    /*void CalculateAreaGradients(const Element& rElem,
+                                    std::vector<array_1d<double, 3>&>& rAreaGradients,
+                                    ProcessInfo& rProcessInfo)
+    {
+        
+        const unsigned int NumNodes = rElem.GetGeometry().PointsNumber();
+
+        double inv_coeff = 1.0/(mAverageSurfaceArea*(mN-1)*mObjectiveValue);
+
+        Geometry<Node<3> >& pGeometry = rElem.GetGeometry();
+
+        array_1d<double, 3> v1, v2, p;
+
+        unsigned int LocalIndex = 0;
+        for (unsigned int iNode = 0; iNode < NumNodes; ++iNode)
+        {
+            int index_1 = iNode - 1;
+            int index_2 = iNode + 1;
+
+            if (iNode < 0)
+                index_1 = NumNodes - 1;
+            if (iNode > NumNodes - 1)
+                index_2 = 0
+
+            p[0] = pGeometry[iNode].X();
+            p[1] = pGeometry[iNode].Y();
+            p[2] = pGeometry[iNode].Z();
+(
+            v1[0] = pGeometry[index_1].X() - pGeometry[iNode].X();
+            v1[1] = pGeometry[index_1].Y() - pGeometry[iNode].Y();
+            v1[2] = pGeometry[index_1].Z() - pGeometry[iNode].Z();
+
+            v2[0] = pGeometry[index_2].X() - pGeometry[iNode].X();
+            v2[1] = pGeometry[index_2].Y() - pGeometry[iNode].Y();
+            v2[2] = pGeometry[index_2].Z() - pGeometry[iNode].Z();
+
+            double mag_v1 = norm_2(v1);
+            double mag_v2 = norm_2(v2);
+
+            double mag_v1_2 = pow(mag_v1, 2);
+            double mag_v2_2 = pow(mag_v2, 2);
+            double v1_dot_v2 = dot_product(v1, v2);
+
+            double cos_alpha = v1_dot_v2/(mag_v1*mag_v2);
+            double sin_alpha = sqrt(1-pow(cos_alpha,2));
+
+            double element_area = 0.5*mag_v1*mag_v2*sin_alpha;
+
+            array_1d<double, 3> gradient_of_v1_dot_v2;
+
+            gradient_of_v1_dot_v2 = -v1 -v2;
+
+            array_1d<double, 3> temp = v1/mag_v1_2 + v2/mag_v2_2;
+
+            rAreaGradients[iNode] = -2*element_area*temp 
+                        -(v1_dot_v2*0.5/elemen_area)*(
+                            gradient_of_v1_dot_v2 + v1_dot_v2*temp
+                            );
+            rAreaGradients[iNode] *= 0.5;
+
+        }
+    }
+
+    void double dot_product(const array_1d<double, 3>& a, 
+                            const array_1d<double, 3>& b)
+    {
+        return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    }*/
     ///@}
 };
 

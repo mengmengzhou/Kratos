@@ -4,6 +4,7 @@
 //					 license: AdjointFluidApplication/license.txt
 //
 //  Main authors:    Michael Andre, https://github.com/msandre
+//                   Suneth Warnakulasuriya
 //
 //  Reference :      This class is adapted from applications/ChimeraApplication/custom_utilities/input_output/vtk_output.h
 

@@ -68,19 +68,7 @@
         "volume_model_part_name"        : "Parts_fluid",
         "skin_parts"                    : ["Inlet3D_inlet","Outlet3D_outlet","NoSlip3D_walls"]
     },
-    "initial_conditions_process_list"  : [{
-        "python_module"         : "process_factory",
-        "kratos_module"         : "KratosMultiphysics",
-        "help"                  : "This process ",
-        "process_name"          : "ApplyConstantVectorValueProcess",
-        "Parameters"            : {
-            "mesh_id"         : 0,
-            "model_part_name" : "VELOCITY_inlet",
-            "variable_name"   : "VELOCITY",
-            "modulus"         : 1e-1,
-            "direction"       : [1.0,0.0,0.0]
-        }
-    }],
+    "initial_conditions_process_list"  : [],
     "boundary_conditions_process_list" : [{
         "python_module"         : "impose_vector_value_by_direction_process",
         "kratos_module"         : "KratosMultiphysics",
@@ -91,7 +79,7 @@
             "mesh_id"         : 0,
             "model_part_name" : "Inlet3D_inlet",
             "variable_name"   : "VELOCITY",
-            "modulus"         : 1e-1,
+            "modulus"         : 1e-4,
             "direction"       : [1.0,0.0,0.0]
         }
     },{
@@ -126,5 +114,19 @@
 	    "variable_list"   : ["VELOCITY", "ACCELERATION", "PRESSURE"],
 	    "alpha_bossak"    :-0.3
 	}
+    },{
+    "kratos_module"    : "KratosMultiphysics.AdjointFluidApplication",
+	"python_module"    : "output_objective_value_process",
+	"help"             : "",
+	"process_name"     : "OutputObjectiveValueProcess3D",
+	"Parameters"          : {
+            "model_part_name"   : "MainModelPart",
+            "objective_settings" : {
+                "objective_type"                 : "flow_mal_distribution",
+                "surface_model_part_name"        : "Outlet3D_outlet",
+                "flow_mal_distribution_direction": "surface_normal",
+                "output_file"                    : "test_turbulent_sensitivity_3d/flow_mal_distribution"
+                }
+        }
     }]
 }

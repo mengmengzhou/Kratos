@@ -43,7 +43,7 @@
             "objective_type"                 : "flow_mal_distribution",
             "surface_model_part_name"        : "Outlet3D_outlet",
             "flow_mal_distribution_direction": "surface_normal",
-            "output_file"                    : "test_turbulent_sensitivity_3d/flow_mal_distribution"
+            "output_file"                    : "test_turbulent_sensitivity_3d/flow_mal_distribution_adjoint"
         },
         "model_import_settings"         : {
             "input_type"     : "mdpa",

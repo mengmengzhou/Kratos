@@ -2,7 +2,7 @@ import os
 from KratosMultiphysics import *
 import KratosMultiphysics.KratosUnittest as KratosUnittest
 import test_MainKratos
-import os
+from shutil import copyfile
 
 class ControlledExecutionScope:
     def __init__(self, scope):
@@ -71,30 +71,26 @@ class TestCase(KratosUnittest.TestCase):
     def ComputeFiniteDifferenceSensitivity( \
                                 self, node_ids, step_size, model_part_file_name, file_name):
         sensitivity = []
-        # unperturbed drag
-        print('Solving for unperturbed flow mal dsitribution...')
+        # unperturbed flow mal distribution
+        copyfile("%s.mdpa.org" % model_part_file_name, "%s.mdpa" % model_part_file_name)
         self.solve(model_part_file_name)
         flow_mal_distribution_0 = self.getTimeAveragedFlowMalDistribution(file_name)
         for node_id in node_ids:
             node_sensitivity = []
+            copyfile("%s.mdpa.org" % model_part_file_name, "%s.mdpa" % model_part_file_name)
             coord = self.readNodalCoordinates(node_id, model_part_file_name)
-            # Y + h
             perturbed_coord = [coord[0], coord[1]+step_size, coord[2]]
             self.writeNodalCoordinates(node_id, perturbed_coord, model_part_file_name)
-            print('Solving for perturbation in Y direction flow mal dsitribution...')
             self.solve(model_part_file_name)
             flow_mal_distribution = self.getTimeAveragedFlowMalDistribution(file_name)
             node_sensitivity.append((flow_mal_distribution - flow_mal_distribution_0) / step_size)
             # Z + h
             perturbed_coord = [coord[0], coord[1], coord[2] + step_size]
             self.writeNodalCoordinates(node_id, perturbed_coord, model_part_file_name)
-            print('Solving for perturbation in Z direction flow mal dsitribution...')
             self.solve(model_part_file_name)
             flow_mal_distribution = self.getTimeAveragedFlowMalDistribution(file_name)
             node_sensitivity.append((flow_mal_distribution - flow_mal_distribution_0) / step_size)
             sensitivity.append(node_sensitivity)
-            # return mdpa file to unperturbed state
-            self.writeNodalCoordinates(node_id, coord, model_part_file_name)
         return sensitivity
 
     def createTest(self, parameter_file_name):
@@ -108,31 +104,48 @@ class TestCase(KratosUnittest.TestCase):
         test = self.createTest(parameter_file_name)
         test.Solve()
 
-    def test_Nozzle_3D(self):
+    def test_nozzle_3d(self):
         with ControlledExecutionScope(os.path.dirname(os.path.realpath(__file__))):
             # solve fluid
-            print('Solving primal problem...')
-            self.solve('test_turbulent_sensitivity_3d/nozzle_test_3d')
+            model_part_file_name = 'test_turbulent_sensitivity_3d/nozzle_test_3d'
+            copyfile("%s.mdpa.org" % model_part_file_name, "%s.mdpa" % model_part_file_name)
+            self.solve(model_part_file_name)
             # solve adjoint
-            print('Solving adjoint problem...')
             test = self.createTest('test_turbulent_sensitivity_3d/nozzle_test_3d_adjoint')
             test.Solve()
 
-            node_id = 74
+            node_ids = [281, 273]
 
-            Sensitivity = [[]]
-            Sensitivity[0].append(test.main_model_part.GetNode(node_id).GetSolutionStepValue(SHAPE_SENSITIVITY_Y))
-            Sensitivity[0].append(test.main_model_part.GetNode(node_id).GetSolutionStepValue(SHAPE_SENSITIVITY_Z))
+            _adjoint_sensitivity = []
+            for i in range(0, len(node_ids)):
+                node_id = node_ids[i]
+                node_sensitivity = []
+                node_sensitivity.append( \
+                        test.main_model_part.GetNode(node_id).GetSolutionStepValue(\
+                                            SHAPE_SENSITIVITY_Y))
+                node_sensitivity.append( \
+                        test.main_model_part.GetNode(node_id).GetSolutionStepValue(\
+                                            SHAPE_SENSITIVITY_Z))
+                _adjoint_sensitivity.append(node_sensitivity)
 
             # calculate sensitivity by finite difference
             step_size = 0.00000001
-            FDSensitivity = self.ComputeFiniteDifferenceSensitivity(\
-                        [node_id], \
+            _finite_difference_sensitivity = self.ComputeFiniteDifferenceSensitivity(\
+                        node_ids, \
                         step_size, \
                         './test_turbulent_sensitivity_3d/nozzle_test_3d', \
                         './test_turbulent_sensitivity_3d/flow_mal_distribution.data')
-            self.assertAlmostEqual(Sensitivity[0][0], FDSensitivity[0][0], 5)
-            self.assertAlmostEqual(Sensitivity[0][1], FDSensitivity[0][1], 5)
+
+            print("Sensitivities calculated from finite difference method: ")
+            print(_finite_difference_sensitivity)
+            print("Sensitivities calculated from adjoint method: ")
+            print(_adjoint_sensitivity)
+            for i in range(0, len(node_ids)):
+                self.assertAlmostEqual(_adjoint_sensitivity[i][0], \
+                                        _finite_difference_sensitivity[i][0], 5)
+                self.assertAlmostEqual(_adjoint_sensitivity[i][1], \
+                                        _finite_difference_sensitivity[i][1], 5)
+
             self.removeFile("./test_turbulent_sensitivity_3d/nozzle_test_3d_0.h5")
             self.removeFile("./test_turbulent_sensitivity_3d/flow_mal_distribution.data")
             self.removeFile("./test_turbulent_sensitivity_3d/nozzle_test_3d.time")
