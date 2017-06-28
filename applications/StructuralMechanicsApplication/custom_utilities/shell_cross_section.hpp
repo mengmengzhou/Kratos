@@ -467,6 +467,8 @@ public:
                 mOrientationAngle += 360.0;
         }
 
+		void RecoverOrthotropicProperties(const unsigned int currentPly);
+
         inline const IntegrationPointCollection& GetIntegrationPoints()const
         {
             return mIntegrationPoints;
@@ -1274,7 +1276,7 @@ public:
 	* Checks if the shell is an orthotropic material
 	* @return the true/false
 	*/
-	bool CheckIsOrthotropic(Properties& rProps);
+	bool CheckIsOrthotropic(const Properties& rProps);
 
 	/**
 	* Parses the shell orthotropic material data from properties

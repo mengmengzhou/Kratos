@@ -439,6 +439,12 @@ namespace Kratos
 			{
 				Ply& iPly = *ply_it;
 				const Properties& iPlyProps = iPly.GetProperties();
+
+				if (CheckIsOrthotropic(iPlyProps))
+				{
+					iPly.RecoverOrthotropicProperties(ply_number);
+				}
+
 				materialValues.SetMaterialProperties(iPlyProps);
 				double iPlyAngle = iPly.GetOrientationAngle();
 
@@ -813,7 +819,7 @@ namespace Kratos
 		KRATOS_CATCH("")
 	}
 
-	bool ShellCrossSection::CheckIsOrthotropic(Properties& rProps)
+	bool ShellCrossSection::CheckIsOrthotropic(const Properties& rProps)
 	{
 		if (rProps.Has(SHELL_ORTHOTROPIC_LAYERS))
 		{
@@ -827,15 +833,13 @@ namespace Kratos
 
 	void ShellCrossSection::ParseOrthotropicPropertyMatrix(Properties& props, Element* myElement)
 	{
-		bool printLayers = false; // for debugging
-
 		// ascertain how many plies there are and begin stacking them
 		unsigned int plies = (props)[SHELL_ORTHOTROPIC_LAYERS].size1();
 		this->BeginStack();
 
 		// figure out the format of material properties based on it's width
 		int myFormat = (props)[SHELL_ORTHOTROPIC_LAYERS].size2();
-		if (myFormat == 16 || myFormat == 17)
+		if (myFormat == 16)
 		{
 			myFormat -= 7;
 		}
@@ -853,109 +857,18 @@ namespace Kratos
 				//
 				// Arranged as: thickness, RZangle, density, E1, E2, Poisson_12, G12, G13, G23
 
-				// Assign the property of the current ply
+				// Assign the geometric properties of the current ply
 				plyThickness = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 0);
 				angleRz = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 1);
 
-				props.SetValue(DENSITY,
-					(props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 2));	//DENSITY
-
-				props.SetValue(YOUNG_MODULUS_X,
-					(props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 3));	//E1
-
-				props.SetValue(YOUNG_MODULUS_Y,
-					(props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 4));	//E2
-
-				props.SetValue(POISSON_RATIO_XY,
-					(props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 5));	//Nu_12
-
-				props.SetValue(SHEAR_MODULUS_XY,
-					(props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 6));	//G12
-
-				props.SetValue(SHEAR_MODULUS_XZ,
-					(props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 7));	//G13
-
-				props.SetValue(SHEAR_MODULUS_YZ,
-					(props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 8));	//G23
-
-				if (printLayers)
-				{
-					std::cout << "\n===============================================================" << std::endl;
-					std::cout << "Composite mechanical properties material definition: LAYER " << currentPly << std::endl;
-					std::cout << "_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _" << std::endl;
-					std::cout << "Thickness = " << plyThickness << std::endl;
-					std::cout << "E1 = " << props.GetValue(YOUNG_MODULUS_X) << std::endl;
-					std::cout << "E2 = " << props.GetValue(YOUNG_MODULUS_Y) << std::endl;
-					std::cout << "G12 = " << props.GetValue(SHEAR_MODULUS_XY) << std::endl;
-				}
-
-				break;
-
-			case 10:
-				// Matrix and fiber material definition
-				//
-				// Arranged as: layer_thickness, RZangle, density_fiber, E_fiber, Poisson_fiber, vol_fiber,
-				//				density_matrix, E_matrix, Poisson_matrix, vol_matrix
-
-				// setup orthtropic composite variables
-				double density_fiber, E_fiber, Poisson_fiber, VolumeFraction_fiber,
-					density_matrix, E_matrix, Poisson_matrix, VolumeFraction_matrix;
-
-				// parse properties for each ply
-				plyThickness = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 0);
-				angleRz = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 1);	// angle (degrees) between element XX and material xx, about RZ
-				density_fiber = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 2);
-				E_fiber = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 3);
-				Poisson_fiber = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 4);
-				VolumeFraction_fiber = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 5);
-				density_matrix = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 6);
-				E_matrix = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 7);
-				Poisson_matrix = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 8);
-				VolumeFraction_matrix = (props)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 9);
-
-				if (VolumeFraction_matrix + VolumeFraction_fiber != 1.0)
-				{
-					KRATOS_THROW_ERROR(std::invalid_argument, "Check volume fractions!", "");
-				}
-
-				// calculate shear moduli
-				double G_fiber, G_matrix;
-				G_fiber = E_fiber / (2.0*(1.0 + Poisson_fiber));
-				G_matrix = E_matrix / (2.0*(1.0 + Poisson_matrix));
-
-				// Add in derived material values to the property of the current ply
-				props.SetValue(YOUNG_MODULUS_X,
-					(E_fiber*VolumeFraction_fiber + E_matrix*VolumeFraction_matrix));						//E1
-				props.SetValue(YOUNG_MODULUS_Y,
-					(E_fiber*E_matrix / (E_fiber*VolumeFraction_matrix + E_matrix*VolumeFraction_fiber)));	//E2
-				props.SetValue(POISSON_RATIO_XY,
-					(Poisson_fiber*VolumeFraction_fiber + Poisson_matrix*VolumeFraction_matrix));			//Nu_12
-				props.SetValue(SHEAR_MODULUS_XY,
-					(G_fiber*G_matrix / (G_fiber*VolumeFraction_matrix + G_matrix*VolumeFraction_fiber)));	//G12
-				props.SetValue(DENSITY,
-					(density_fiber*VolumeFraction_fiber + density_matrix*VolumeFraction_matrix));			//DENSITY
-
-				// TEMPORARY - ESTIMATE OF UNKNOWN SHEAR MODULI
-				props.SetValue(SHEAR_MODULUS_XZ, props.GetValue(SHEAR_MODULUS_XY));							//G13
-				props.SetValue(SHEAR_MODULUS_YZ, 0.2*props[YOUNG_MODULUS_Y]);								//G23
-
-				if (printLayers)
-				{
-					std::cout << "\n===============================================================" << std::endl;
-					std::cout << "Matrix and fiber material definition: LAYER " << currentPly << std::endl;
-					std::cout << "_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _" << std::endl;
-					std::cout << "Thickness = " << plyThickness << std::endl;
-					std::cout << "E_fiber = " << E_fiber << std::endl;
-					std::cout << "E_matrix = " << E_matrix << std::endl;
-					std::cout << "E1 = " << props.GetValue(YOUNG_MODULUS_X) << std::endl;
-					std::cout << "E2 = " << props.GetValue(YOUNG_MODULUS_Y) << std::endl;
-					std::cout << "G12 = " << props.GetValue(SHEAR_MODULUS_XY) << std::endl;
-				}
+				// Mechanical properties of the plies are updated during the
+				// calculation in the following method:
+				// ShellCrossSection::Ply::RecoverOrthotropicProperties
 
 				break;
 
 			default:
-				KRATOS_THROW_ERROR(std::logic_error, "The Orthotropic Layers have been defined  incorrectly!", "")
+				KRATOS_THROW_ERROR(std::logic_error, "The Orthotropic Layer data has been defined incorrectly! It should be arranged as follows:\n\tthickness, RZangle, density, E1, E2, Poisson_12, G12, G13, G23", "")
 			}
 
 			this->AddPly(plyThickness, angleRz, 5, myElement->pGetProperties());
@@ -1543,5 +1456,32 @@ namespace Kratos
 			mOOP_CondensedStrains = other.mOOP_CondensedStrains;
 			mOOP_CondensedStrains_converged = other.mOOP_CondensedStrains_converged;
 		}
+	}
+	void ShellCrossSection::Ply::RecoverOrthotropicProperties(const unsigned int currentPly)
+	{
+		// Composite mechanical properties material definition
+		//
+		// Arranged as: (thickness), (RZangle), density, E1, E2, Poisson_12, G12, G13, G23
+
+		mpProperties->SetValue(DENSITY,
+			(*mpProperties)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 2));	//DENSITY
+
+		mpProperties->SetValue(YOUNG_MODULUS_X,
+			(*mpProperties)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 3));	//E1
+
+		mpProperties->SetValue(YOUNG_MODULUS_Y,
+			(*mpProperties)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 4));	//E2
+
+		mpProperties->SetValue(POISSON_RATIO_XY,
+			(*mpProperties)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 5));	//Nu_12
+
+		mpProperties->SetValue(SHEAR_MODULUS_XY,
+			(*mpProperties)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 6));	//G12
+
+		mpProperties->SetValue(SHEAR_MODULUS_XZ,
+			(*mpProperties)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 7));	//G13
+
+		mpProperties->SetValue(SHEAR_MODULUS_YZ,
+			(*mpProperties)[SHELL_ORTHOTROPIC_LAYERS](currentPly, 8));	//G23
 	}
 }
