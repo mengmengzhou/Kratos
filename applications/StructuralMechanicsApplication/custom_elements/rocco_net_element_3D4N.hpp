@@ -128,6 +128,8 @@ public:
 		MatrixType& rLeftHandSideMatrix,
 		ProcessInfo& rCurrentProcessInfo) override;
 
+	VectorType CalculateBodyForces();
+
 	double CalculateActualCableLength();
 	double CalculateActualDiagonalLength(const int node1, const int node2);
 
@@ -160,6 +162,9 @@ private:
 	bool mCableResistanceReached = false;
 	Matrix mLHS;
 	double mNodalMass_custom;
+
+	//test
+	bool tensileReachedTEst = false;
 
 	RoccoNetElement3D4N() : Element() {}
 

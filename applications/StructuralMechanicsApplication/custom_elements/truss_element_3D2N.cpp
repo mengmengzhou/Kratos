@@ -50,7 +50,7 @@ namespace Kratos
 
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int local_size = number_of_nodes * dimension;
+		const unsigned int local_size = number_of_nodes * dimension;
 
 		if (rResult.size() != local_size) rResult.resize(local_size);
 
@@ -71,7 +71,7 @@ namespace Kratos
 
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int local_size = number_of_nodes * dimension;
+		const unsigned int local_size = number_of_nodes * dimension;
 
 		if (rElementalDofList.size() != local_size) {
 			rElementalDofList.resize(local_size);
@@ -92,131 +92,38 @@ namespace Kratos
 	void TrussElement3D2N::Initialize() {
 
 		KRATOS_TRY
-		this->mArea = this->GetProperties()[CROSS_AREA];
-		this->mYoungsModulus = this->GetProperties()[YOUNG_MODULUS];
-		this->mLength = this->CalculateReferenceLength();
-		this->mCurrentLength = this->CalculateCurrentLength();
-		this->mDensity = this->GetProperties()[DENSITY];
-
-		if (this->GetProperties().Has(TRUSS_PRESTRESS_PK2) == false) {
-			this->mPreStress = 0.00;
-		}
-		else this->mPreStress = this->GetProperties()[TRUSS_PRESTRESS_PK2];
-
-		if (this->GetProperties().Has(TRUSS_IS_CABLE) == false) {
-			this->mIsCable = false;
-		}
-		else this->mIsCable = this->GetProperties()[TRUSS_IS_CABLE];
-
-		if (this->mLength == 0.00) {
-			KRATOS_ERROR << ("Zero length found in element #", this->Id()) <<
-				std::endl;
-		}
 		KRATOS_CATCH("")
 	}
 
-	TrussElement3D2N::MatrixType TrussElement3D2N::CreateElementStiffnessMatrix(){
+	TrussElement3D2N::MatrixType TrussElement3D2N::CreateElementStiffnessMatrix(
+		ProcessInfo& rCurrentProcessInfo){
 
 		KRATOS_TRY
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int local_size = number_of_nodes * dimension;
+		const unsigned int local_size = number_of_nodes * dimension;
 
-		const double E = this->mYoungsModulus;
-		double A = this->mArea;
-		const double S_pre = this->mPreStress;
 		MatrixType LocalStiffnessMatrix = ZeroMatrix(local_size, local_size);
 
-		// du... delta displacement in x-direction
-		// dv... delta displacement in y-direction
-		// dw... delta displacement in z-direction
-		// L... inital member length
-		// l... deformed member length
-		// e_gl... green_lagrange strain
-
-	    double du = this->GetGeometry()[1].FastGetSolutionStepValue(DISPLACEMENT_X)
-			- this->GetGeometry()[0].FastGetSolutionStepValue(DISPLACEMENT_X);
-	    double dv = this->GetGeometry()[1].FastGetSolutionStepValue(DISPLACEMENT_Y)
-			- this->GetGeometry()[0].FastGetSolutionStepValue(DISPLACEMENT_Y);
-	    double dw = this->GetGeometry()[1].FastGetSolutionStepValue(DISPLACEMENT_Z)
-			- this->GetGeometry()[0].FastGetSolutionStepValue(DISPLACEMENT_Z);
-		const double dx = this->GetGeometry()[1].X0() - this->GetGeometry()[0].X0();
-		const double dy = this->GetGeometry()[1].Y0() - this->GetGeometry()[0].Y0();
-		const double dz = this->GetGeometry()[1].Z0() - this->GetGeometry()[0].Z0();
-		const double L = this->mLength;
-		const double l = this->mCurrentLength;
-	    double e_gL = (l*l - L*L) / (2.00 * L*L);
-		const double L2 = L*L;
-		const double L4 = L2*L2;
 
 
-		if (this->mIsLinearElement == true)
+		if (this->ReturnIfIsCable() == true && this->mIsCompressed == true)
 		{
-			du = 0.00;
-			dv = 0.00;
-			dw = 0.00;
-			e_gL = 0.00;
+			LocalStiffnessMatrix = ZeroMatrix(local_size, local_size);
 		}
 
+		else
+		{
+			this->CalculateElasticStiffnessMatrix(LocalStiffnessMatrix,
+				rCurrentProcessInfo);
+			if (this->mIsLinearElement == false) 
+			{
+				MatrixType K_geo = ZeroMatrix(local_size, local_size);;
+				this->CalculateGeometricStiffnessMatrix(K_geo, rCurrentProcessInfo);
 
-		const double K_1 = e_gL*E + S_pre;
-
-		//if cable + compressed -> no contribution to global K
-		if (this->mIsCable == true && this->mIsCompressed == true) A = 0;
-
-		LocalStiffnessMatrix(0, 0) = A*L*(K_1 / L2 + E*(dx + du)*(dx + du) / L4); 
-		LocalStiffnessMatrix(3, 3) = LocalStiffnessMatrix(0, 0); 
-
-		LocalStiffnessMatrix(1, 1) = A*L*(K_1 / L2 + E*(dy + dv)*(dy + dv) / L4); 
-		LocalStiffnessMatrix(4, 4) = LocalStiffnessMatrix(1, 1); 
-
-		LocalStiffnessMatrix(2, 2) = A*L*(K_1 / L2 + E*(dz + dw)*(dz + dw) / L4); 
-		LocalStiffnessMatrix(5, 5) = LocalStiffnessMatrix(2, 2); 
-
-		LocalStiffnessMatrix(0, 1) = A*L*((dx + du)*(dy + dv)*E / L4);		
-		LocalStiffnessMatrix(1, 0) = LocalStiffnessMatrix(0, 1);			 
-
-		LocalStiffnessMatrix(0, 2) = A*L*((dx + du)*(dz + dw)*E / L4); 
-		LocalStiffnessMatrix(2, 0) = LocalStiffnessMatrix(0, 2); 
-
-		LocalStiffnessMatrix(0, 3) = A*L*(-K_1 / L2 - E*(dx + du)*(dx + du) / L4); 
-		LocalStiffnessMatrix(3, 0) = LocalStiffnessMatrix(0, 3); 
-
-		LocalStiffnessMatrix(0, 4) = A*L*((-1.00)*(dx + du)*(dy + dv)*E / L4); 
-		LocalStiffnessMatrix(4, 0) = LocalStiffnessMatrix(0, 4); 
-
-		LocalStiffnessMatrix(0, 5) = A*L*((-1.00)*(dx + du)*(dz + dw)*E / L4); 
-		LocalStiffnessMatrix(5, 0) = LocalStiffnessMatrix(0, 5); 
-
-		LocalStiffnessMatrix(1, 2) = A*L*((dy + dv)*(dz + dw)*E / L4); 
-		LocalStiffnessMatrix(2, 1) = LocalStiffnessMatrix(1, 2); 
-
-		LocalStiffnessMatrix(1, 3) = A*L*((-1.00)*(dy + dv)*(dx + du)*E / L4); 
-		LocalStiffnessMatrix(3, 1) = LocalStiffnessMatrix(1, 3); 
-
-		LocalStiffnessMatrix(1, 4) = A*L*(-K_1 / L2 - E*(dy + dv)*(dy + dv) / L4);  
-		LocalStiffnessMatrix(4, 1) = LocalStiffnessMatrix(1, 4); 
-
-		LocalStiffnessMatrix(1, 5) = A*L*((-1.00)*(dy + dv)*(dz + dw)*E / L4); 
-		LocalStiffnessMatrix(5, 1) = LocalStiffnessMatrix(1, 5); 
-
-		LocalStiffnessMatrix(2, 3) = A*L*((-1.00)*(dw + dz)*(dx + du)*E / L4); 
-		LocalStiffnessMatrix(3, 2) = LocalStiffnessMatrix(2, 3); 
-
-		LocalStiffnessMatrix(2, 4) = A*L*((-1.00)*(dw + dz)*(dy + dv)*E / L4);  
-		LocalStiffnessMatrix(4, 2) = LocalStiffnessMatrix(2, 4); 
-
-		LocalStiffnessMatrix(2, 5) = A*L*(-K_1 / L2 - E*(dz + dw)*(dz + dw) / L4); 
-		LocalStiffnessMatrix(5, 2) = LocalStiffnessMatrix(2, 5); 
-
-		LocalStiffnessMatrix(3, 4) = A*L*((dx + du)*(dy + dv)*E / L4); 
-		LocalStiffnessMatrix(4, 3) = LocalStiffnessMatrix(3, 4); 
-
-		LocalStiffnessMatrix(3, 5) = A*L*((dx + du)*(dz + dw)*E / L4); 
-		LocalStiffnessMatrix(5, 3) = LocalStiffnessMatrix(3, 5); 
-
-		LocalStiffnessMatrix(4, 5) = A*L*((dy + dv)*(dz + dw)*E / L4); 
-		LocalStiffnessMatrix(5, 4) = LocalStiffnessMatrix(4, 5); 
+				LocalStiffnessMatrix += K_geo;
+			}
+		}
 
 		return LocalStiffnessMatrix;
 		KRATOS_CATCH("")
@@ -228,7 +135,7 @@ namespace Kratos
 		KRATOS_TRY
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int MatSize = number_of_nodes * dimension;
+		const unsigned int MatSize = number_of_nodes * dimension;
 
 		if (rDampingMatrix.size1() != MatSize)
 		{
@@ -277,7 +184,7 @@ namespace Kratos
 		KRATOS_TRY
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int MatSize = number_of_nodes * dimension;
+		const unsigned int MatSize = number_of_nodes * dimension;
 
 		if (rMassMatrix.size1() != MatSize) {
 			rMassMatrix.resize(MatSize, MatSize, false);
@@ -285,7 +192,11 @@ namespace Kratos
 
 		rMassMatrix = ZeroMatrix(MatSize, MatSize);
 
-		const double TotalMass = this->mArea * this->mLength * this->mDensity;
+		const double A = this->GetProperties()[CROSS_AREA];
+		const double L = this->CalculateReferenceLength();
+		const double rho = this->GetProperties()[DENSITY];
+
+		const double TotalMass = A * L * rho;
 
 		Vector LumpFact = ZeroVector(number_of_nodes);
 
@@ -310,14 +221,18 @@ namespace Kratos
 		KRATOS_TRY
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int MatSize = number_of_nodes * dimension;
+		const unsigned int MatSize = number_of_nodes * dimension;
 
 		//getting shapefunctionvalues 
 		const Matrix& Ncontainer = this->GetGeometry().ShapeFunctionsValues(
 			GeometryData::GI_GAUSS_1);
 
 		//creating necessary values 
-		double TotalMass = this->mArea * this->mLength * this->mDensity;
+		const double A = this->GetProperties()[CROSS_AREA];
+		const double L = this->CalculateReferenceLength();
+		const double rho = this->GetProperties()[DENSITY];
+
+		double TotalMass = A * L * rho;
 		VectorType BodyForcesNode = ZeroVector(dimension);
 		VectorType BodyForcesGlobal = ZeroVector(MatSize);
 
@@ -340,7 +255,7 @@ namespace Kratos
 		KRATOS_TRY
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int element_size = number_of_nodes * dimension;
+		const unsigned int element_size = number_of_nodes * dimension;
 
 		if (rValues.size() != element_size) rValues.resize(element_size, false);
 
@@ -362,7 +277,7 @@ namespace Kratos
 		KRATOS_TRY
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int element_size = number_of_nodes * dimension;
+		const unsigned int element_size = number_of_nodes * dimension;
 
 		if (rValues.size() != element_size) rValues.resize(element_size, false);
 
@@ -384,7 +299,7 @@ namespace Kratos
 		KRATOS_TRY
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int element_size = number_of_nodes * dimension;
+		const unsigned int element_size = number_of_nodes * dimension;
 
 		if (rValues.size() != element_size) rValues.resize(element_size, false);
 
@@ -417,7 +332,8 @@ namespace Kratos
 		//resizing the matrices + create memory for LHS
 		rLeftHandSideMatrix = ZeroMatrix(LocalSize, LocalSize);
 		//creating LHS
-		noalias(rLeftHandSideMatrix) = this->CreateElementStiffnessMatrix();
+		noalias(rLeftHandSideMatrix) = this->CreateElementStiffnessMatrix(
+			rCurrentProcessInfo);
 
 		//create+compute RHS
 		rRightHandSideVector = ZeroVector(LocalSize);
@@ -436,11 +352,9 @@ namespace Kratos
 			rRightHandSideVector += this->CalculateBodyForces();
 		}
 
-		if (this->mIsCable == true && this->mIsCompressed == true) {
+		if (this->ReturnIfIsCable() == true && this->mIsCompressed == true) {
 			rRightHandSideVector = ZeroVector(LocalSize);
 		}
-
-		this->mIterCount++;
 		KRATOS_CATCH("")
 	}
 
@@ -472,10 +386,9 @@ namespace Kratos
 		//add bodyforces 
 		rRightHandSideVector += this->CalculateBodyForces();
 
-		if (this->mIsCable == true && this->mIsCompressed == true) {
+		if (this->ReturnIfIsCable() == true && this->mIsCompressed == true) {
 			rRightHandSideVector = ZeroVector(LocalSize);
 		}
-
 		KRATOS_CATCH("")
 	}
 
@@ -490,8 +403,8 @@ namespace Kratos
 		//resizing the matrices + create memory for LHS
 		rLeftHandSideMatrix = ZeroMatrix(LocalSize, LocalSize);
 		//creating LHS
-		std::cout << "---------------------------------------------->" << std::endl;
-		noalias(rLeftHandSideMatrix) = this->CreateElementStiffnessMatrix();
+		noalias(rLeftHandSideMatrix) = this->CreateElementStiffnessMatrix(
+			 rCurrentProcessInfo);
 		KRATOS_CATCH("")
 	}
 
@@ -506,7 +419,12 @@ namespace Kratos
 		if (rOutput.size() != integration_points.size()) {
 			rOutput.resize(integration_points.size());
 		}
-		if (rVariable == TRUSS_PRESTRESS_PK2) rOutput[0] = this->mPreStress;
+		if (rVariable == TRUSS_PRESTRESS_PK2) {
+			rOutput[0] = 0.00;
+			if (this->GetProperties().Has(TRUSS_PRESTRESS_PK2) == true) {
+				rOutput[0] = this->GetProperties()[TRUSS_PRESTRESS_PK2];
+			}
+		}
 		KRATOS_CATCH("")
 	}
 
@@ -552,6 +470,17 @@ namespace Kratos
 	}
 
 
+	bool TrussElement3D2N::ReturnIfIsCable()
+	{
+		KRATOS_TRY;
+		bool IsCable = false;
+		if (this->GetProperties().Has(TRUSS_IS_CABLE) == true) {
+			IsCable = this->GetProperties()[TRUSS_IS_CABLE];
+		}
+		return IsCable;
+		KRATOS_CATCH("")
+	}
+
 	int  TrussElement3D2N::Check(const ProcessInfo& rCurrentProcessInfo){
 		KRATOS_TRY
 
@@ -562,22 +491,22 @@ namespace Kratos
 			}
 		//verify that the variables are correctly initialized
 		if (VELOCITY.Key() == 0)
-			KRATOS_ERROR << ("VELOCITY has Key zero! (check if the application is correctly registered", "") << std::endl;
+			KRATOS_ERROR << "VELOCITY has Key zero! (check if the application is correctly registered" << "" << std::endl;
 		if (DISPLACEMENT.Key() == 0)
-			KRATOS_ERROR << ("DISPLACEMENT has Key zero! (check if the application is correctly registered", "") << std::endl;
+			KRATOS_ERROR << "DISPLACEMENT has Key zero! (check if the application is correctly registered" << "" << std::endl;
 		if (ACCELERATION.Key() == 0)
-			KRATOS_ERROR << ("ACCELERATION has Key zero! (check if the application is correctly registered", "") << std::endl;
+			KRATOS_ERROR << "ACCELERATION has Key zero! (check if the application is correctly registered" << "" << std::endl;
 		if (DENSITY.Key() == 0)
-			KRATOS_ERROR << ("DENSITY has Key zero! (check if the application is correctly registered", "") << std::endl;
+			KRATOS_ERROR << "DENSITY has Key zero! (check if the application is correctly registered" << "" << std::endl;
 		if (CROSS_AREA.Key() == 0)
-			KRATOS_ERROR << ("CROSS_AREA has Key zero! (check if the application is correctly registered", "") << std::endl;
+			KRATOS_ERROR << "CROSS_AREA has Key zero! (check if the application is correctly registered" << "" << std::endl;
 		//verify that the dofs exist
-		for (int i = 0; i<this->GetGeometry().PointsNumber(); ++i)
+		for (unsigned int i = 0; i<this->GetGeometry().PointsNumber(); ++i)
 			{
 			if (this->GetGeometry()[i].SolutionStepsDataHas(DISPLACEMENT) == false)
-				KRATOS_ERROR << ("missing variable DISPLACEMENT on node ", this->GetGeometry()[i].Id()) << std::endl;
+				KRATOS_ERROR << "missing variable DISPLACEMENT on node " << this->GetGeometry()[i].Id() << std::endl;
 			if (this->GetGeometry()[i].HasDofFor(DISPLACEMENT_X) == false || this->GetGeometry()[i].HasDofFor(DISPLACEMENT_Y) == false || this->GetGeometry()[i].HasDofFor(DISPLACEMENT_Z) == false)
-				KRATOS_ERROR << ("missing one of the dofs for the variable DISPLACEMENT on node ", GetGeometry()[i].Id()) << std::endl;
+				KRATOS_ERROR << "missing one of the dofs for the variable DISPLACEMENT on node " << GetGeometry()[i].Id() << std::endl;
 			}
 
 
@@ -585,17 +514,17 @@ namespace Kratos
 		if (this->GetProperties().Has(CROSS_AREA) == false ||
 			this->GetProperties()[CROSS_AREA] == 0)
 		{
-			KRATOS_ERROR << ( "CROSS_AREA not provided for this element", this->Id()) << std::endl;
+			KRATOS_ERROR <<  "CROSS_AREA not provided for this element" << this->Id() << std::endl;
 		}
 
 		if (this->GetProperties().Has(YOUNG_MODULUS) == false ||
 			this->GetProperties()[YOUNG_MODULUS] == 0)
 		{
-			KRATOS_ERROR << ("YOUNG_MODULUS not provided for this element", this->Id()) << std::endl;
+			KRATOS_ERROR << "YOUNG_MODULUS not provided for this element" << this->Id() << std::endl;
 		}
 		if (this->GetProperties().Has(DENSITY) == false)
 		{
-			KRATOS_ERROR << ("DENSITY not provided for this element", this->Id()) << std::endl;
+			KRATOS_ERROR << "DENSITY not provided for this element" << this->Id() << std::endl;
 		}
 
 
@@ -607,7 +536,7 @@ namespace Kratos
 
 		KRATOS_TRY
 		const double l = this->CalculateCurrentLength();
-		const double L = this->mLength;
+		const double L = this->CalculateReferenceLength();
 		const double e = ((l * l - L * L) / (2.00 * L * L));
 		return e;
 		KRATOS_CATCH("")
@@ -651,10 +580,15 @@ namespace Kratos
 		this->CreateTransformationMatrix(TransformationMatrix);
 		const double InternalStrainGL = this->CalculateGreenLagrangeStrain();
 		const double l = this->CalculateCurrentLength();
-		const double L0 = this->mLength;
-		const double E = this->mYoungsModulus;
-		const double A = this->mArea;
-		const double S_pre = this->mPreStress;
+		const double L0 = this->CalculateReferenceLength();
+		const double E = this->GetProperties()[YOUNG_MODULUS];
+		const double A = this->GetProperties()[CROSS_AREA];
+
+		double S_pre = 0.00;
+		if (this->GetProperties().Has(TRUSS_PRESTRESS_PK2) == true) {
+			S_pre = this->GetProperties()[TRUSS_PRESTRESS_PK2];
+		}
+
 		const double N = ((E*InternalStrainGL + S_pre) * l * A) / L0;
 
 		if (N < 0.00) this->mIsCompressed = true;
@@ -664,9 +598,6 @@ namespace Kratos
 		VectorType f_local = ZeroVector(LocalSize);
 		f_local[0] = -1.00 * N;
 		f_local[3] = 1.00 * N;
-		
-
-		this->mCurrentLength = l;
 		rinternalForces = ZeroVector(LocalSize);
 		noalias(rinternalForces) = prod(TransformationMatrix, f_local);
 		KRATOS_CATCH("");
@@ -677,7 +608,7 @@ namespace Kratos
 		KRATOS_TRY
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int local_size = number_of_nodes * dimension;
+		const unsigned int local_size = number_of_nodes * dimension;
 
 		//1st calculate transformation matrix
 		Vector DirectionVectorX = ZeroVector(dimension);
@@ -740,7 +671,7 @@ namespace Kratos
 			rRotationMatrix.resize(local_size, local_size, false);
 		}
 		//Building the rotation matrix for the local element matrix
-		for (int kk = 0; kk < local_size; kk += dimension)
+		for (unsigned int kk = 0; kk < local_size; kk += dimension)
 		{
 			for (int i = 0; i<dimension; ++i)
 			{
@@ -764,7 +695,6 @@ namespace Kratos
 		KRATOS_TRY;
 		const int number_of_nodes = this->GetGeometry().PointsNumber();
 		const int dimension = this->GetGeometry().WorkingSpaceDimension();
-		const int element_size = number_of_nodes * dimension;
 		
 		if (rRHSVariable == RESIDUAL_VECTOR && rDestinationVariable == FORCE_RESIDUAL)
 		{
@@ -782,7 +712,7 @@ namespace Kratos
 				{
 					ForceResidual[j] += rRHSVector[index + j];
 				}
-
+				
 				GetGeometry()[i].UnSetLock();
 			}
 		}
@@ -790,18 +720,187 @@ namespace Kratos
 	}
 
 
+	void TrussElement3D2N::CalculateGeometricStiffnessMatrix(MatrixType& rGeometricStiffnessMatrix,
+		ProcessInfo& rCurrentProcessInfo)
+	{
+		KRATOS_TRY;
+		const int number_of_nodes = this->GetGeometry().PointsNumber();
+		const int dimension = this->GetGeometry().WorkingSpaceDimension();
+		const unsigned int local_size = number_of_nodes * dimension;
+
+		const double E = this->GetProperties()[YOUNG_MODULUS];
+		double A = this->GetProperties()[CROSS_AREA];
+
+		double S_pre = 0.00;
+		if (this->GetProperties().Has(TRUSS_PRESTRESS_PK2) == true) {
+			S_pre = this->GetProperties()[TRUSS_PRESTRESS_PK2];
+		}
+
+		rGeometricStiffnessMatrix = ZeroMatrix(local_size, local_size);
+
+		// du... delta displacement in x-direction
+		// dv... delta displacement in y-direction
+		// dw... delta displacement in z-direction
+		// L... inital member length
+		// l... deformed member length
+		// e_gl... green_lagrange strain
+
+		double du = this->GetGeometry()[1].FastGetSolutionStepValue(DISPLACEMENT_X)
+			- this->GetGeometry()[0].FastGetSolutionStepValue(DISPLACEMENT_X);
+		double dv = this->GetGeometry()[1].FastGetSolutionStepValue(DISPLACEMENT_Y)
+			- this->GetGeometry()[0].FastGetSolutionStepValue(DISPLACEMENT_Y);
+		double dw = this->GetGeometry()[1].FastGetSolutionStepValue(DISPLACEMENT_Z)
+			- this->GetGeometry()[0].FastGetSolutionStepValue(DISPLACEMENT_Z);
+		const double dx = this->GetGeometry()[1].X0() - this->GetGeometry()[0].X0();
+		const double dy = this->GetGeometry()[1].Y0() - this->GetGeometry()[0].Y0();
+		const double dz = this->GetGeometry()[1].Z0() - this->GetGeometry()[0].Z0();
+		const double L = this->CalculateReferenceLength();
+		const double l = this->CalculateCurrentLength();
+		double e_gL = (l*l - L*L) / (2.00 * L*L);
+		const double L3 = L * L * L;
+
+
+		const double K_sigma = ((E*A*e_gL) / L) + ((S_pre*A) / L);
+		const double K_uij = (E*A) / L3;
+
+		rGeometricStiffnessMatrix(0, 0) = K_sigma + K_uij * (2 * du*dx + du*du);
+		rGeometricStiffnessMatrix(3, 3) = rGeometricStiffnessMatrix(0, 0);
+
+		rGeometricStiffnessMatrix(1, 1) = K_sigma + K_uij * (2 * dv*dy + dv*dv);
+		rGeometricStiffnessMatrix(4, 4) = rGeometricStiffnessMatrix(1, 1);
+
+		rGeometricStiffnessMatrix(2, 2) = K_sigma + K_uij * (2 * dw*dz + dw*dw);
+		rGeometricStiffnessMatrix(5, 5) = rGeometricStiffnessMatrix(2, 2);
+
+		rGeometricStiffnessMatrix(0, 1) = K_uij * (dx*dv + dy*du + du*dv);
+		rGeometricStiffnessMatrix(1, 0) = rGeometricStiffnessMatrix(0, 1);
+
+		rGeometricStiffnessMatrix(0, 2) = K_uij * (dx*dw + dz*du + du*dw);
+		rGeometricStiffnessMatrix(2, 0) = rGeometricStiffnessMatrix(0, 2);
+
+		rGeometricStiffnessMatrix(0, 3) = -rGeometricStiffnessMatrix(0, 0);
+		rGeometricStiffnessMatrix(3, 0) = rGeometricStiffnessMatrix(0, 3);
+
+		rGeometricStiffnessMatrix(0, 4) = -rGeometricStiffnessMatrix(0, 1);
+		rGeometricStiffnessMatrix(4, 0) = rGeometricStiffnessMatrix(0, 4);
+
+		rGeometricStiffnessMatrix(0, 5) = -rGeometricStiffnessMatrix(0, 2);
+		rGeometricStiffnessMatrix(5, 0) = rGeometricStiffnessMatrix(0, 5);
+
+		rGeometricStiffnessMatrix(1, 2) = K_uij * (dy*dw + dz*dv + dv*dw);
+		rGeometricStiffnessMatrix(2, 1) = rGeometricStiffnessMatrix(1, 2);
+
+		rGeometricStiffnessMatrix(1, 3) = rGeometricStiffnessMatrix(0, 4);
+		rGeometricStiffnessMatrix(3, 1) = rGeometricStiffnessMatrix(1, 3);
+
+		rGeometricStiffnessMatrix(1, 4) = -rGeometricStiffnessMatrix(1, 1);
+		rGeometricStiffnessMatrix(4, 1) = rGeometricStiffnessMatrix(1, 4);
+
+		rGeometricStiffnessMatrix(1, 5) = -rGeometricStiffnessMatrix(1, 2);
+		rGeometricStiffnessMatrix(5, 1) = rGeometricStiffnessMatrix(1, 5);
+
+		rGeometricStiffnessMatrix(2, 3) = -rGeometricStiffnessMatrix(0, 2);
+		rGeometricStiffnessMatrix(3, 2) = rGeometricStiffnessMatrix(2, 3);
+
+		rGeometricStiffnessMatrix(2, 4) = -rGeometricStiffnessMatrix(1, 2);
+		rGeometricStiffnessMatrix(4, 2) = rGeometricStiffnessMatrix(2, 4);
+
+		rGeometricStiffnessMatrix(2, 5) = -rGeometricStiffnessMatrix(2, 2);
+		rGeometricStiffnessMatrix(5, 2) = rGeometricStiffnessMatrix(2, 5);
+
+		rGeometricStiffnessMatrix(3, 4) = rGeometricStiffnessMatrix(0, 1);
+		rGeometricStiffnessMatrix(4, 3) = rGeometricStiffnessMatrix(3, 4);
+
+		rGeometricStiffnessMatrix(3, 5) = rGeometricStiffnessMatrix(0, 2);
+		rGeometricStiffnessMatrix(5, 3) = rGeometricStiffnessMatrix(3, 5);
+
+		rGeometricStiffnessMatrix(4, 5) = rGeometricStiffnessMatrix(1, 2);
+		rGeometricStiffnessMatrix(5, 4) = rGeometricStiffnessMatrix(4, 5);
+		KRATOS_CATCH("")
+	}
+
+	void TrussElement3D2N::CalculateElasticStiffnessMatrix(MatrixType& rElasticStiffnessMatrix,
+		ProcessInfo& rCurrentProcessInfo)
+	{
+		KRATOS_TRY;
+		const int number_of_nodes = this->GetGeometry().PointsNumber();
+		const int dimension = this->GetGeometry().WorkingSpaceDimension();
+		const unsigned int local_size = number_of_nodes * dimension;
+
+		const double E = this->GetProperties()[YOUNG_MODULUS];
+		double A = this->GetProperties()[CROSS_AREA];
+
+		rElasticStiffnessMatrix = ZeroMatrix(local_size, local_size);
+
+		const double dx = this->GetGeometry()[1].X0() - this->GetGeometry()[0].X0();
+		const double dy = this->GetGeometry()[1].Y0() - this->GetGeometry()[0].Y0();
+		const double dz = this->GetGeometry()[1].Z0() - this->GetGeometry()[0].Z0();
+		const double L = this->CalculateReferenceLength();
+		const double L3 = L*L*L;
+
+		const double EA = E*A;
+
+		rElasticStiffnessMatrix(0, 0) = (EA*dx*dx) / L3;
+		rElasticStiffnessMatrix(3, 3) = rElasticStiffnessMatrix(0, 0);
+
+		rElasticStiffnessMatrix(1, 1) = (EA*dy*dy) / L3;
+		rElasticStiffnessMatrix(4, 4) = rElasticStiffnessMatrix(1, 1);
+
+		rElasticStiffnessMatrix(2, 2) = (EA*dz*dz) / L3;
+		rElasticStiffnessMatrix(5, 5) = rElasticStiffnessMatrix(2, 2);
+
+		rElasticStiffnessMatrix(0, 1) = (EA*dx*dy) / L3;
+		rElasticStiffnessMatrix(1, 0) = rElasticStiffnessMatrix(0, 1);
+
+		rElasticStiffnessMatrix(0, 2) = (EA*dx*dz) / L3;
+		rElasticStiffnessMatrix(2, 0) = rElasticStiffnessMatrix(0, 2);
+
+		rElasticStiffnessMatrix(0, 3) = -rElasticStiffnessMatrix(0, 0);
+		rElasticStiffnessMatrix(3, 0) = rElasticStiffnessMatrix(0, 3);
+
+		rElasticStiffnessMatrix(0, 4) = -rElasticStiffnessMatrix(0, 1);
+		rElasticStiffnessMatrix(4, 0) = rElasticStiffnessMatrix(0, 4);
+
+		rElasticStiffnessMatrix(0, 5) = -rElasticStiffnessMatrix(0, 2);
+		rElasticStiffnessMatrix(5, 0) = rElasticStiffnessMatrix(0, 5);
+
+		rElasticStiffnessMatrix(1, 2) = (EA*dy*dz) / L3;
+		rElasticStiffnessMatrix(2, 1) = rElasticStiffnessMatrix(1, 2);
+
+		rElasticStiffnessMatrix(1, 3) = rElasticStiffnessMatrix(0, 4);
+		rElasticStiffnessMatrix(3, 1) = rElasticStiffnessMatrix(1, 3);
+
+		rElasticStiffnessMatrix(1, 4) = -rElasticStiffnessMatrix(1, 1);
+		rElasticStiffnessMatrix(4, 1) = rElasticStiffnessMatrix(1, 4);
+
+		rElasticStiffnessMatrix(1, 5) = -rElasticStiffnessMatrix(1, 2);
+		rElasticStiffnessMatrix(5, 1) = rElasticStiffnessMatrix(1, 5);
+
+		rElasticStiffnessMatrix(2, 3) = -rElasticStiffnessMatrix(0, 2);
+		rElasticStiffnessMatrix(3, 2) = rElasticStiffnessMatrix(2, 3);
+
+		rElasticStiffnessMatrix(2, 4) = -rElasticStiffnessMatrix(1, 2);
+		rElasticStiffnessMatrix(4, 2) = rElasticStiffnessMatrix(2, 4);
+
+		rElasticStiffnessMatrix(2, 5) = -rElasticStiffnessMatrix(2, 2);
+		rElasticStiffnessMatrix(5, 2) = rElasticStiffnessMatrix(2, 5);
+
+		rElasticStiffnessMatrix(3, 4) = rElasticStiffnessMatrix(0, 1);
+		rElasticStiffnessMatrix(4, 3) = rElasticStiffnessMatrix(3, 4);
+
+		rElasticStiffnessMatrix(3, 5) = rElasticStiffnessMatrix(0, 2);
+		rElasticStiffnessMatrix(5, 3) = rElasticStiffnessMatrix(3, 5);
+
+		rElasticStiffnessMatrix(4, 5) = rElasticStiffnessMatrix(1, 2);
+		rElasticStiffnessMatrix(5, 4) = rElasticStiffnessMatrix(4, 5);
+		KRATOS_CATCH("")
+	}
+
 
 	void TrussElement3D2N::save(Serializer& rSerializer) const
 	{
 		KRATOS_SERIALIZE_SAVE_BASE_CLASS(rSerializer, Element);
 		rSerializer.save("mIscompressed", this->mIsCompressed);
-		rSerializer.save("mIsCable", this->mIsCable);
-		rSerializer.save("Area", this->mArea);
-		rSerializer.save("Density", this->mDensity);
-		rSerializer.save("YoungsModulus", this->mYoungsModulus);
-		rSerializer.save("LengthRef", this->mLength);
-		rSerializer.save("LengthCur", this->mCurrentLength);
-		rSerializer.save("Prestress", this->mPreStress);
 		rSerializer.save("LinerEle", this->mIsLinearElement);
 
 	}
@@ -809,13 +908,6 @@ namespace Kratos
 	{
 		KRATOS_SERIALIZE_LOAD_BASE_CLASS(rSerializer, Element);
 		rSerializer.load("mIscompressed", this->mIsCompressed);
-		rSerializer.load("mIsCable", this->mIsCable);
-		rSerializer.load("Area", this->mArea);
-		rSerializer.load("Density", this->mDensity);
-		rSerializer.load("YoungsModulus", this->mYoungsModulus);
-		rSerializer.load("LengthRef", this->mLength);
-		rSerializer.load("LengthCur", this->mCurrentLength);
-		rSerializer.load("Prestress", this->mPreStress);
 		rSerializer.load("LinerEle", this->mIsLinearElement);
 	}
 } // namespace Kratos.

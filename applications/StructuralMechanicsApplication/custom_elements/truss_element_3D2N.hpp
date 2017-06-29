@@ -73,13 +73,13 @@ namespace Kratos
 						bool rLinear = false);
 
 
-		virtual ~TrussElement3D2N();
+		~TrussElement3D2N() override;
 
 
 		BaseType::Pointer Create(
 			IndexType NewId,
 			NodesArrayType const& rThisNodes,
-			PropertiesType::Pointer pProperties) const;
+			PropertiesType::Pointer pProperties) const override;
 
 		void EquationIdVector(
 			EquationIdVectorType& rResult,
@@ -89,9 +89,9 @@ namespace Kratos
 			DofsVectorType& rElementalDofList,
 			ProcessInfo& rCurrentProcessInfo) override;
 
-		void Initialize();
+		void Initialize() override;
 
-		MatrixType CreateElementStiffnessMatrix();
+		MatrixType CreateElementStiffnessMatrix(ProcessInfo& rCurrentProcessInfo);
 
 		void CalculateOnIntegrationPoints(
 			const Variable<double>& rVariable,
@@ -161,7 +161,7 @@ namespace Kratos
 			int Step = 0) override;
 
 		int  Check(
-			const ProcessInfo& rCurrentProcessInfo);
+			const ProcessInfo& rCurrentProcessInfo) override;
 
 
 		double CalculateGreenLagrangeStrain();
@@ -169,22 +169,24 @@ namespace Kratos
 
 		VectorType CalculateBodyForces();  
 
+		bool ReturnIfIsCable();
+
+		void CalculateGeometricStiffnessMatrix(MatrixType& rGeometricStiffnessMatrix,
+			ProcessInfo& rCurrentProcessInfo);
+
+		void CalculateElasticStiffnessMatrix(MatrixType& rElasticStiffnessMatrix,
+			ProcessInfo& rCurrentProcessInfo);
 
 
 	private:
-		double mPreStress, mArea, mYoungsModulus, mLength, mDensity;
-		double mCurrentLength;
-		MatrixType mLHS;
-		int mIterCount = 0; 
-		bool mIsCable;
 		bool mIsCompressed;
 		bool mIsLinearElement = false;
 
 		TrussElement3D2N() {};
 
 		friend class Serializer;
-		virtual void save(Serializer& rSerializer) const;
-		virtual void load(Serializer& rSerializer);
+		void save(Serializer& rSerializer) const override;
+		void load(Serializer& rSerializer) override;
 	};
 
 
