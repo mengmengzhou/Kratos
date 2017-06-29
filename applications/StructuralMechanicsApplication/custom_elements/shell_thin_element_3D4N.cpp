@@ -1079,6 +1079,23 @@ namespace Kratos
 		std::vector<Vector>& rValues,
 		const ProcessInfo& rCurrentProcessInfo)
 	{
+		if (rVariable == LOCAL_AXES_VECTOR)
+		{
+			rValues.resize(4);
+			for (int i = 0; i < 4; ++i) rValues[i] = ZeroVector(3);
+			// Initialize common calculation variables
+			// Compute the local coordinate system.
+			ShellQ4_LocalCoordinateSystem localCoordinateSystem(
+				mpCoordinateTransformation->CreateLocalCoordinateSystem());
+			Matrix OrientationMat = localCoordinateSystem.Orientation();
+			for (size_t row = 0; row < 3; row++)
+			{
+				for (size_t col = 0; col < 3; col++)
+				{
+					rValues[row][col] = OrientationMat(row, col);
+				}
+			}
+		}
 	}
 
 	void ShellThinElement3D4N::GetValueOnIntegrationPoints

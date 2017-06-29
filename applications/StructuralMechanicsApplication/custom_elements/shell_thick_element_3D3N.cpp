@@ -912,21 +912,16 @@ namespace Kratos
 	{
 		if (rVariable == LOCAL_AXES_VECTOR)
 		{
-			rValues.resize(9);
-			for (int i = 0; i < 9; ++i) rValues[i] = ZeroVector(3);
+			rValues.resize(3);
+			for (int i = 0; i < 3; ++i) rValues[i] = ZeroVector(3);
 			// Initialize common calculation variables
 			CalculationData data(mpCoordinateTransformation, rCurrentProcessInfo);
 			Matrix OrientationMat = data.LCS.Orientation();
-			for (size_t gauss_point = 0; gauss_point < 3; gauss_point++)
+			for (size_t row = 0; row < 3; row++)
 			{
-				for (size_t row = 0; row < 3; row++)
+				for (size_t col = 0; col < 3; col++)
 				{
-					for (size_t col = 0; col < 3; col++)
-					{
-						rValues[row+3*gauss_point][col] = OrientationMat(row, col);
-					}
-					// Make local axis 2 half the length of local axis 1
-					rValues[1 + 3 * gauss_point] /= 2.0;
+					rValues[row][col] = OrientationMat(row, col);
 				}
 			}
 		}

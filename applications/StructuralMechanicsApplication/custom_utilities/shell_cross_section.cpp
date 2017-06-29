@@ -1024,9 +1024,6 @@ namespace Kratos
 			rMaterialValues.SetDeterminantF(rVariables.DeterminantF);
 			rMaterialValues.SetDeformationGradientF(rVariables.DeformationGradientF_2D);
 
-			//std::cout << "after here!!!!!!!!!!!!!!!!!!!!" << std::endl;
-			//std::cout << rMaterialValues.GetConstitutiveMatrix() << std::endl;
-
 			if (mBehavior == Thick)
 			{
 				// get elastic data for the trasverse shear part (treated elastically)
