@@ -436,7 +436,7 @@ namespace Kratos
 				for (ModelPart::NodeIterator i = i_begin; i != i_end; ++i)
 				{
 					array_1d<double, 3> testRESMOM1 = i->FastGetSolutionStepValue(MOMENT_RESIDUAL);
-					KRATOS_WATCH(testRESMOM1);
+					//KRATOS_WATCH(testRESMOM1);
 
 					//Current step information "N+1" (before step update).
 
@@ -481,12 +481,12 @@ namespace Kratos
 					}//for DoF
 
 
-					KRATOS_WATCH(current_velocity);
-					KRATOS_WATCH(current_acceleration);
-					KRATOS_WATCH(middle_velocity);
-					KRATOS_WATCH(current_displacement);
+					//KRATOS_WATCH(current_velocity);
+					//KRATOS_WATCH(current_acceleration);
+					//KRATOS_WATCH(middle_velocity);
+					//KRATOS_WATCH(current_displacement);
 
-					std::cout << "--" << std::endl;
+					//std::cout << "--" << std::endl;
 
 					if (this->mRotDof3D == true)
 					{
@@ -496,7 +496,7 @@ namespace Kratos
 						array_1d<double, 3>& current_rotation = i->FastGetSolutionStepValue(ROTATION);
 
 						array_1d<double, 3> testRESMOM2 = i->FastGetSolutionStepValue(MOMENT_RESIDUAL);
-						KRATOS_WATCH(testRESMOM2);
+						//KRATOS_WATCH(testRESMOM2);
 
 						//test rot mass entry
 						const double RotMass = 0.01;
@@ -505,7 +505,7 @@ namespace Kratos
 
 
 						current_acceleration_angular = current_residual_moment / RotMass;
-						KRATOS_WATCH(current_residual_moment);
+						//KRATOS_WATCH(current_residual_moment);
 
 						int Dof = 3;
 						bool Fix_rot[3] = { false, false, false };
@@ -530,11 +530,11 @@ namespace Kratos
 							current_rotation[j] = current_rotation[j] + mTime.Delta * middle_velocity_angular[j];
 
 						}
-						KRATOS_WATCH(current_velocity_angular);
-						KRATOS_WATCH(current_acceleration_angular);
-						KRATOS_WATCH(middle_velocity_angular);
-						KRATOS_WATCH(current_rotation);
-						std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+						//KRATOS_WATCH(current_velocity_angular);
+						//KRATOS_WATCH(current_acceleration_angular);
+						//KRATOS_WATCH(middle_velocity_angular);
+						//KRATOS_WATCH(current_rotation);
+						//std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
 					}
 
 				}//for Node 

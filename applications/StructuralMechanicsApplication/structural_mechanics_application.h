@@ -46,7 +46,7 @@
 #include "custom_elements/nodal_concentrated_element.hpp"
 
 /* Adding the spring damper element */
-#include "custom_elements/spring_damper_element_3D2N.hpp"
+//#include "custom_elements/spring_damper_element_3D2N.hpp"
 
 /* Adding the SPRISM element */
 #include "custom_elements/SprismElement3D6N.hpp"
@@ -259,7 +259,7 @@ private:
     const NodalConcentratedElement mNodalConcentratedDampedElement3D1N;
 
     // Adding the spring damper element
-    const SpringDamperElement3D2N mSpringDamperElement3D2N;
+    //const SpringDamperElement3D2N mSpringDamperElement3D2N;
 
     /* CONDITIONS*/
     // Beam moment condition
