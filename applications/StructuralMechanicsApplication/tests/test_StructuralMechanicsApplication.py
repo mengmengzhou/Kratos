@@ -47,27 +47,32 @@ import KratosMultiphysics.KratosUnittest as KratosUnittest
 # # Shell tests
 # from SmallTests import ShellQ4ThickBendingRollUpTests   as TShellQ4ThickBendingRollUpTests
 # from SmallTests import ShellQ4ThickDrillingRollUpTests  as TShellQ4ThickDrillingRollUpTests
-# from SmallTests import ShellT3ThinBendingRollUpTests    as TShellT3ThinBendingRollUpTests
+from SmallTests import ShellT3ThinBendingRollUpTests    as TShellT3ThinBendingRollUpTests
 # from SmallTests import ShellT3ThinDrillingRollUpTests   as TShellT3ThinDrillingRollUpTests
 # # Eigenvalues tests
 # from SmallTests import EigenQ4Thick2x2PlateTests        as TEigenQ4Thick2x2PlateTests
 # from SmallTests import EigenTL3D8NCubeTests             as TEigenTL3D8NCubeTests
 # # Membrane tests
 # from SmallTests import Fofi4PointTentnoCableTests       as TFofi4PointTentnoCableTests
-# from SmallTests import MembraneQ4PointLoadTests         as TMembraneQ4PointLoadTests
+from SmallTests import MembraneQ4PointLoadTests         as TMembraneQ4PointLoadTests
 # # Nodal damping test
 # from test_nodal_damping import NodalDampingTests        as TNodalDampingTests
 # 2NELEMENT tests
 from SmallTests import Simple3D2NTrussTest as T3D2NTrussTest
+from SmallTests import Simple3D2NTrussLinearTest as T3D2NTrussLinearTest
+from SmallTests import Simple3D2NTrussDynamicTest as T3D2NTrussDynamicTest
 from SmallTests import Simple3D2NBeamCrTest as T3D2NBeamCrTest
 from SmallTests import Simple3D2NBeamCrLinearTest as T3D2NBeamCrLinearTest
+from SmallTests import Simple3D2NBeamCrDynamicTest as T3D2NBeamCrDynamicTest
+# Nodal damping test
+from test_nodal_damping import NodalDampingTests        as TNodalDampingTests
+from test_spring_damper_element import SpringDamperElementTests as TSpringDamperElementTests
 
+# ## NIGTHLY TESTS
+# from NightlyTests import ShellT3IsotropicScordelisTests as TShellT3IsotropicScordelisTests
 
-## NIGTHLY TESTS
-from NightlyTests import ShellT3IsotropicScordelisTests as TShellT3IsotropicScordelisTests
-
-## VALIDATION TESTS
-from ValidationTests import SprismPanTests as TSprismPanTests
+# ## VALIDATION TESTS
+# from ValidationTests import SprismPanTests as TSprismPanTests
 
 def AssambleTestSuites():
     ''' Populates the test suites to run.
@@ -92,20 +97,29 @@ def AssambleTestSuites():
     # smallSuite.addTest(TSprismBendingPatchTests('test_execution'))
     # smallSuite.addTest(TShellQ4ThickBendingRollUpTests('test_execution'))
     # smallSuite.addTest(TShellQ4ThickDrillingRollUpTests('test_execution'))
-    # smallSuite.addTest(TShellT3ThinBendingRollUpTests('test_execution'))
+    smallSuite.addTest(TShellT3ThinBendingRollUpTests('test_execution'))
     # smallSuite.addTest(TShellT3ThinDrillingRollUpTests('test_execution'))
     # smallSuite.addTest(TEigenQ4Thick2x2PlateTests('test_execution'))
     # smallSuite.addTest(TEigenTL3D8NCubeTests('test_execution'))
+    
+    smallSuite.addTest(T3D2NTrussDynamicTest('test_execution')) 
+    smallSuite.addTest(T3D2NTrussLinearTest('test_execution'))  
     smallSuite.addTest(T3D2NTrussTest('test_execution'))  
     smallSuite.addTest(T3D2NBeamCrTest('test_execution'))    
     smallSuite.addTest(T3D2NBeamCrLinearTest('test_execution'))  
-    #smallSuite.addTest(MPCSmallDisplacementElementTests('test_execution'))
+    smallSuite.addTest(T3D2NBeamCrDynamicTest('test_execution'))  
 
-    # Membrane tests
-    #smallSuite.addTest(TFofi4PointTentnoCableTests('test_execution'))
-    #smallSuite.addTest(TMembraneQ4PointLoadTests('test_execution'))
+    # smallSuite.addTest(MPCSmallDisplacementElementTests('test_execution'))
+
+    # # Membrane tests
+    # smallSuite.addTest(TFofi4PointTentnoCableTests('test_execution'))
+    smallSuite.addTest(TMembraneQ4PointLoadTests('test_execution'))
+    # # Nodal damping test
+    # smallSuite.addTest(TNodalDampingTests('test_execution'))
     # Nodal damping test
-    #smallSuite.addTest(TNodalDampingTests('test_execution'))
+    smallSuite.addTest(TNodalDampingTests('test_execution'))
+    smallSuite.addTest(TSpringDamperElementTests('test_execution'))
+
     # Create a test suit with the selected tests plus all small tests
     nightSuite = suites['nightly']
     nightSuite.addTests(smallSuite)
@@ -119,24 +133,33 @@ def AssambleTestSuites():
     allSuite = suites['all']
     allSuite.addTests(
         KratosUnittest.TestLoader().loadTestsFromTestCases([
-            # TFofi4PointTentnoCableTests,
-            # TMembraneQ4PointLoadTests,
-            # TSimpleMeshMovingTest,
-            # TDynamicBossakTests,
-            # TDynamicNewmarkTests,
-            # TSprismMembranePatchTests,
-            # TSprismBendingPatchTests,
-            # TShellQ4ThickBendingRollUpTests,
-            # TShellQ4ThickDrillingRollUpTests,
-            # TShellT3ThinBendingRollUpTests,
-            # TShellT3ThinDrillingRollUpTests,
-            # TShellT3IsotropicScordelisTests,
+            #TFofi4PointTentnoCableTests,
+            #TMembraneQ4PointLoadTests,
+            #TSimpleMeshMovingTest,
+            #TDynamicBossakTests,
+            #TDynamicNewmarkTests,
+            #TSprismMembranePatchTests,
+            #TSprismBendingPatchTests,
+            #TShellQ4ThickBendingRollUpTests,
+            #TShellQ4ThickDrillingRollUpTests,
+            #TShellT3ThinBendingRollUpTests,
+            #TShellT3ThinDrillingRollUpTests,
+            #TShellT3IsotropicScordelisTests,
+            #TMembraneQ4PointLoadTests,
             T3D2NTrussTest,
+            T3D2NTrussLinearTest,
+            T3D2NTrussDynamicTest,
             T3D2NBeamCrTest,
             T3D2NBeamCrLinearTest,
-            # TMpcSmallDispElemTests,
-            # TIsotropicDamageSimoJuPSTest,
-            # TNodalDampingTests
+            T3D2NBeamCrDynamicTest
+            #TMpcSmallDispElemTests
+            #TIsotropicDamageSimoJuPSTest,
+            #TNodalDampingTests
+            #TShellT3ThinDrillingRollUpTests,
+            #TShellT3IsotropicScordelisTests,
+            #TIsotropicDamageSimoJuPSTest,
+            #TNodalDampingTests,
+            #TSpringDamperElementTests
             ######TSprismPanTests
         ])
     )
@@ -144,8 +167,8 @@ def AssambleTestSuites():
     if( hasattr(KratosMultiphysics.ExternalSolversApplication,  "FEASTSolver") ):
         allSuite.addTests(
             KratosUnittest.TestLoader().loadTestsFromTestCases([
-                TEigenQ4Thick2x2PlateTests,
-                TEigenTL3D8NCubeTests
+               # TEigenQ4Thick2x2PlateTests,
+               # TEigenTL3D8NCubeTests
             ])
         )
     else:
