@@ -69,6 +69,8 @@ KratosStructuralMechanicsApplication::KratosStructuralMechanicsApplication():
     mNodalConcentratedDampedElement2D1N( 0, Element::GeometryType::Pointer( new Point2D <Node<3> >( Element::GeometryType::PointsArrayType( 1 ) ) ), false ),
     mNodalConcentratedElement3D1N( 0, Element::GeometryType::Pointer( new Point3D <Node<3> >( Element::GeometryType::PointsArrayType( 1 ) ) ), true ),
     mNodalConcentratedDampedElement3D1N( 0, Element::GeometryType::Pointer( new Point3D <Node<3> >( Element::GeometryType::PointsArrayType( 1 ) ) ), false ),
+    // Adding the spring damper element
+    mSpringDamperElement3D2N( 0, Element::GeometryType::Pointer( new Line3D2 <Node<3> >( Element::GeometryType::PointsArrayType( 2 ) ) ) ),
     /* CONDITIONS */
     // Beam's point moment condition
     mPointMomentCondition3D1N( 0, Condition::GeometryType::Pointer( new Point3D <Node<3> >( Condition::GeometryType::PointsArrayType( 1 ) ) ) ),
@@ -110,16 +112,15 @@ void KratosStructuralMechanicsApplication::Register()
 	KRATOS_REGISTER_VARIABLE(INERTIA_ROT_Y)
 	KRATOS_REGISTER_VARIABLE(INERTIA_ROT_Z)
 	KRATOS_REGISTER_VARIABLE(LOCAL_AXES_VECTOR)
-	KRATOS_REGISTER_VARIABLE(HINGE_START)
-	KRATOS_REGISTER_VARIABLE(HINGE_END)
+	KRATOS_REGISTER_VARIABLE(LUMPED_MASS_MATRIX)
 
 	//ROCO NET
-	KRATOS_REGISTER_VARIABLE(KB_ROCCO)
-	KRATOS_REGISTER_VARIABLE(DIAMETER_ROCCO)
-	KRATOS_REGISTER_VARIABLE(WIRE_THICKNESS_ROCCO)
-	KRATOS_REGISTER_VARIABLE(WIRE_WINDINGS_ROCCO)
-	KRATOS_REGISTER_VARIABLE(NODAL_MASS_ROCCO)
-	KRATOS_REGISTER_VARIABLE(KT_MULT_ROCCO)
+	KRATOS_REGISTER_VARIABLE(KB_RING)
+	KRATOS_REGISTER_VARIABLE(DIAMETER_RING)
+	KRATOS_REGISTER_VARIABLE(WIRE_THICKNESS_RING)
+	KRATOS_REGISTER_VARIABLE(WIRE_WINDINGS_RING)
+	KRATOS_REGISTER_VARIABLE(NODAL_MASS_RING)
+	KRATOS_REGISTER_VARIABLE(KT_RING)
 
 
     //  Shell generalized variables
@@ -220,6 +221,9 @@ void KratosStructuralMechanicsApplication::Register()
     KRATOS_REGISTER_ELEMENT("NodalConcentratedDampedElement2D1N", mNodalConcentratedDampedElement2D1N);
     KRATOS_REGISTER_ELEMENT("NodalConcentratedElement3D1N", mNodalConcentratedElement3D1N);
     KRATOS_REGISTER_ELEMENT("NodalConcentratedDampedElement3D1N", mNodalConcentratedDampedElement3D1N);
+
+    // Register the spring damper element
+    KRATOS_REGISTER_ELEMENT("SpringDamperElement3D2N", mSpringDamperElement3D2N);
 
     // Register the conditions
     // Beam's point moment condition
