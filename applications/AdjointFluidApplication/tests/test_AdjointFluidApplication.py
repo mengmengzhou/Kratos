@@ -5,6 +5,7 @@ import test_input_output
 import test_vms_adjoint_element_2d
 import test_vms_sensitivity_for_one_time_step_2d
 import test_vms_sensitivity_2d
+import test_turbulent_adjoint_sensitivity_3d
 
 ## NIGTHLY TESTS
 
@@ -39,6 +40,7 @@ def AssembleTestSuites():
     smallSuite.addTest(test_vms_sensitivity_2d.TestCase('test_OneElement'))
     smallSuite.addTest(test_vms_sensitivity_2d.TestCase('test_Cylinder'))
     smallSuite.addTest(test_vms_sensitivity_2d.TestCase('test_SteadyCylinder'))
+    smallSuite.addTest(test_turbulent_adjoint_sensitivity_3d.TestCase('test_nozzle_3d'))
 
 
     # Create a test suite with the selected tests plus all small tests

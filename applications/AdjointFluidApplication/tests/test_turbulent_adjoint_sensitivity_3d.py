@@ -137,7 +137,7 @@ class TestCase(KratosUnittest.TestCase):
             test.Solve()
             self.removeFile("%s_adjoint.mdpa" % model_part_file_name)
 
-            node_ids = [281]
+            node_ids = [281, 251, 288]
 
             _adjoint_sensitivity = []
             for i in range(0, len(node_ids)):
