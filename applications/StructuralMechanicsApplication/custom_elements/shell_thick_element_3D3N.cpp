@@ -227,6 +227,10 @@ namespace Kratos
 			}
 			else if (theSection->CheckIsOrthotropic(props))
 			{
+				// Element type set for use in defining global composite orientation assignment
+				std::string thisElementType = std::string("ShellThickElement3D3N");
+				props.SetValue(ELEMENT_TYPE, thisElementType);
+
 				// make new instance of shell cross section
 				theSection = ShellCrossSection::Pointer(new ShellCrossSection());
 

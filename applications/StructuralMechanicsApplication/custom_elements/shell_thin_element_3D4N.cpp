@@ -258,6 +258,8 @@ namespace Kratos
 				"ShellThinElement3D4N Element - Wrong integration scheme",
 				integrationPoints.size());
 
+		
+
 		if (mSections.size() != OPT_NUM_GP)
 		{
 			const Matrix & shapeFunctionsValues =
@@ -271,6 +273,10 @@ namespace Kratos
 			}
 			else if (theSection->CheckIsOrthotropic(props))
 			{
+				// Element type set for use in defining global composite orientation assignment
+				std::string thisElementType = std::string("ShellThinElement3D4N");
+				props.SetValue(ELEMENT_TYPE, thisElementType);
+
 				// make new instance of shell cross section
 				theSection =
 					ShellCrossSection::Pointer(new ShellCrossSection());

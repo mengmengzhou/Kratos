@@ -104,6 +104,8 @@ void KratosStructuralMechanicsApplication::Register()
     KRATOS_REGISTER_VARIABLE( GEOMETRIC_STIFFNESS )
 	KRATOS_REGISTER_VARIABLE( LOCAL_AXES_VECTOR)
 		
+	// General
+	KRATOS_REGISTER_VARIABLE(ELEMENT_TYPE)
 
     //  Shell generalized variables
     KRATOS_REGISTER_VARIABLE( SHELL_STRAIN )
