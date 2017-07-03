@@ -7,9 +7,8 @@
         "model_part_name" : "MainModelPart",
         "domain_size"     : 3,
         "start_step"      : 0.0,
-        "end_time"        : 6.0,
-        "time_step"       : 0.01,
-        "nsteps"          : 600
+        "nsteps"          : 10,
+        "time_step"       : 0.001
     },
     "output_configuration"             : {
         "result_file_configuration" : {
@@ -19,9 +18,9 @@
                 "WriteConditionsFlag"   : "WriteConditions",
                 "MultiFileFlag"         : "SingleFile"
             },
-            "file_label"          : "step",
+            "file_label"          : "time",
             "output_control_type" : "step",
-            "output_frequency"    : 0.03,
+            "output_frequency"    : 1.0,
             "body_output"         : true,
             "node_output"         : false,
             "skin_output"         : false,
@@ -32,9 +31,9 @@
         "point_data_configuration"  : []
     },
     "restart_options"                  : {
-        "SaveRestart"      : false,
+        "SaveRestart"      : "False",
         "RestartFrequency" : 0,
-        "LoadRestart"      : false,
+        "LoadRestart"      : "False",
         "Restart_Step"     : 0
     },
     "solver_settings"                  : {
@@ -43,44 +42,50 @@
             "input_type"     : "mdpa",
             "input_filename" : "test_turbulent_sensitivity_3d/nozzle_test_3d"
         },
-        "maximum_iterations"            : 10,
-        "dynamic_tau"                   : 1,
-        "oss_switch"                    : 0,
-        "echo_level"                    : 0,
-        "consider_periodic_conditions"  : false,
-        "compute_reactions"             : true,
-        "divergence_clearance_steps"    : 0,
-        "relative_velocity_tolerance"   : 0.001,
-        "absolute_velocity_tolerance"   : 1e-5,
-        "relative_pressure_tolerance"   : 0.001,
-        "absolute_pressure_tolerance"   : 1e-5,
-        "linear_solver_settings"        : {
+        "maximum_iterations"           : 10,
+        "dynamic_tau"                  : 1.0,
+        "oss_switch"                   : 0,
+        "echo_level"                   : 0,
+        "consider_periodic_conditions" : false,
+        "compute_reactions"            : true,
+        "divergence_clearance_steps"   : 0,
+        "reform_dofs_at_each_step"     : false,
+        "relative_velocity_tolerance"  : 1e-3,
+        "absolute_velocity_tolerance"  : 1e-5,
+        "relative_pressure_tolerance"  : 1e-3,
+        "absolute_pressure_tolerance"  : 1e-5,
+        "linear_solver_settings"       : {
             "solver_type"         : "AMGCL",
-            "max_iteration"       : 500,
-            "tolerance"           : 1e-9,
-            "provide_coordinates" : false,
-            "smoother_type"       : "ilu0",
-            "krylov_type"         : "gmres",
-            "coarsening_type"     : "aggregation",
-            "scaling"             : true,
-            "verbosity"           : 0
+            "verbosity"           : 0,
+            "coarse_enough"       : 500
         },
         "volume_model_part_name"        : "Parts_fluid",
-        "skin_parts"                    : ["Inlet3D_inlet","Outlet3D_outlet","NoSlip3D_walls"]
+        "skin_parts"                    : ["Inlet3D_inlet","Outlet3D_outlet","NoSlip3D_walls"],
+        "no_skin_parts"                 : []
     },
     "initial_conditions_process_list"  : [],
     "boundary_conditions_process_list" : [{
-        "python_module"         : "impose_vector_value_by_direction_process",
-        "kratos_module"         : "KratosMultiphysics",
-        "help"                  : "This process fixes all the components of a given vector variable",
-        "check"                 : "DirectorVectorNonZero direction",
-        "process_name"          : "ImposeVectorValueByDirectionProcess",
-        "Parameters"            : {
+        "python_module" : "impose_vector_value_by_components_process",
+        "kratos_module" : "KratosMultiphysics",
+        "process_name"  : "ImposeVectorValueByComponentsProcess",
+        "Parameters"    : {
             "mesh_id"         : 0,
             "model_part_name" : "Inlet3D_inlet",
             "variable_name"   : "VELOCITY",
-            "modulus"         : 1e-4,
-            "direction"       : [1.0,0.0,0.0]
+            "is_fixed_x"      : true,
+            "is_fixed_y"      : true,
+            "is_fixed_z"      : true,
+            "value"           : [0.00001, 0.0, 0.0]
+        }
+    },{
+        "python_module" : "impose_scalar_value_process",
+        "kratos_module" : "KratosMultiphysics.FluidDynamicsApplication",
+        "process_name"  : "ApplyOutletProcess",
+        "Parameters"    : {
+            "mesh_id"         : 0,
+            "model_part_name" : "Outlet3D_outlet",
+            "variable_name"   : "PRESSURE",
+            "value"           : 0
         }
     },{
         "python_module"         : "apply_noslip_process",

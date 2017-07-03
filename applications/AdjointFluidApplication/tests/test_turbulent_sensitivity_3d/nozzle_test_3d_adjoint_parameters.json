@@ -6,9 +6,9 @@
         "problem_name"    : "nozzle_test_3d_adjoint",
         "model_part_name" : "MainModelPart",
         "domain_size"     : 3,
-        "start_step"      : 6.01,
-        "nsteps"          : 300,
-        "time_step"       :-0.01
+        "start_step"      : 0.011,
+        "nsteps"          : 10,
+        "time_step"       :-0.001
     },
     "output_configuration"             : {
         "result_file_configuration" : {
@@ -18,14 +18,14 @@
                 "WriteConditionsFlag"   : "WriteElementsOnly",
                 "MultiFileFlag"         : "SingleFile"
             },
-            "file_label"          : "step",
+            "file_label"          : "time",
             "output_control_type" : "step",
             "output_frequency"    : 1.0,
             "body_output"         : true,
             "node_output"         : false,
             "skin_output"         : false,
             "plane_output"        : [],
-            "nodal_results"       : ["VELOCITY","ADJOINT_VELOCITY","PRESSURE","ADJOINT_PRESSURE","SHAPE_SENSITIVITY","NORMAL_SENSITIVITY"],
+            "nodal_results"       : ["VELOCITY","PRESSURE","ADJOINT_VELOCITY","ADJOINT_PRESSURE","SHAPE_SENSITIVITY"],
             "gauss_point_results" : []
         },
         "point_data_configuration"  : []
@@ -36,14 +36,14 @@
             "scheme_type" : "bossak",
             "boundary_model_part_name" : "Outlet3D_outlet",
             "alpha_bossak"             :-0.3,
-            "adjoint_start_time"       : 2.999999999,
-            "adjoint_end_time"         : 6.000000001
+            "adjoint_start_time"       : 0.0,
+            "adjoint_end_time"         : 0.0100000001
         },
         "objective_settings" : {
             "objective_type"                 : "flow_mal_distribution",
             "surface_model_part_name"        : "Outlet3D_outlet",
             "flow_mal_distribution_direction": "surface_normal",
-            "output_file"                    : "test_turbulent_sensitivity_3d/flow_mal_distribution_adjoint"
+            "output_file"                    : ""
         },
         "model_import_settings"         : {
             "input_type"     : "mdpa",
