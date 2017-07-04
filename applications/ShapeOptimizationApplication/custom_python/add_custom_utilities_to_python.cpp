@@ -166,8 +166,10 @@ void  AddCustomUtilitiesToPython()
             .def("output_control_point_displacements", &CADMapper::output_control_point_displacements)
             .def("output_surface_border_points", &CADMapper::output_surface_border_points)
             .def("output_surface_border_points_two", &CADMapper::output_surface_border_points_two)
+            .def("compute_nearest_points", &CADMapper::compute_nearest_points)            
             .def("compute_a_matrix", &CADMapper::compute_a_matrix)
             .def("map_to_cad_space_2", &CADMapper::map_to_cad_space_2)            
+            
 
             ;                      
 }
