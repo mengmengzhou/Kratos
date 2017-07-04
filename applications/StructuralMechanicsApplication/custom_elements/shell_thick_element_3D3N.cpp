@@ -227,10 +227,6 @@ namespace Kratos
 			}
 			else if (theSection->CheckIsOrthotropic(props))
 			{
-				// Element type set for use in defining global composite orientation assignment
-				std::string thisElementType = std::string("ShellThickElement3D3N");
-				props.SetValue(ELEMENT_TYPE, thisElementType);
-
 				// make new instance of shell cross section
 				theSection = ShellCrossSection::Pointer(new ShellCrossSection());
 
@@ -563,7 +559,7 @@ namespace Kratos
 
 	void ShellThickElement3D3N::InitializeSolutionStep(ProcessInfo& CurrentProcessInfo)
 	{
-		const PropertiesType& props = GetProperties();
+		PropertiesType& props = GetProperties();
 		const GeometryType & geom = GetGeometry();
 		const Matrix & shapeFunctionsValues = geom.ShapeFunctionsValues(GetIntegrationMethod());
 
@@ -571,6 +567,26 @@ namespace Kratos
 			mSections[i]->InitializeSolutionStep(props, geom, row(shapeFunctionsValues, i), CurrentProcessInfo);
 
 		mpCoordinateTransformation->InitializeSolutionStep(CurrentProcessInfo);
+
+		// Operations to set orthotropic section alignment
+		if (props.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
+		{
+			// Ensure operation is only done once
+			if (props.GetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT) != 0.0)
+			{
+				double rotationAngle = props.GetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT);
+				double currentOrientationAngle;
+				for (size_t i = 0; i < OPT_NUM_GP; i++)
+				{
+					currentOrientationAngle = mSections[i]->GetOrientationAngle();
+					mSections[i]->SetOrientationAngle(currentOrientationAngle + rotationAngle);
+				}
+
+				// Ensure operation is only done once
+				rotationAngle = 0.0;
+				props.SetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT, rotationAngle);
+			}
+		}
 	}
 
 	void ShellThickElement3D3N::FinalizeSolutionStep(ProcessInfo& CurrentProcessInfo)

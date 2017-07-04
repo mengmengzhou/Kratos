@@ -243,9 +243,14 @@ namespace Kratos
 			6> >& rVariable, std::vector<array_1d<double, 6> >& rValues,
 			const ProcessInfo& rCurrentProcessInfo);
 
+		// Calculate functions
+		void Calculate(const Variable<Matrix >& rVariable,
+			Matrix& Output,
+			const ProcessInfo& rCurrentProcessInfo);
+
 		///@}
 
-		std::vector<Properties> mPly_Properties;
+
 
 		///@name Public specialized Access - Temporary
 		///@{

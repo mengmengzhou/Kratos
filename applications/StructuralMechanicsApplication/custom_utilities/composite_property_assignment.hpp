@@ -16,6 +16,7 @@
 
 // System includes
 #include <iterator>
+#include <math.h>
 
 // External includes
 
@@ -34,6 +35,7 @@ namespace Kratos {
 	///@}
 	///@name Type Definitions
 	///@{
+	typedef ModelPart::ElementsContainerType::iterator ElementsIteratorType;
 
 	///@}
 	///@name  Enum's
@@ -79,29 +81,24 @@ namespace Kratos {
 		///@name Operations
 		///@{
 
-		void Execute(ModelPart& rSubModelpart, Vector3 GlobalFiberDirection)
+		void Execute(ModelPart& rSubModelpart, Vector3 GlobalFiberDirection, ProcessInfo& rCurrentProcessInfo)
 		{
-			unsigned int caseID = 0; // 1=tri, 2=quad, 0=error
-			// do element check here
+			// Check to see if the composite orientation assignment has already
+			// been performed on the current modelPart
+			// Just look at the first element to save time
+			ElementsIteratorType& firstElement = rSubModelpart.ElementsBegin();
+			Properties elementProperties = (*firstElement).GetProperties();
 
-
-			for (auto& element : rSubModelpart.Elements())
+			if (elementProperties.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
 			{
-				// check element type (1=tri, 2=quad, 0=error)
-				checkElementType(element, caseID); //move this out of loop!
-				
-				// get global orientation of local axes
-				// or get element global to local transformation matrix and apply to the fiber vector
-
-				// compute rotation necessary to make loc2 and fiber vectors orthogonal
-
-				// apply rotation through the shell cross section class.
-					// probably need to make a public set method in each element
-
-				// add option to write out angles so they don't have to be computed next time
-					// or maybe this should be a separate python call
-
-			}// sub-modelpart element loop
+				// the composite orientation assignment has already been done
+			}
+			else
+			{
+				// perform the composite orientation assignment
+				compositeOrientationAssignment(rSubModelpart, 
+					GlobalFiberDirection, rCurrentProcessInfo);
+			}
 		}
 
 		///@}
@@ -163,31 +160,54 @@ namespace Kratos {
 		///@}
 		///@name Private Operations
 		///@{
-		void checkElementType(Element& element, unsigned int& caseID)
+		void compositeOrientationAssignment(ModelPart& rSubModelpart, Vector3 GlobalFiberDirection, ProcessInfo& rCurrentProcessInfo)
 		{
-			element.Initialize();
-			Properties elementProps = element.GetProperties();
-			std::string elementType = elementProps.GetValue(ELEMENT_TYPE);
+			// Declare working variables
+			Matrix LCSOrientation;
+			Vector3 localGlobalFiberDirection;
+			Vector3 localAxis1 = Vector3(3, 0.0);
+			double cosTheta, theta;
+			Properties::Pointer pElementProps;
 
-			std::string thickTri = "ShellThickElement3D3N";
-			std::string thinQuad = "ShellThinElement3D4N";
+			for (auto& element : rSubModelpart.Elements())
+			{
+				// get current element properties
+				pElementProps = element.pGetProperties();
 
-			if (elementType.compare(thickTri) == 0)
-			{
-				std::cout << "thick tri!" << std::endl;
-				caseID = 1;
-			}
-			else if (elementType.compare(thinQuad) == 0)
-			{
-				std::cout << "thin quad!" << std::endl;
-				caseID = 2;
-			}
-			else
-			{
-				KRATOS_ERROR <<
-					"Error: Element type unsupported for use with CompositePropertyAssignment"
-					<< std::endl;
-			}
+
+				// get local orientation of GlobalFiberDirection
+				element.Calculate(LOCAL_ELEMENT_ORIENTATION, LCSOrientation, rCurrentProcessInfo);
+				localGlobalFiberDirection = prod(LCSOrientation, GlobalFiberDirection);
+				localGlobalFiberDirection[2] = 0.0; // remove z component
+
+
+				// get element local axis 1 vector
+				for (size_t i = 0; i < 3; i++)
+				{
+					localAxis1[i] = LCSOrientation(0, i);
+				}
+
+
+				// compute current angle 'theta' between local axis 1 and 
+				// localGlobalFiberDirection
+				cosTheta = inner_prod(localAxis1, localGlobalFiberDirection);
+				cosTheta /= (std::sqrt(inner_prod(localAxis1, localAxis1)));
+				cosTheta /= (std::sqrt(inner_prod(localGlobalFiberDirection, localGlobalFiberDirection)));
+				theta = acos(cosTheta); // current angle between ax1 and fiber
+				theta *= -1.0; // rotation necessary to align
+
+
+				// set required rotation in element properties.
+				// rotation is performed in the element's InitializeSolutionStep
+				// call
+				pElementProps = element.pGetProperties();
+				pElementProps->SetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT, theta);
+
+
+				// add option to write out angles so they don't have to be computed next time
+					// or maybe this should be a separate python call
+
+			}// sub-modelpart element loop
 		}
 
 		///@}

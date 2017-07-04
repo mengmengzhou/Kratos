@@ -57,9 +57,10 @@ inline
 void CompositePropertyAssignmentExecute(
 		CompositePropertyAssignment& rThisUtil,
 		ModelPart& rModelPart,
-		Vector3 GlobalFiberDirection)
+		Vector3 GlobalFiberDirection,
+		ProcessInfo& rCurrentProcessInfo)
 {
-	rThisUtil.Execute(rModelPart, GlobalFiberDirection);
+	rThisUtil.Execute(rModelPart, GlobalFiberDirection, rCurrentProcessInfo);
 }
 
 

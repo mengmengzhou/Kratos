@@ -273,10 +273,6 @@ namespace Kratos
 			}
 			else if (theSection->CheckIsOrthotropic(props))
 			{
-				// Element type set for use in defining global composite orientation assignment
-				std::string thisElementType = std::string("ShellThinElement3D4N");
-				props.SetValue(ELEMENT_TYPE, thisElementType);
-
 				// make new instance of shell cross section
 				theSection =
 					ShellCrossSection::Pointer(new ShellCrossSection());
@@ -602,7 +598,7 @@ namespace Kratos
 	void ShellThinElement3D4N::InitializeSolutionStep
 	(ProcessInfo& CurrentProcessInfo)
 	{
-		const PropertiesType& props = GetProperties();
+		PropertiesType& props = GetProperties();
 		const GeometryType & geom = GetGeometry();
 		const Matrix & shapeFunctionsValues =
 			geom.ShapeFunctionsValues(GetIntegrationMethod());
@@ -612,6 +608,27 @@ namespace Kratos
 				row(shapeFunctionsValues, i), CurrentProcessInfo);
 
 		mpCoordinateTransformation->InitializeSolutionStep(CurrentProcessInfo);
+
+
+		// Operations to set orthotropic section alignment
+		if (props.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
+		{
+			// Ensure operation is only done once
+			if (props.GetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT) != 0.0)
+			{
+				double rotationAngle = props.GetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT);
+				double currentOrientationAngle;
+				for (size_t i = 0; i < 4; i++)
+				{
+					currentOrientationAngle = mSections[i]->GetOrientationAngle();
+					mSections[i]->SetOrientationAngle(currentOrientationAngle + rotationAngle);
+				}
+
+				// Ensure operation is only done once
+				rotationAngle = 0.0;
+				props.SetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT, rotationAngle);
+			}
+		}
 	}
 
 	void ShellThinElement3D4N::FinalizeSolutionStep
@@ -1162,6 +1179,19 @@ namespace Kratos
 		GetValueOnIntegrationPoints(rVariable, rValues, rCurrentProcessInfo);
 	}
 
+	void ShellThinElement3D4N::Calculate(const Variable<Matrix>& rVariable, Matrix & Output, const ProcessInfo & rCurrentProcessInfo)
+	{
+		if (rVariable == LOCAL_ELEMENT_ORIENTATION)
+		{
+			Output.resize(3, 3, false);
+
+			// Compute the local coordinate system.
+			ShellQ4_LocalCoordinateSystem localCoordinateSystem(
+				mpCoordinateTransformation->CreateReferenceCoordinateSystem());
+			Output = localCoordinateSystem.Orientation();
+		}
+	}
+
 	// =========================================================================
 	//
 	// Class ShellThinElement3D4N - Private methods
@@ -1695,7 +1725,6 @@ namespace Kratos
 		double L_mult = 0.5 / A;
 		const double alpha_6 = data.alpha / 6.0;
 		const double alpha_3 = data.alpha / 3.0;
-		//data.L_mem.resize(3, 12, false); \\ TODO delete
 		data.L_mem.clear();
 
 		//j = 1, i=4, k=2
