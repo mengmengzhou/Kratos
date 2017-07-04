@@ -1109,14 +1109,65 @@ namespace Kratos
 			// Initialize common calculation variables
 			// Compute the local coordinate system.
 			ShellQ4_LocalCoordinateSystem localCoordinateSystem(
-				mpCoordinateTransformation->CreateLocalCoordinateSystem());
+				mpCoordinateTransformation->CreateReferenceCoordinateSystem());
 			Matrix OrientationMat = localCoordinateSystem.Orientation();
+
 			for (size_t row = 0; row < 3; row++)
 			{
 				for (size_t col = 0; col < 3; col++)
 				{
 					rValues[row][col] = OrientationMat(row, col);
 				}
+			}
+		}
+		else if (rVariable == ORTHOTROPIC_FIBER_ORIENTATION_1)
+		{
+			rValues.resize(4);
+			for (int i = 0; i < 4; ++i) rValues[i] = ZeroVector(3);
+			// Initialize common calculation variables
+			// Compute the local coordinate system.
+			ShellQ4_LocalCoordinateSystem localCoordinateSystem(
+				mpCoordinateTransformation->CreateLocalCoordinateSystem());
+
+			// Get local axis 1 in flattened LCS space
+			Vector3 localAxis1 = localCoordinateSystem.P2() - localCoordinateSystem.P1();
+			localAxis1[2] = 0.0;
+
+			// Perform rotation of local axis 1 to fiber1 in flattened LCS space
+			Matrix localToFiberRotation = Matrix(3, 3, 0.0);
+			double fiberSectionRotation = mSections[0]->GetOrientationAngle();
+			fiberSectionRotation *= 1.0;
+			double c = std::cos(fiberSectionRotation);
+			double s = std::sin(fiberSectionRotation);
+
+			localToFiberRotation(0, 0) = c;
+			localToFiberRotation(0, 1) = -s;
+			localToFiberRotation(1, 0) = s;
+			localToFiberRotation(1, 1) = c;
+			localToFiberRotation(2, 2) = 1.0;
+
+			Vector3 fiberAxis1, temp;
+			temp = prod(localToFiberRotation, localAxis1);
+
+			// Transform result back to global cartesian coords
+			Matrix localToGlobalLarge;
+			localCoordinateSystem.ComputeLocalToGlobalTransformationMatrix(localToGlobalLarge);
+			Matrix localToGlobalSmall = Matrix(3, 3, 0.0);
+			for (size_t i = 0; i < 3; i++)
+			{
+				for (size_t j = 0; j < 3; j++)
+				{
+					localToGlobalSmall(i, j) = localToGlobalLarge(i, j);
+				}
+			}
+			fiberAxis1 = prod(localToGlobalSmall, temp);
+
+			//write results
+			for (size_t dir = 0; dir < 4; dir++)
+			{
+
+				rValues[dir] = fiberAxis1;
+
 			}
 		}
 	}
