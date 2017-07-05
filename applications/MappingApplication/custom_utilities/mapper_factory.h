@@ -26,6 +26,7 @@
 
 #include "custom_mappers/nearest_neighbor_mapper.h"
 #include "custom_mappers/nearest_element_mapper.h"
+#include "custom_mappers/mortar_mapper.h"
 
 
 namespace Kratos
@@ -410,14 +411,14 @@ private:
         if (mMapperType == "NearestNeighbor")
         {
             mpMapper = Mapper::Pointer(new NearestNeighborMapper(*mpInterfaceModelPartOrigin,
-                                       *mpInterfaceModelPartDestination,
-                                       mrJsonParameters));
+                                                                 *mpInterfaceModelPartDestination,
+                                                                  mrJsonParameters));
         }
         else if (mMapperType == "NearestElement")
         {
             mpMapper = Mapper::Pointer(new NearestElementMapper(*mpInterfaceModelPartOrigin,
-                                       *mpInterfaceModelPartDestination,
-                                       mrJsonParameters));
+                                                                *mpInterfaceModelPartDestination,
+                                                                 mrJsonParameters));
 
         } /*else if (mMapperType == "Barycentric") {
               mpMapper = Mapper::Pointer(new BarycentricMapper(*mpInterfaceModelPartOrigin,
@@ -429,12 +430,12 @@ private:
                                                          *mpInterfaceModelPartDestination,
                                                          mrJsonParameters));
 
-          } *//*else if (mMapperType == "Mortar") {
+          } */else if (mMapperType == "Mortar") {
               mpMapper = Mapper::Pointer(new MortarMapper(*mpInterfaceModelPartOrigin,
-                                                            *mpInterfaceModelPartDestination,
-                                                            mrJsonParameters));
+                                                          *mpInterfaceModelPartDestination,
+                                                           mrJsonParameters));
 
-          } *//*else if (mMapperType == "IGA") {
+          } /*else if (mMapperType == "IGA") {
               mpMapper = Mapper::Pointer(new IGAMapper(*mpInterfaceModelPartOrigin,
                                                          *mpInterfaceModelPartDestination,
                                                          mrJsonParameters));
