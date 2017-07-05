@@ -27,7 +27,7 @@
 
 // Project includes
 #include "includes/define.h"
-#include "custom_python/add_custom_utilities_to_python.h"
+#include "custom_python/add_custom_mappers_to_python.h"
 
 #include "custom_utilities/mapper_flags.h"
 #include "custom_utilities/mapper_factory.h"
@@ -92,7 +92,7 @@ void InverseMap(MapperFactory& dummy,
     dummy.InverseMap(origin_variable, destination_variable, dummy_flags);
 }
 
-void  AddCustomUtilitiesToPython()
+void  AddCustomMappersToPython()
 {
     using namespace boost::python;
 

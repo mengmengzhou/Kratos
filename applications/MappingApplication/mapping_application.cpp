@@ -24,10 +24,6 @@
 #include "mapping_application.h"
 #include "mapping_application_variables.h"
 
-#include "geometries/tetrahedra_3d_4.h"
-#include "geometries/prism_3d_6.h"
-#include "geometries/hexahedra_3d_8.h"
-
 #ifdef KRATOS_USING_MPI
 #include "mpi.h"
 #endif

@@ -20,8 +20,8 @@
 // THE USE OF THISSOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-#if !defined(KRATOS_ADD_UTILITIES_TO_PYTHON_H_INCLUDED )
-#define  KRATOS_ADD_UTILITIES_TO_PYTHON_H_INCLUDED
+#if !defined(KRATOS_ADD_MAPPERS_TO_PYTHON_H_INCLUDED )
+#define  KRATOS_ADD_MAPPERS_TO_PYTHON_H_INCLUDED
 
 
 
@@ -41,10 +41,10 @@ namespace Kratos
 namespace Python
 {
 
-void  AddCustomUtilitiesToPython();
+void  AddCustomMappersToPython();
 
 }  // namespace Python.
 
 }  // namespace Kratos.
 
-#endif // KRATOS_ADD_UTILITIES_TO_PYTHON_H_INCLUDED  defined
+#endif // KRATOS_ADD_MAPPERS_TO_PYTHON_H_INCLUDED  defined
