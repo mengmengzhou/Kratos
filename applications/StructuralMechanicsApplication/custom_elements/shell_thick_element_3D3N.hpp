@@ -184,6 +184,15 @@ namespace Kratos
 			6> >& rVariable, std::vector<array_1d<double, 6> >& rValues,
 			const ProcessInfo& rCurrentProcessInfo);
 
+		// Calculate functions
+		void Calculate(const Variable<Matrix >& rVariable,
+			Matrix& Output,
+			const ProcessInfo& rCurrentProcessInfo);
+
+		void Calculate(const Variable<double>& rVariable,
+			double& Output,
+			const ProcessInfo& rCurrentProcessInfo);
+
 		///@}
 
 		///@name Public specialized Access - Temporary
@@ -264,7 +273,7 @@ namespace Kratos
 											stabilize the transverse shear part of the											material matrix. This should be false unless 
 											you are testing! */
 
-			const bool specialDSGc3 = true;
+			const bool specialDSGc3 = false;
 
 			// ---------------------------------------
 			// calculation-variable data
@@ -372,6 +381,8 @@ namespace Kratos
 		CrossSectionContainerType mSections; /*!< Container for cross section associated to each integration point */
 
 		IntegrationMethod mThisIntegrationMethod; /*!< Currently selected integration method */
+
+		double mOrthotropicSectionRotation = 0.0; /*!< In-plane rotation angle for orthotropic section */
 
 												  ///@}
 

@@ -567,26 +567,6 @@ namespace Kratos
 			mSections[i]->InitializeSolutionStep(props, geom, row(shapeFunctionsValues, i), CurrentProcessInfo);
 
 		mpCoordinateTransformation->InitializeSolutionStep(CurrentProcessInfo);
-
-		// Operations to set orthotropic section alignment
-		if (props.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
-		{
-			// Ensure operation is only done once
-			if (props.GetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT) != 0.0)
-			{
-				double rotationAngle = props.GetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT);
-				double currentOrientationAngle;
-				for (size_t i = 0; i < OPT_NUM_GP; i++)
-				{
-					currentOrientationAngle = mSections[i]->GetOrientationAngle();
-					mSections[i]->SetOrientationAngle(currentOrientationAngle + rotationAngle);
-				}
-
-				// Ensure operation is only done once
-				rotationAngle = 0.0;
-				props.SetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT, rotationAngle);
-			}
-		}
 	}
 
 	void ShellThickElement3D3N::FinalizeSolutionStep(ProcessInfo& CurrentProcessInfo)
@@ -930,19 +910,60 @@ namespace Kratos
 		std::vector<Vector>& rValues,
 		const ProcessInfo& rCurrentProcessInfo)
 	{
-		if (rVariable == LOCAL_AXES_VECTOR)
+		if (rVariable == LOCAL_AXIS_VECTOR_1)
 		{
-			rValues.resize(3);
-			for (int i = 0; i < 3; ++i) rValues[i] = ZeroVector(3);
+			// LOCAL_AXIS_VECTOR_1 output DOES NOT include the effect of section
+			// orientation, which rotates the entrire element section in-plane
+			// and is used in element stiffness calculation.
+
+			rValues.resize(OPT_NUM_GP);
+			for (int i = 0; i < OPT_NUM_GP; ++i) rValues[i] = ZeroVector(3);
 			// Initialize common calculation variables
-			CalculationData data(mpCoordinateTransformation, rCurrentProcessInfo);
-			Matrix OrientationMat = data.LCS.Orientation();
-			for (size_t row = 0; row < 3; row++)
+			ShellT3_LocalCoordinateSystem localCoordinateSystem(mpCoordinateTransformation->CreateReferenceCoordinateSystem());
+
+			for (size_t GP = 0; GP < 1; GP++)
 			{
-				for (size_t col = 0; col < 3; col++)
-				{
-					rValues[row][col] = OrientationMat(row, col);
-				}
+				rValues[GP] = localCoordinateSystem.Vx();
+			}
+		}
+		else if (rVariable == ORTHOTROPIC_FIBER_ORIENTATION_1)
+		{
+			// ORTHOTROPIC_FIBER_ORIENTATION_1 output DOES include the effect of 
+			// section orientation, which rotates the entrire element section 
+			// in-plane and is used in the element stiffness calculation.
+
+			// Resize output
+			rValues.resize(OPT_NUM_GP);
+			for (int i = 0; i < OPT_NUM_GP; ++i) rValues[i] = ZeroVector(3);
+
+			// Initialize common calculation variables
+			// Compute the local coordinate system.
+			ShellT3_LocalCoordinateSystem localCoordinateSystem(mpCoordinateTransformation->CreateReferenceCoordinateSystem());
+
+			// Get local axis 1 in flattened LCS space
+			Vector3 localAxis1 = localCoordinateSystem.P2() - localCoordinateSystem.P1();
+
+			// Perform rotation of local axis 1 to fiber1 in flattened LCS space
+			Matrix localToFiberRotation = Matrix(3, 3, 0.0);
+			double fiberSectionRotation = mSections[0]->GetOrientationAngle();
+			double c = std::cos(fiberSectionRotation);
+			double s = std::sin(fiberSectionRotation);
+			localToFiberRotation(0, 0) = c;
+			localToFiberRotation(0, 1) = -s;
+			localToFiberRotation(1, 0) = s;
+			localToFiberRotation(1, 1) = c;
+			localToFiberRotation(2, 2) = 1.0;
+			Vector3 temp = prod(localToFiberRotation, localAxis1);
+
+			// Transform result back to global cartesian coords and normalize
+			Matrix localToGlobalSmall = localCoordinateSystem.Orientation();
+			Vector3 fiberAxis1 = prod(trans(localToGlobalSmall), temp);
+			fiberAxis1 /= std::sqrt(inner_prod(fiberAxis1, fiberAxis1));
+
+			//write results
+			for (size_t dir = 0; dir < 1; dir++)
+			{
+				rValues[dir] = fiberAxis1;
 			}
 		}
 	}
@@ -1002,6 +1023,29 @@ namespace Kratos
 		const ProcessInfo& rCurrentProcessInfo)
 	{
 		GetValueOnIntegrationPoints(rVariable, rValues, rCurrentProcessInfo);
+	}
+
+	void ShellThickElement3D3N::Calculate(const Variable<Matrix>& rVariable, Matrix & Output, const ProcessInfo & rCurrentProcessInfo)
+	{
+		if (rVariable == LOCAL_ELEMENT_ORIENTATION)
+		{
+			Output.resize(3, 3, false);
+
+			// Compute the local coordinate system.
+			ShellT3_LocalCoordinateSystem localCoordinateSystem(mpCoordinateTransformation->CreateReferenceCoordinateSystem());
+			Output = localCoordinateSystem.Orientation();
+		}
+	}
+
+	void ShellThickElement3D3N::Calculate(const Variable<double>& rVariable, double & rotationAngle, const ProcessInfo & rCurrentProcessInfo)
+	{
+		if (rVariable == ORTHOTROPIC_ORIENTATION_ASSIGNMENT)
+		{
+			if (rotationAngle != 0.0)
+			{
+				mOrthotropicSectionRotation = rotationAngle;
+			}
+		}
 	}
 
 	void ShellThickElement3D3N::SetCrossSectionsOnIntegrationPoints(std::vector< ShellCrossSection::Pointer >& crossSections)
@@ -1498,8 +1542,21 @@ namespace Kratos
 				angle = -angle;
 		}
 
-		for (CrossSectionContainerType::iterator it = mSections.begin(); it != mSections.end(); ++it)
-			(*it)->SetOrientationAngle(angle);
+		Properties props = GetProperties();
+		if (props.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
+		{
+			//std::cout << "Current orientation angle = " << mSections[0]->GetOrientationAngle() << std::endl;
+			//std::cout << "Orthotropic rotation angle = " << mOrthotropicSectionRotation << std::endl;
+			//std::cout << "Normal rotation angle = " << angle << std::endl;
+			for (CrossSectionContainerType::iterator it = mSections.begin(); it != mSections.end(); ++it)
+				(*it)->SetOrientationAngle(mOrthotropicSectionRotation);
+		}
+		else
+		{
+			for (CrossSectionContainerType::iterator it = mSections.begin(); it != mSections.end(); ++it)
+				(*it)->SetOrientationAngle(angle);
+		}
+		
 	}
 
 	void ShellThickElement3D3N::CalculateSectionResponse(CalculationData& data)

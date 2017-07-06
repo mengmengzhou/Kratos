@@ -1102,26 +1102,30 @@ namespace Kratos
 		std::vector<Vector>& rValues,
 		const ProcessInfo& rCurrentProcessInfo)
 	{
-		if (rVariable == LOCAL_AXES_VECTOR)
+		if (rVariable == LOCAL_AXIS_VECTOR_1)
 		{
+			// LOCAL_AXIS_VECTOR_1 output DOES NOT include the effect of section
+			// orientation, which rotates the entrire element section in-plane
+			// and is used in element stiffness calculation.
+
 			rValues.resize(4);
 			for (int i = 0; i < 4; ++i) rValues[i] = ZeroVector(3);
 			// Initialize common calculation variables
 			// Compute the local coordinate system.
 			ShellQ4_LocalCoordinateSystem localCoordinateSystem(
 				mpCoordinateTransformation->CreateReferenceCoordinateSystem());
-			Matrix OrientationMat = localCoordinateSystem.Orientation();
-
-			for (size_t row = 0; row < 3; row++)
+			
+			for (size_t GP = 0; GP < 4; GP++)
 			{
-				for (size_t col = 0; col < 3; col++)
-				{
-					rValues[row][col] = OrientationMat(row, col);
-				}
+				rValues[GP] = localCoordinateSystem.Vx();
 			}
 		}
 		else if (rVariable == ORTHOTROPIC_FIBER_ORIENTATION_1)
 		{
+			// ORTHOTROPIC_FIBER_ORIENTATION_1 output DOES include the effect of 
+			// section orientation, which rotates the entrire element section 
+			// in-plane and is used in element stiffness calculation.
+
 			rValues.resize(4);
 			for (int i = 0; i < 4; ++i) rValues[i] = ZeroVector(3);
 			// Initialize common calculation variables
