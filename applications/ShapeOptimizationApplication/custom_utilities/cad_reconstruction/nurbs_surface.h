@@ -1077,7 +1077,34 @@ public:
 		}
 
 		return mapping_matrix_ids;
-	}	
+	}
+
+	// --------------------------------------------------------------------------
+	matrix<int> GetRelevantControlPointsIndexes(int span_u, int span_v, double _u, double _v)
+	{
+		if(span_u==-1) span_u=find_Knot_Span(m_knot_vector_u,_u,m_p,m_n_u);
+		if(span_v==-1) span_v=find_Knot_Span(m_knot_vector_v,_v,m_q,m_n_v);
+
+		// Initialize matrices
+		matrix<int> control_points_matrix;// = zero_matrix<unsigned int>( m_p+1 ,m_q+1 );
+
+		// Loop in the same order as for the evaluation of the NURBs functiosn
+		for (int c=0;c<=m_q;c++)
+		{
+			for (int b=0;b<=m_p;b++)
+			{
+				// the control point vector is filled up by first going over u, then over v
+				int ui = span_u-m_p+b;
+				int vi = span_v-m_q+c;
+				int control_point_index =vi*m_n_u + ui;
+
+				// Store control point in corresponding matrix
+				control_points_matrix(b,c) = control_point_index;
+			}
+		}
+
+		return control_points_matrix;
+	}
 
 	// --------------------------------------------------------------------------
 	IntVector GetKnotSpan(double _u, double _v)
@@ -1108,6 +1135,18 @@ public:
 	ControlPointVector& GetControlPoints()
 	{
 		return m_control_points;
+	}
+
+	// --------------------------------------------------------------------------
+	int& GetDegP()
+	{
+		return m_p;
+	}
+
+	// --------------------------------------------------------------------------
+	int& GetDegQ()
+	{
+		return m_q;
 	}
 
 	// ==============================================================================
