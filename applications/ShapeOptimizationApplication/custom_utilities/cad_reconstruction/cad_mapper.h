@@ -1783,7 +1783,7 @@ class CADMapper
 		// Each correspondingly created point is stored in a list.
 		// Further lists in the same order are created to store the respective u & v parameter as well as the patch id
 		// As list iterator we use a counter for the number of CAD nodes
-		std::cout << "\n> Starting computation of a matrix..." << std::endl;
+		std::cout << "\n> Starting computation of nearest points..." << std::endl;
 		unsigned int cad_node_counter = 0;
 		NodeVector list_of_cad_nodes;
 		DoubleVector list_of_us_of_cad_nodes;
@@ -1862,6 +1862,13 @@ class CADMapper
 		m_list_of_span_u_of_nearest_points.clear();
 		m_list_of_span_v_of_nearest_points.clear();		
 		m_list_of_patch_of_nearest_points.clear();
+
+		m_list_of_neighbour_points.clear();
+		m_list_of_u_of_neighbour_points.clear();
+		m_list_of_v_of_neighbour_points.clear();
+		m_list_of_span_u_of_neighbour_points.clear();
+		m_list_of_span_v_of_neighbour_points.clear();				
+		m_list_of_patch_of_neighbour_points.clear();
 		// Loop over all nodes of fe-model-part and find corresponding closest neighbors of cad-model
 		std::cout << "\n> Starting to identify neighboring CAD points..." << std::endl;
 		boost::timer timer_2;
@@ -1872,8 +1879,6 @@ class CADMapper
             ModelPart::NodeType& node_i = *node_itr;
             array_1d<double,3>  i_coord = node_i.Coordinates();
 
-
-
         	// Search nearest cad neighbor of current integration point
         	NodeType::Pointer nearest_point = nodes_tree.SearchNearestPoint( node_i ); 
 
@@ -1881,6 +1886,17 @@ class CADMapper
 			double u_of_nearest_point = list_of_us_of_cad_nodes[nearest_point->Id()-1];
 			double v_of_nearest_point = list_of_vs_of_cad_nodes[nearest_point->Id()-1];
 			int patch_itr_of_nearest_point = list_of_patch_itrs_of_cad_nodes[nearest_point->Id()-1];
+			IntVector knot_span_nearest_point = m_patches[patch_itr_of_nearest_point].GetSurface().GetKnotSpan(u_of_nearest_point, v_of_nearest_point);
+			int span_u_of_np = knot_span_nearest_point[0];
+			int span_v_of_np = knot_span_nearest_point[1];
+
+			// Store CAD information of nearest point
+			m_list_of_neighbour_points.push_back(nearest_point);
+			m_list_of_u_of_neighbour_points.push_back(u_of_nearest_point);
+			m_list_of_v_of_neighbour_points.push_back(v_of_nearest_point);
+			m_list_of_span_u_of_neighbour_points.push_back(span_u_of_np);
+			m_list_of_span_v_of_neighbour_points.push_back(span_v_of_np);				
+			m_list_of_patch_of_neighbour_points.push_back(patch_itr_of_nearest_point);
 
 			// Perform Newton-Raphson for detailed search
 			// Initialize P: point on the mesh
@@ -1903,75 +1919,186 @@ class CADMapper
 			double v_k = v_of_nearest_point;
 			Point<3> newtonRaphPoint;
 
-				double norm_deltau = 100000000;
-				unsigned int k = 0;
-				unsigned int max_itr = 50;
-				while (norm_deltau > 1e-5)
+			double norm_deltau = 100000000;
+			unsigned int k = 0;
+			unsigned int max_itr = 50;
+			while (norm_deltau > 1e-5)
+			{
+				// The distance between Q (on the CAD surface) and P (on the FE-mesh) is evaluated
+				Q_minus_P(0) = Q_k(0) - P(0);
+				Q_minus_P(1) = Q_k(1) - P(1);
+				Q_minus_P(2) = Q_k(2) - P(2);
+
+				// The distance is used to compute Hessian and gradient
+				m_patches[patch_itr_of_nearest_point].GetSurface().EvaluateGradientsForClosestPointSearch(Q_minus_P, myHessian, myGradient , u_k, v_k);
+
+				// u_k and v_k are updated
+				MathUtils<double>::InvertMatrix( myHessian, InvH, det_H );
+				Vector deltau = prod(InvH,myGradient);
+				u_k -= deltau(0);
+				v_k -= deltau(1);
+
+				// Q is updated
+				m_patches[patch_itr_of_nearest_point].GetSurface().EvaluateSurfacePoint(newtonRaphPoint, u_k, v_k);
+				Q_k(0) = newtonRaphPoint[0];
+				Q_k(1) = newtonRaphPoint[1];
+				Q_k(2) = newtonRaphPoint[2];
+				norm_deltau = norm_2(deltau);
+
+				k++;
+
+				if(k>max_itr)
 				{
-					// The distance between Q (on the CAD surface) and P (on the FE-mesh) is evaluated
-					Q_minus_P(0) = Q_k(0) - P(0);
-					Q_minus_P(1) = Q_k(1) - P(1);
-					Q_minus_P(2) = Q_k(2) - P(2);
-
-					// The distance is used to compute Hessian and gradient
-					m_patches[patch_itr_of_nearest_point].GetSurface().EvaluateGradientsForClosestPointSearch(Q_minus_P, myHessian, myGradient , u_k, v_k);
-
-					// u_k and v_k are updated
-					MathUtils<double>::InvertMatrix( myHessian, InvH, det_H );
-					Vector deltau = prod(InvH,myGradient);
-					u_k -= deltau(0);
-					v_k -= deltau(1);
-
-					// Q is updated
-					m_patches[patch_itr_of_nearest_point].GetSurface().EvaluateSurfacePoint(newtonRaphPoint, u_k, v_k);
-					Q_k(0) = newtonRaphPoint[0];
-					Q_k(1) = newtonRaphPoint[1];
-					Q_k(2) = newtonRaphPoint[2];
-					norm_deltau = norm_2(deltau);
-
-					k++;
-
-					if(k>max_itr)
-					{
-						std::cout << "WARNING!!! Newton-Raphson to find closest point did not converge in the following number of iterations: " << k-1 << std::endl;
-						KRATOS_WATCH(Q_k);
-						KRATOS_WATCH(P);
-					}
+					std::cout << "WARNING!!! Newton-Raphson to find closest point did not converge in the following number of iterations: " << k-1 << std::endl;
+					KRATOS_WATCH(Q_k);
+					KRATOS_WATCH(P);
 				}
+			}
 
-				// Update nearest point
-				u_of_nearest_point = u_k;
-				v_of_nearest_point = v_k;
-				nearest_point->X() = Q_k(0);
-				nearest_point->Y() = Q_k(1);
-				nearest_point->Z() = Q_k(2);
+			// Update nearest point
+			u_of_nearest_point = u_k;
+			v_of_nearest_point = v_k;
+			nearest_point->X() = Q_k(0);
+			nearest_point->Y() = Q_k(1);
+			nearest_point->Z() = Q_k(2);
 
-				// Compute and store span of each parameter to avoid redundant computations later
-				IntVector knot_span_nearest_point = m_patches[patch_itr_of_nearest_point].GetSurface().GetKnotSpan(u_of_nearest_point, v_of_nearest_point);
+			// Compute and store span of each parameter to avoid redundant computations later
+			knot_span_nearest_point = m_patches[patch_itr_of_nearest_point].GetSurface().GetKnotSpan(u_of_nearest_point, v_of_nearest_point);
 
-				// Set flag to mark control point as relevant for mapping
-				int span_u_of_np = knot_span_nearest_point[0];
-				int span_v_of_np = knot_span_nearest_point[1];
-				m_patches[patch_itr_of_nearest_point].GetSurface().FlagControlPointsForMapping(span_u_of_np, span_v_of_np, u_of_nearest_point, v_of_nearest_point);
+			// Set flag to mark control point as relevant for mapping
+			span_u_of_np = knot_span_nearest_point[0];
+			span_v_of_np = knot_span_nearest_point[1];
+			m_patches[patch_itr_of_nearest_point].GetSurface().FlagControlPointsForMapping(span_u_of_np, span_v_of_np, u_of_nearest_point, v_of_nearest_point);
 
-				// Store information about nearest point in vector for recovery in the same loop later when the mapping matrix is constructed
-				m_list_of_nearest_points.push_back(nearest_point);
-				m_list_of_u_of_nearest_points.push_back(u_of_nearest_point);
-				m_list_of_v_of_nearest_points.push_back(v_of_nearest_point);
-				m_list_of_span_u_of_nearest_points.push_back(span_u_of_np);
-				m_list_of_span_v_of_nearest_points.push_back(span_v_of_np);				
-				m_list_of_patch_of_nearest_points.push_back(patch_itr_of_nearest_point);
+			// Store information about nearest point in vector for recovery in the same loop later when the mapping matrix is constructed
+			m_list_of_nearest_points.push_back(nearest_point);
+			m_list_of_u_of_nearest_points.push_back(u_of_nearest_point);
+			m_list_of_v_of_nearest_points.push_back(v_of_nearest_point);
+			m_list_of_span_u_of_nearest_points.push_back(span_u_of_np);
+			m_list_of_span_v_of_nearest_points.push_back(span_v_of_np);				
+			m_list_of_patch_of_nearest_points.push_back(patch_itr_of_nearest_point);
 		}
 
 		std::cout << "> Time needed for identify neighboring CAD points: " << timer_2.elapsed() << " s" << std::endl;
 	}
 
+	void print_nearest_points(std::string output_filename)
+	{
+		std::cout << "\n> Starting writing results of compute_nearest_points() to file..." << std::endl;
+
+		// Open file to write all points in
+		std::ofstream file_to_write(output_filename);
+		// write header
+		file_to_write	<< "FE-node | nearest neighbour| Newton-Raphson point" << std::endl;
+		file_to_write 	<< "x" << " "
+						<< "y" << " "
+						<< "z" << " "
+						<< "|" << " "
+						<< "patch-id" << " "
+						<< "u" << " "
+						<< "v" << " "
+						<< "u_min" << " "
+						<< "u_max" << " "
+						<< "v_min" << " "
+						<< "v_max" << " "
+						<< "x" << " "
+						<< "y" << " "
+						<< "z" << " "
+						<< "|" << " "
+						<< "patch-id" << " "
+						<< "u" << " "
+						<< "v" << " "
+						<< "x" << " "
+						<< "y" << " "
+						<< "z" << std::endl;
+		// write points
+		int i = 0, patch_itr;
+		double u_i, v_i;
+	    for(ModelPart::NodesContainerType::iterator node_itr = mr_fe_model_part.NodesBegin(); node_itr!=mr_fe_model_part.NodesEnd(); node_itr++)
+		{
+           	ModelPart::NodeType& node = *node_itr;
+			
+			// compute updated coordinates of Newton Raphson point
+			u_i = m_list_of_u_of_nearest_points[i];
+			v_i = m_list_of_v_of_nearest_points[i];
+			patch_itr = m_list_of_patch_of_nearest_points[i];
+			Point<3> cad_point;
+			m_patches[patch_itr].GetSurface().EvaluateSurfacePoint(cad_point, u_i, v_i);
+			
+
+			// write to file
+			if(node.Has(SHAPE_CHANGE_ABSOLUTE))
+			{
+							// print FE-node
+				file_to_write 	<< node.Coordinate(1) + node.GetValue(SHAPE_CHANGE_ABSOLUTE_X) << " "
+								<< node.Coordinate(2) + node.GetValue(SHAPE_CHANGE_ABSOLUTE_Y) << " "
+								<< node.Coordinate(3) + node.GetValue(SHAPE_CHANGE_ABSOLUTE_Z) << " "
+							// print neighbour
+								<< m_list_of_patch_of_neighbour_points[i] << " "
+
+								<< m_list_of_u_of_neighbour_points[i] << " "
+								<< m_list_of_v_of_neighbour_points[i] << " "
+
+								<< m_patches[m_list_of_patch_of_neighbour_points[i]].GetSurface().GetKnotVectorU().front() << " "
+								<< m_patches[m_list_of_patch_of_neighbour_points[i]].GetSurface().GetKnotVectorU().back() << " "
+								<< m_patches[m_list_of_patch_of_neighbour_points[i]].GetSurface().GetKnotVectorV().front() << " "
+								<< m_patches[m_list_of_patch_of_neighbour_points[i]].GetSurface().GetKnotVectorV().back() << " "
+
+								<< m_list_of_neighbour_points[i]->X() << " "
+								<< m_list_of_neighbour_points[i]->Y() << " "
+								<< m_list_of_neighbour_points[i]->Z() << " "
+							// print nearest point
+								<< m_list_of_patch_of_nearest_points[i] << " "
+
+								<< m_list_of_u_of_nearest_points[i] << " "
+								<< m_list_of_v_of_nearest_points[i] << " "
+
+								<< cad_point.X() << " "
+								<< cad_point.Y() << " "
+								<< cad_point.Z() << std::endl;
+			}
+			else
+			{
+							// print FE-node
+				file_to_write 	<< node.Coordinate(1) << " "
+								<< node.Coordinate(2) << " "
+								<< node.Coordinate(3) << " "
+							// print neighbour
+								<< m_list_of_patch_of_neighbour_points[i] << " "
+
+								<< m_list_of_u_of_neighbour_points[i] << " "
+								<< m_list_of_v_of_neighbour_points[i] << " "
+
+								<< m_patches[m_list_of_patch_of_neighbour_points[i]].GetSurface().GetKnotVectorU().front() << " "
+								<< m_patches[m_list_of_patch_of_neighbour_points[i]].GetSurface().GetKnotVectorU().back() << " "
+								<< m_patches[m_list_of_patch_of_neighbour_points[i]].GetSurface().GetKnotVectorV().front() << " "
+								<< m_patches[m_list_of_patch_of_neighbour_points[i]].GetSurface().GetKnotVectorV().back() << " "
+
+								<< m_list_of_neighbour_points[i]->X() << " "
+								<< m_list_of_neighbour_points[i]->Y() << " "
+								<< m_list_of_neighbour_points[i]->Z() << " "
+							// print nearest point
+								<< m_list_of_patch_of_nearest_points[i] << " "
+
+								<< m_list_of_u_of_nearest_points[i] << " "
+								<< m_list_of_v_of_nearest_points[i] << " "
+
+								<< cad_point.X() << " "
+								<< cad_point.Y() << " "
+								<< cad_point.Z() << std::endl;
+			}
+			i++;
+		}
+
+		// Close file
+		file_to_write.close();
+		std::cout << "\n> Finished writing results" << std::endl;
+		
+	}
 	void compute_a_matrix()
 	{
-		// #################################################################################################################
-		// 2nd step: construct matrix //??? split in 2 functions?
-		// Count relevant control points and assign each a unique mapping matrix Id (iterator over points)
-		
+		std::cout << "\n> Starting computation of a matrix..." << std::endl;
+		// Count relevant control points and assign each a unique mapping matrix Id (iterator over points)		
 		// First we identify relevant control points affecting the cad points on the surface
 		m_n_control_points = 0; 
 		m_n_relevant_control_points = 0;
@@ -2111,8 +2238,14 @@ class CADMapper
 		// 2: compute left hand side
 		std::cout << "\t> Computing LHS...\n ";		
 		Matrix lhs;
+		std::cout << "\t\t[" << 3*m_n_relevant_control_points
+				  << "x" << 3*m_n_relevant_fem_points
+				  << "] [" << 3*m_n_relevant_fem_points
+				  << "x" << 3*m_n_relevant_control_points
+				  << "]\n";
 		lhs.resize(3*m_n_relevant_control_points, 3*m_n_relevant_control_points);
-		noalias(lhs) = prod(transpose, m_a_matrix);
+		// noalias(lhs) = prod(transpose, m_a_matrix);
+		prod(transpose, m_a_matrix, lhs);
 		std::cout << "\t\t\t DONE" << std::endl;
  
 		// 3: compute right hand side
@@ -2185,23 +2318,6 @@ class CADMapper
 			x_CAD[3*i_id+1] = m_list_of_nearest_points[i_id]->Y();		// bla == i_id, since list_of_nearest_points is filled looping over nodes
 			x_CAD[3*i_id+2] = m_list_of_nearest_points[i_id]->Z();
 		}
-		KRATOS_WATCH(x_CAD - x_FEM);
-		std::cout << "\n> distance is: " << norm_inf(x_CAD - x_FEM);
-		double max = 0;
-		int id;
-		double diff;
-		for(int i = 0; i< 3*m_n_relevant_fem_points; i++)
-		{
-			diff = abs(x_CAD[i] - x_FEM[i]);
-			if( max < diff)
-			{
-				max = diff;
-				id = i/3 + i%3; 
-			}
-
-		}
-		KRATOS_WATCH(max);
-		KRATOS_WATCH(id);
 	}
 
     // ==============================================================================
@@ -2245,13 +2361,21 @@ class CADMapper
 	SparseMatrixType m_mapping_matrix_CAD_FEM;
 	Vector m_mapping_rhs_vector;
 	Matrix m_a_matrix; // rectangular NURBS matrix
+	// arrays for debugging 1 //???
 	NodeVector m_list_of_nearest_points;	
 	DoubleVector m_list_of_u_of_nearest_points;
 	DoubleVector m_list_of_v_of_nearest_points;
 	DoubleVector m_list_of_span_u_of_nearest_points;
 	DoubleVector m_list_of_span_v_of_nearest_points;		
 	IntVector m_list_of_patch_of_nearest_points;
-		
+	// arrays for debugging 2 //???
+	NodeVector m_list_of_neighbour_points;	
+	DoubleVector m_list_of_u_of_neighbour_points;
+	DoubleVector m_list_of_v_of_neighbour_points;
+	DoubleVector m_list_of_span_u_of_neighbour_points;
+	DoubleVector m_list_of_span_v_of_neighbour_points;		
+	IntVector m_list_of_patch_of_neighbour_points;
+	
 	const Condition::GeometryType::IntegrationMethod m_integration_method = GeometryData::GI_GAUSS_5;
 
 	// ==============================================================================

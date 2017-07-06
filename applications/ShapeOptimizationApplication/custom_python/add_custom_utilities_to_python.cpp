@@ -169,6 +169,7 @@ void  AddCustomUtilitiesToPython()
             .def("compute_nearest_points", &CADMapper::compute_nearest_points)            
             .def("compute_a_matrix", &CADMapper::compute_a_matrix)
             .def("map_to_cad_space_2", &CADMapper::map_to_cad_space_2)            
+            .def("print_nearest_points", &CADMapper::print_nearest_points)            
             
 
             ;                      
