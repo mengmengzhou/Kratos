@@ -44,6 +44,7 @@ Import_ContactMechanicsApplication = False
 Import_ContactStructuralMechanicsApplication = False
 Import_KratosMappingApplication = False
 Import_ConstitutiveModelsApplication = False
+Import_FemToDemApplication = False
 
 print("Applications Available:")
 print("Import_SolidMechanicsApplication: False")
@@ -86,6 +87,7 @@ print("Import_ContactMechanicsApplication: False")
 print("Import_ContactStructuralMechanicsApplication: False")
 print("Import_KratosMappingApplication: False")
 print("Import_ConstitutiveModelsApplication: False")
+print("Import_FemToDemApplication: False")
 
 application_directory = os.path.dirname(os.path.realpath(__file__))
 
@@ -131,6 +133,7 @@ def ImportApplications(kernel, applications_path=application_directory):
     print("Import_ContactStructuralMechanicsApplication: " + str(Import_ContactStructuralMechanicsApplication))
     print("Import_KratosMappingApplication: " + str(Import_KratosMappingApplication))    
     print("Import_ConstitutiveModelsApplication: " + str(Import_ConstitutiveModelsApplication))
+	print("Import_FemToDemApplication: " + str(Import_FemToDemApplication))
 
     if(Import_SolidMechanicsApplication):
         print("importing KratosSolidMechanicsApplication ...")
@@ -141,6 +144,16 @@ def ImportApplications(kernel, applications_path=application_directory):
         solid_mechanics_application = KratosSolidMechanicsApplication()
         kernel.AddApplication(solid_mechanics_application)
         print("KratosSolidMechanicsApplication Succesfully imported")
+		
+    if(Import_FemToDemApplication):
+        print("importing KratosFemToDemApplication ...")
+        sys.path.append(applications_path + '/FemToDemApplication/python_scripts')
+        sys.path.append(applications_path + '/FemToDemApplication/python_scripts/constitutive_laws')
+        sys.path.append(applications_path + '/FemToDemApplication/Linux')
+        from KratosFemToDemApplication import *
+        fem_to_dem_application = KratosFemToDemApplication()
+        kernel.AddApplication(fem_to_dem_application)
+        print("KratosFemToDemApplication Succesfully imported")
 
     if(Import_PfemBaseApplication):
         print("importing KratosPfemBaseApplication ...")
@@ -488,6 +501,8 @@ def ImportApplications(kernel, applications_path=application_directory):
     kernel.Initialize()
     if(Import_SolidMechanicsApplication):
         kernel.InitializeApplication(solid_mechanics_application)
+    if(Import_FemToDemApplication):
+        kernel.InitializeApplication(fem_to_dem_application)
     if(Import_PfemBaseApplication):
         kernel.InitializeApplication(pfem_base_application)
     if(Import_PfemSolidMechanicsApplication):
