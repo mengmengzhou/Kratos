@@ -70,10 +70,7 @@ void KratosFemToDemApplication::Register()
  	// calling base class register to register Kratos components
  	KratosApplication::Register();
 	
-	/*std::cout << "    KRATOS/ __/ / __/   /\  /\      // \\  / __/ / /\  /\            " << std::endl;
-	std::cout << "           / __/ / __/ / /  \/  \    //  || / __/ / /  \/  \           " << std::endl;
-	std::cout << "          /_/   /___/ /_/   \/ \_\  //_ // /___/ /_/   \/ \_\          " << std::endl;
- 	std::cout << "Initializing KratosFemToDemApplication... " << std::endl;*/
+	
 	
 
 	//REGISTER VARIABLES FEM2DEM
