@@ -82,7 +82,7 @@ namespace Kratos
 
 	void AleCornVelElement::InitializeSolutionStep(ProcessInfo& rCurrentProcessInfo)
 	{
-
+		SmallDisplacementElement::InitializeSolutionStep(rCurrentProcessInfo);
 	}
 
 	void AleCornVelElement::FinalizeSolutionStep(ProcessInfo& rCurrentProcessInfo)
