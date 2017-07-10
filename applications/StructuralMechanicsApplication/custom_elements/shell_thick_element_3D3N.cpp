@@ -1836,53 +1836,92 @@ namespace Kratos
 	{
 		std::cout << "DSGc3" << std::endl;
 
-	
-		int numberGPs = 3;
+		// choose formulation options
+		bool use_pure_bubble_mode = false;
+		bool use_no_bubble_mode = false;
+		bool use_reconstructed_shear_gaps = false;
+		bool use_original_dsg = true;
+		bool use_original_dsg_with_bubble = false;
 
 		// Material matrix data.D is already multiplied with A!!!
 		data.D *= 2.0; //now data.D is D*detJ
 
-		/*
-		Matrix shearD = Matrix(2, 2,0.0);
-		shearD.clear();
-		shearD(0, 0) = data.D(6, 6);
-		shearD(1, 1) = data.D(7, 7);
-		Matrix shearK = Matrix(9, 9, 0.0);
-		shearK.clear();
-		*/
+		// Modified B-matrix
+		Matrix BSuper = Matrix(2, 9, 0.0);
+
+		// Get geometry data
+		const double x1 = data.LCS0.X1();
+		const double y1 = data.LCS0.Y1();
+		const double x2 = data.LCS0.X2();
+		const double y2 = data.LCS0.Y2();
+		const double x3 = data.LCS0.X3();
+		const double y3 = data.LCS0.Y3();
+
+		// Geometric quantities
+		const double a = x2 - x1;
+		const double b = y2 - y1;
+		const double c = y3 - y1;
+		const double d = x3 - x1;
+
+		// Numeric integration
+		int numberGPs = 3;
+		double integration_weight = 1.0 / 6.0;
+		if (use_original_dsg_with_bubble)
+		{
+			// use quartic integration
+			numberGPs = 7;
+		}
+
+		std::vector< array_1d<double, 3> > quarticGPLocations;
+		quarticGPLocations.resize(7);
+		quarticGPLocations.clear();
+		for (size_t i = 0; i < 7; i++)
+		{
+			quarticGPLocations[i].clear();
+			quarticGPLocations[i][0] = 0.0;
+			quarticGPLocations[i][1] = 0.0;
+		}
+		Vector quarticGPweights = Vector(7, 0.0);
+
+		quarticGPweights[0] = 1.0 / 40.0;
+
+		quarticGPLocations[1][0] = 0.5;
+		quarticGPweights[1] = 1.0 / 15.0;
+
+		quarticGPLocations[2][0] = 1.0;
+		quarticGPweights[2] = 1.0 / 40.0;
+
+		quarticGPLocations[3][0] = 0.5;
+		quarticGPLocations[3][1] = 0.5;
+		quarticGPweights[3] = 1.0 / 15.0;
+
+		quarticGPLocations[4][1] = 1.0;
+		quarticGPweights[4] = 1.0 / 40.0;
+
+		quarticGPLocations[5][1] = 0.5;
+		quarticGPweights[5] = 1.0 / 15.0;
+
+		quarticGPLocations[6][0] = 0.3;
+		quarticGPLocations[6][1] = 0.3;
+		quarticGPweights[6] = 9.0 / 40.0;
 		
-		Matrix SuperB = Matrix(2, 9, 0.0);
-		
+
+		//  Integration loop
 		double loc1, loc2, loc3;
 		for (size_t gauss_point = 0; gauss_point < numberGPs; gauss_point++)
 		{
-
-			loc1 = data.gpLocations[gauss_point][0];
-			loc2 = data.gpLocations[gauss_point][1];
-
-			// Get geometry data
-			const double x1 = data.LCS0.X1();
-			const double y1 = data.LCS0.Y1();
-			const double x2 = data.LCS0.X2();
-			const double y2 = data.LCS0.Y2();
-			const double x3 = data.LCS0.X3();
-			const double y3 = data.LCS0.Y3();
-
-			// Geometric quantities
-			const double a = x2 - x1;
-			const double b = y2 - y1;
-			const double c = y3 - y1;
-			const double d = x3 - x1;
+			if (use_original_dsg_with_bubble)
+			{
+				loc1 = quarticGPLocations[gauss_point][0];
+				loc2 = quarticGPLocations[gauss_point][1];
+			}
+			else
+			{
+				loc1 = data.gpLocations[gauss_point][0];
+				loc2 = data.gpLocations[gauss_point][1];
+			}
 			
-
-			// Modified B-matrix
-			Matrix BSuper = Matrix(2, 9, 0.0);
-
-			// choose formulation options
-			bool use_pure_bubble_mode = false;
-			bool use_no_bubble_mode = false;
-			bool use_reconstructed_shear_gaps = true;
-			bool use_original_dsg = false;
+			BSuper.clear();
 
 			if (use_pure_bubble_mode)
 			{
@@ -1988,6 +2027,33 @@ namespace Kratos
 
 				BSuper /= (2.0*data.TotalArea);
 			}
+			else if (use_original_dsg_with_bubble)
+			{
+				std::cout << "use_original_dsg with bubble" << std::endl;
+
+				BSuper(0, 0) = 1.0*b - 1.0*c;
+				BSuper(0, 1) = c;
+				BSuper(0, 2) = -b;
+				BSuper(0, 3) = 0.0;
+				BSuper(0, 4) = -1.0*b*c*(3.0*loc1*loc1 + 12.0*loc1*loc2 - 3.0*loc1 + 3.0*loc2*loc2 - 3.0*loc2 + 0.5);
+				BSuper(0, 5) = 1.0*b*c*(3.0*loc1*loc1 + 12.0*loc1*loc2 - 3.0*loc1 + 3.0*loc2*loc2 - 3.0*loc2 + 0.5);
+				BSuper(0, 6) = 0.5*a*c - 0.5*b*d;
+				BSuper(0, 7) = 6.0*a*c*loc1*loc2 + 3.0*a*c*loc2*loc2 - 3.0*a*c*loc2 + 0.5*a*c + 3.0*b*d*loc1*loc1 + 6.0*b*d*loc1*loc2 - 3.0*b*d*loc1;
+				BSuper(0, 8) = -6.0*a*c*loc1*loc2 - 3.0*a*c*loc2*loc2 + 3.0*a*c*loc2 - 3.0*b*d*loc1*loc1 - 6.0*b*d*loc1*loc2 + 3.0*b*d*loc1 - 0.5*b*d;
+				BSuper(1, 0) = -1.0*a + 1.0*d;
+				BSuper(1, 1) = -d;
+				BSuper(1, 2) = a;
+				BSuper(1, 3) = -0.5*a*c + 0.5*b*d;
+				BSuper(1, 4) = 3.0*a*c*loc1*loc1 + 6.0*a*c*loc1*loc2 - 3.0*a*c*loc1 + 6.0*b*d*loc1*loc2 + 3.0*b*d*loc2*loc2 - 3.0*b*d*loc2 + 0.5*b*d;
+				BSuper(1, 5) = -3.0*a*c*loc1*loc1 - 6.0*a*c*loc1*loc2 + 3.0*a*c*loc1 - 0.5*a*c - 6.0*b*d*loc1*loc2 - 3.0*b*d*loc2*loc2 + 3.0*b*d*loc2;
+				BSuper(1, 6) = 0.0;
+				BSuper(1, 7) = -1.0*a*d*(3.0*loc1*loc1 + 12.0*loc1*loc2 - 3.0*loc1 + 3.0*loc2*loc2 - 3.0*loc2 + 0.5);
+				BSuper(1, 8) = 1.0*a*d*(3.0*loc1*loc1 + 12.0*loc1*loc2 - 3.0*loc1 + 3.0*loc2*loc2 - 3.0*loc2 + 0.5);
+
+				BSuper /= (2.0*data.TotalArea);
+
+				integration_weight = quarticGPweights[gauss_point];
+			}
 
 			//comparison K matrix, in Bletzinger DOF ordering
 			//Matrix temp2 = Matrix(prod(trans(BSuper), shearD));
@@ -2008,7 +2074,7 @@ namespace Kratos
 				data.B(7, 4 + 6 * node) = BSuper(1, 6 + node);	// phiy
 			}
 			// Add to stiffness matrix
-			Matrix temp = Matrix(prod(trans(data.B), data.D/6.0));
+			Matrix temp = Matrix(prod(trans(data.B), data.D*integration_weight));
 			rLeftHandSideMatrix += prod(temp, data.B);
 		}
 	}

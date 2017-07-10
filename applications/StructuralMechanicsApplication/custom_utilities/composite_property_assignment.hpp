@@ -77,7 +77,7 @@ namespace Kratos {
 			// Check to see if the composite orientation assignment has already
 			// been performed on the current modelPart
 			// Just look at the first element to save time
-			ElementsIteratorType& firstElement = rSubModelpart.ElementsBegin();
+			const ElementsIteratorType& firstElement = rSubModelpart.ElementsBegin();
 			Properties elementProperties = (*firstElement).GetProperties();
 
 			if (elementProperties.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
