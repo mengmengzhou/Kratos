@@ -823,8 +823,6 @@ namespace Kratos
 		}
 		else this->mIsLumpedMassMatrix = false;
 
-
-
 		if (this->mIsLumpedMassMatrix == true)
 		{
 			this->CalculateLumpedMassMatrix(rMassMatrix, rCurrentProcessInfo);
@@ -1067,7 +1065,6 @@ namespace Kratos
 		const int size = NumNodes * dimension;
 		const int LocalSize = NumNodes * dimension * 2;
 		rRightHandSideVector = ZeroVector(LocalSize);
-
 
 		if (this->mIsLinearElement == false)
 		{
@@ -1554,6 +1551,7 @@ namespace Kratos
 
 		const double CRy = (rho*IRy) / ((1 + Phiy)*(1 + Phiy)*L);
 		const double CRz = (rho*IRz) / ((1 + Phiz)*(1 + Phiz)*L);
+
 
 		//longitudinal forces + torsional moment
 		const double M00 = (1.00 / 3.00)*A*rho*L;
