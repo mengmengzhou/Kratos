@@ -71,7 +71,9 @@ public:
         mpMapperCommunicator->InitializeDestination(MapperUtilities::Node_Coords);
         mpMapperCommunicator->Initialize();
 
-        mpMapperCommunicator->GetBuilderAndMultiplier()->BuildLHS(scheme, modelpart, Mdo); // could be moved to baseclass...?
+        FillMappingMatrix();
+
+        //mpMapperCommunicator->GetBuilderAndMultiplier()->BuildLHS(scheme, modelpart, Mdo); // could be moved to baseclass...?
     }
 
     /// Destructor.
@@ -198,9 +200,6 @@ private:
     ///@name Member Variables
     ///@{
 
-    TSystemMatrixType M_dd;
-    TSystemVectorType q_tmp;
-
     ///@}
     ///@name Private Operators
     ///@{
@@ -208,6 +207,32 @@ private:
     ///@}
     ///@name Private Operations
     ///@{
+
+    void FillMappingMatrix() override
+    {
+        // local information: row for destination Node
+
+
+        mM_do->Reset();
+
+
+        // Ask the communicator for the information needed for filling the matrix
+        // NN: Neighbor Indices
+        // NE: Neighbor Indices and corresponding shape function values
+        // Mortar:
+
+        
+        std::vector<int> neighbor_IDs = mpCommunicator->GetNeighborIDs();
+        int i = 0;
+
+        for (auto &local_node : rModelPart.GetCommunicator().LocalMesh().Nodes())
+        {
+            mM_do(local_node.Id() , neighbor_IDs[i]) = 1.0f; // Fill the local part of the matrix
+            ++i;
+        }
+
+        mpCommunicator->AssembleMappingMatrix(mM_do);
+    }
 
     ///@}
     ///@name Private  Access

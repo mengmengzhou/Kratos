@@ -67,11 +67,7 @@ public:
                           Parameters& rJsonParameters) : Mapper(
                                   i_model_part_origin, i_model_part_destination, rJsonParameters)
     {
-        mpMapperCommunicator->InitializeOrigin(MapperUtilities::Node_Coords);
-        mpMapperCommunicator->InitializeDestination(MapperUtilities::Node_Coords);
-        mpMapperCommunicator->Initialize();
-
-        mpInverseMapper.reset(); // explicitly specified to be safe
+        
     }
 
     /// Destructor.
@@ -87,16 +83,7 @@ public:
 
     void UpdateInterface(Kratos::Flags MappingOptions, double SearchRadius) override
     {
-        mpMapperCommunicator->UpdateInterface(MappingOptions, SearchRadius);
-        if (mpInverseMapper)
-        {
-            mpInverseMapper->UpdateInterface(MappingOptions, SearchRadius);
-        }
 
-        if (MappingOptions.Is(MapperFlags::REMESHED))
-        {
-            ComputeNumberOfNodesAndConditions();
-        }
     }
 
     /* This function maps from Origin to Destination */
@@ -104,34 +91,7 @@ public:
              const Variable<double>& rDestinationVariable,
              Kratos::Flags MappingOptions) override
     {
-        double factor = 1.0f;
-
-        if (MappingOptions.Is(MapperFlags::CONSERVATIVE))
-        {
-            factor = MapperUtilities::ComputeConservativeFactor(
-                         mNumNodesOrigin,
-                         mNumNodesDestination);
-        }
-
-        ProcessMappingOptions(MappingOptions, factor);
-
-        // Creating the function pointers for the InterfaceObjects
-        auto function_pointer_origin = std::bind(&GetValueOfNode<double>,
-                                       std::placeholders::_1,
-                                       rOriginVariable,
-                                       MappingOptions,
-                                       std::placeholders::_2);
-
-        auto function_pointer_destination = std::bind(&SetValueOfNode<double>,
-                                            std::placeholders::_1,
-                                            std::placeholders::_2,
-                                            rDestinationVariable,
-                                            MappingOptions,
-                                            factor);
-
-        mpMapperCommunicator->TransferVariableData(function_pointer_origin,
-                function_pointer_destination,
-                rOriginVariable);
+        
     }
 
     /* This function maps from Origin to Destination */
@@ -139,34 +99,7 @@ public:
              const Variable< array_1d<double, 3> >& rDestinationVariable,
              Kratos::Flags MappingOptions) override
     {
-        double factor = 1.0f;
-
-        if (MappingOptions.Is(MapperFlags::CONSERVATIVE))
-        {
-            factor = MapperUtilities::ComputeConservativeFactor(
-                         mNumNodesOrigin,
-                         mNumNodesDestination);
-        }
-
-        ProcessMappingOptions(MappingOptions, factor);
-
-        // Creating the function pointers for the InterfaceObjects
-        auto function_pointer_origin = std::bind(&GetValueOfNode< array_1d<double, 3> >,
-                                       std::placeholders::_1,
-                                       rOriginVariable,
-                                       MappingOptions,
-                                       std::placeholders::_2);
-
-        auto function_pointer_destination = std::bind(&SetValueOfNode< array_1d<double, 3> >,
-                                            std::placeholders::_1,
-                                            std::placeholders::_2,
-                                            rDestinationVariable,
-                                            MappingOptions,
-                                            factor);
-
-        mpMapperCommunicator->TransferVariableData(function_pointer_origin,
-                function_pointer_destination,
-                rOriginVariable);
+        
     }
 
     /* This function maps from Destination to Origin */
@@ -174,15 +107,7 @@ public:
                     const Variable<double>& rDestinationVariable,
                     Kratos::Flags MappingOptions) override
     {
-        // Construct the inverse mapper if it hasn't been done before
-        // It is constructed with the order of the model_parts changed!
-        if (!mpInverseMapper)
-        {
-            mpInverseMapper = Mapper::Pointer( new MapperMatrixBased(mModelPartDestination,
-                                               mModelPartOrigin,
-                                               mJsonParameters) );
-        }
-        mpInverseMapper->Map(rDestinationVariable, rOriginVariable, MappingOptions);
+
     }
 
     /* This function maps from Destination to Origin */
@@ -190,15 +115,7 @@ public:
                     const Variable< array_1d<double, 3> >& rDestinationVariable,
                     Kratos::Flags MappingOptions) override
     {
-        // Construct the inverse mapper if it hasn't been done before
-        // It is constructed with the order of the model_parts changed!
-        if (!mpInverseMapper)
-        {
-            mpInverseMapper = Mapper::Pointer( new MapperMatrixBased(mModelPartDestination,
-                                               mModelPartOrigin,
-                                               mJsonParameters) );
-        }
-        mpInverseMapper->Map(rDestinationVariable, rOriginVariable, MappingOptions);
+        
     }
 
     ///@}
@@ -245,9 +162,9 @@ protected:
     ///@name Protected member Variables
     ///@{
 
-    TSystemMatrixType M_do;
-    TSystemVectorType q_o;
-    TSystemVectorType q_d;
+    TSystemMatrixType mM_do;
+    TSystemVectorType mQ_o;
+    TSystemVectorType mQ_d;
     
 
     ///@}
@@ -268,6 +185,10 @@ protected:
     {
         mpMapperCommunicator->GetScheme()->Update(q_d);
     }
+
+    // This function is required by every mapper
+    // It is responsible for filling the (local) mapping matrix
+    virtual void FillMappingMatrix() = 0;
 
     ///@}
     ///@name Protected  Access

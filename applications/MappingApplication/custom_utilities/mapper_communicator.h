@@ -197,6 +197,17 @@ public:
         return 1;
     }
 
+    virtual void BuildCommunicationGraph() 
+    {
+        KRATOS_ERROR << "This function call should not happen, only needed in parallel Execution" << std::endl;
+    }
+
+    virtual void AssembleMappingMatrix()
+    {
+        // In the serial case this function does nothing, since the local matrix is the same as the global matrix
+    }
+
+
     void PrintTime(const std::string& rMapperName,
                    const std::string& rFunctionName,
                    const double& rElapsedTime)
