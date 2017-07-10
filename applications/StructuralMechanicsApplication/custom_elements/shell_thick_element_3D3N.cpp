@@ -1545,9 +1545,6 @@ namespace Kratos
 		Properties props = GetProperties();
 		if (props.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
 		{
-			//std::cout << "Current orientation angle = " << mSections[0]->GetOrientationAngle() << std::endl;
-			//std::cout << "Orthotropic rotation angle = " << mOrthotropicSectionRotation << std::endl;
-			//std::cout << "Normal rotation angle = " << angle << std::endl;
 			for (CrossSectionContainerType::iterator it = mSections.begin(); it != mSections.end(); ++it)
 				(*it)->SetOrientationAngle(mOrthotropicSectionRotation);
 		}

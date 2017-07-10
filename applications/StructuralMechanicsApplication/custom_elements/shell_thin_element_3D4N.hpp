@@ -248,6 +248,10 @@ namespace Kratos
 			Matrix& Output,
 			const ProcessInfo& rCurrentProcessInfo);
 
+		void Calculate(const Variable<double>& rVariable,
+			double& Output,
+			const ProcessInfo& rCurrentProcessInfo);
+
 		///@}
 
 
@@ -449,6 +453,8 @@ namespace Kratos
 		CrossSectionContainerType mSections; /*!< Container for cross section associated to each integration point */
 
 		IntegrationMethod mThisIntegrationMethod; /*!< Currently selected integration method */
+
+		double mOrthotropicSectionRotation = 0.0; /*!< In-plane rotation angle for orthotropic section */
 
 												  ///@}
 

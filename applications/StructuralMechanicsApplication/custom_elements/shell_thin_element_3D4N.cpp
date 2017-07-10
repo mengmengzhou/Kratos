@@ -256,9 +256,7 @@ namespace Kratos
 		if (integrationPoints.size() != OPT_NUM_GP)
 			KRATOS_THROW_ERROR(std::logic_error,
 				"ShellThinElement3D4N Element - Wrong integration scheme",
-				integrationPoints.size());
-
-		
+				integrationPoints.size());		
 
 		if (mSections.size() != OPT_NUM_GP)
 		{
@@ -608,27 +606,6 @@ namespace Kratos
 				row(shapeFunctionsValues, i), CurrentProcessInfo);
 
 		mpCoordinateTransformation->InitializeSolutionStep(CurrentProcessInfo);
-
-
-		// Operations to set orthotropic section alignment
-		if (props.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
-		{
-			// Ensure operation is only done once
-			if (props.GetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT) != 0.0)
-			{
-				double rotationAngle = props.GetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT);
-				double currentOrientationAngle;
-				for (size_t i = 0; i < 4; i++)
-				{
-					currentOrientationAngle = mSections[i]->GetOrientationAngle();
-					mSections[i]->SetOrientationAngle(currentOrientationAngle + rotationAngle);
-				}
-
-				// Ensure operation is only done once
-				rotationAngle = 0.0;
-				props.SetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT, rotationAngle);
-			}
-		}
 	}
 
 	void ShellThinElement3D4N::FinalizeSolutionStep
@@ -1135,12 +1112,10 @@ namespace Kratos
 
 			// Get local axis 1 in flattened LCS space
 			Vector3 localAxis1 = localCoordinateSystem.P2() - localCoordinateSystem.P1();
-			localAxis1[2] = 0.0;
 
 			// Perform rotation of local axis 1 to fiber1 in flattened LCS space
 			Matrix localToFiberRotation = Matrix(3, 3, 0.0);
 			double fiberSectionRotation = mSections[0]->GetOrientationAngle();
-			fiberSectionRotation *= 1.0;
 			double c = std::cos(fiberSectionRotation);
 			double s = std::sin(fiberSectionRotation);
 
@@ -1150,8 +1125,7 @@ namespace Kratos
 			localToFiberRotation(1, 1) = c;
 			localToFiberRotation(2, 2) = 1.0;
 
-			Vector3 fiberAxis1, temp;
-			temp = prod(localToFiberRotation, localAxis1);
+			Vector3 temp = prod(localToFiberRotation, localAxis1);
 
 			// Transform result back to global cartesian coords
 			Matrix localToGlobalLarge;
@@ -1164,14 +1138,13 @@ namespace Kratos
 					localToGlobalSmall(i, j) = localToGlobalLarge(i, j);
 				}
 			}
-			fiberAxis1 = prod(localToGlobalSmall, temp);
+			Vector3 fiberAxis1 = prod(localToGlobalSmall, temp);
+			fiberAxis1 /= std::sqrt(inner_prod(fiberAxis1, fiberAxis1));
 
 			//write results
-			for (size_t dir = 0; dir < 4; dir++)
+			for (size_t dir = 0; dir < 1; dir++)
 			{
-
 				rValues[dir] = fiberAxis1;
-
 			}
 		}
 	}
@@ -1244,6 +1217,17 @@ namespace Kratos
 			ShellQ4_LocalCoordinateSystem localCoordinateSystem(
 				mpCoordinateTransformation->CreateReferenceCoordinateSystem());
 			Output = localCoordinateSystem.Orientation();
+		}
+	}
+
+	void ShellThinElement3D4N::Calculate(const Variable<double>& rVariable, double & rotationAngle, const ProcessInfo & rCurrentProcessInfo)
+	{
+		if (rVariable == ORTHOTROPIC_ORIENTATION_ASSIGNMENT)
+		{
+			if (rotationAngle != 0.0)
+			{
+				mOrthotropicSectionRotation = rotationAngle;
+			}
 		}
 	}
 
@@ -1672,9 +1656,17 @@ namespace Kratos
 				angle = -angle;
 		}
 
-		for (CrossSectionContainerType::iterator it =
-			mSections.begin(); it != mSections.end(); ++it)
-			(*it)->SetOrientationAngle(angle);
+		Properties props = GetProperties();
+		if (props.Has(ORTHOTROPIC_ORIENTATION_ASSIGNMENT))
+		{
+			for (CrossSectionContainerType::iterator it = mSections.begin(); it != mSections.end(); ++it)
+				(*it)->SetOrientationAngle(mOrthotropicSectionRotation);
+		}
+		else
+		{
+			for (CrossSectionContainerType::iterator it = mSections.begin(); it != mSections.end(); ++it)
+				(*it)->SetOrientationAngle(angle);
+		}
 	}
 
 	void ShellThinElement3D4N::InitializeCalculationData(CalculationData& data)

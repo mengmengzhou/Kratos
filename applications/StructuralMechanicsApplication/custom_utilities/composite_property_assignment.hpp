@@ -167,6 +167,7 @@ namespace Kratos {
 				// get local orientation of GlobalFiberDirection
 				element.Calculate(LOCAL_ELEMENT_ORIENTATION, LCSOrientation, rCurrentProcessInfo);
 
+
 				// Project general global orientation onto element plane
 				// global cartesian coords.
 				Vector3& A = GlobalFiberDirection;
@@ -223,6 +224,8 @@ namespace Kratos {
 				//cosTheta /= (std::sqrt(inner_prod(localAxis1, localAxis1)));
 				//cosTheta /= (std::sqrt(inner_prod(localGlobalFiberDirection, localGlobalFiberDirection)));
 				theta = std::acos(cosTheta);
+
+				
 				//std::cout << "angle in degrees: " << theta / 2.0 / 3.14 * 360 << std::endl;
 
 				// dot between lc2 and localFiberDir
@@ -234,6 +237,39 @@ namespace Kratos {
 					theta *= -1.0;
 				}
 
+
+				// Rotate by 180 degrees if we need to
+				Matrix localToFiberRotation = Matrix(3, 3, 0.0);
+				double c = std::cos(theta);
+				double s = std::sin(theta);
+				localToFiberRotation(0, 0) = c;
+				localToFiberRotation(0, 1) = -s;
+				localToFiberRotation(1, 0) = s;
+				localToFiberRotation(1, 1) = c;
+				localToFiberRotation(2, 2) = 1.0;
+				Vector3 temp = prod(localToFiberRotation, localGlobalFiberDirection);
+
+				//std::cout << "temp = " << temp << std::endl;
+				double dotCheck1 = inner_prod(temp, localAxis1);
+				//std::cout << "temp dot localAxis1 = " << dotCheck << std::endl;
+				double dotCheck2 = inner_prod(temp, localAxis2);
+				//std::cout << "temp dot localAxis2 = " << dotCheck << std::endl;
+
+				/*
+				if (dotCheck1 < 0.0)
+				{
+					theta += KRATOS_M_PI;
+				}
+				else if (dotCheck2 < 0.0)
+				{
+					theta += KRATOS_M_PI;
+				}
+				*/
+				if (std::abs(theta) > 2.0*KRATOS_M_PI)
+				{
+					theta = 0.0;
+				}
+				
 				bool test_lc1_global = false;
 				if (test_lc1_global)
 				{
