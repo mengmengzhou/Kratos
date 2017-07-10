@@ -1086,7 +1086,7 @@ public:
 		if(span_v==-1) span_v=find_Knot_Span(m_knot_vector_v,_v,m_q,m_n_v);
 
 		// Initialize matrices
-		matrix<int> control_points_matrix;// = zero_matrix<unsigned int>( m_p+1 ,m_q+1 );
+		matrix<int> control_points_matrix = zero_matrix<int>( m_p+1 ,m_q+1 );
 
 		// Loop in the same order as for the evaluation of the NURBs functiosn
 		for (int c=0;c<=m_q;c++)

@@ -59,6 +59,13 @@ linear_solver = SuperLUSolver()
 # linear_solver = AMGCLSolver(AMGCLSmoother.GAUSS_SEIDEL, AMGCLIterativeSolverType.BICGSTAB, 1e-9, 300, 2, 10)
 mapper = CADMapper(fe_model_part,cad_geometry,cad_integration_data,linear_solver)
 
+
+# Output some surface nodes of cad geometry
+file_to_write = "surface_nodes_of_cad_geometry.txt"
+u_resolution = 100
+v_resolution = 100
+mapper.output_surface_points(file_to_write, u_resolution, v_resolution, -1)
+
 # Compute nearest points
 u_resolution = 500
 v_resolution = 500
@@ -82,6 +89,21 @@ for node in fe_model_part.Nodes:
 
 # Perform mapping
 mapper.map_to_cad_space_2()
+
+
+# Output some surface nodes of updated cad geometry
+file_to_write = "surface_nodes_of_updated_cad_geometry.txt"
+u_resolution = 250
+v_resolution = 250
+mapper.output_surface_points(file_to_write, u_resolution, v_resolution, -1)
+
+
+# Output control point update in gid-format 
+mapper.output_control_point_displacements()
+
+# Output json file with updated geometry
+with open(cad_geometry_output_filename, 'w') as fp:
+    json.dump(cad_geometry, fp)
 
 #########################################################################
 file_to_write = "{0}x{1}_updated.txt".format(u_resolution, v_resolution)

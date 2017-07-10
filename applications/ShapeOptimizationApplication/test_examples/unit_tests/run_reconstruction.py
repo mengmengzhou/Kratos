@@ -18,8 +18,8 @@ import json as json
 # ======================================================================================================================================
 
 # Input parameters
-fem_input_filename = "optimized_shell_3418_elements"
-cad_geometry_input_filename = "Benchmark_halbkreis_32x16_multipatch_geometry.json" 
+fem_input_filename = "test_1"
+cad_geometry_input_filename = "test_1_geometry.json" 
 cad_integration_input_filename = "Benchmark_halbkreis_32x16_multipatch_integration_data.json" 
 
 # Output parameters
@@ -46,26 +46,32 @@ with open(cad_integration_input_filename) as cad_data2:
     cad_integration_data = json.load(cad_data2)    
 
 # ======================================================================================================================================
-# Mapping
+# Testing nearest neighbour + Newton-Raphson
 # ======================================================================================================================================    
 
 # Create CAD-mapper
 linear_solver = SuperLUSolver()
-# DiagPrecond = DiagonalPreconditioner()
-# linear_solver =  BICGSTABSolver(1e-9, 5000, DiagPrecond)
-# linear_solver = AMGCLSolver(AMGCLSmoother.GAUSS_SEIDEL, AMGCLIterativeSolverType.BICGSTAB, 1e-9, 300, 2, 10)
 mapper = CADMapper(fe_model_part,cad_geometry,cad_integration_data,linear_solver)
+
 
 # Output some surface nodes of cad geometry
 file_to_write = "surface_nodes_of_cad_geometry.txt"
-u_resolution = 100
-v_resolution = 100
+u_resolution = 30
+v_resolution = 30
 mapper.output_surface_points(file_to_write, u_resolution, v_resolution, -1)
 
-# Compute mapping matrix
-u_resolution = 500
-v_resolution = 500
-mapper.compute_mapping_matrix(u_resolution,v_resolution)
+# Compute nearest points
+u_res = 5
+v_res = 5
+mapper.compute_nearest_points(u_res,v_res)
+
+#########################################################################
+file_to_write = "{0}x{1}.txt".format(u_resolution, v_resolution)
+mapper.print_nearest_points(file_to_write)
+#########################################################################
+
+# Compute a matrix
+mapper.compute_a_matrix()
 
 # Set shape update to map
 for node in fe_model_part.Nodes:
@@ -75,28 +81,20 @@ for node in fe_model_part.Nodes:
     shape_update[2] = node.GetSolutionStepValue(SHAPE_CHANGE_ABSOLUTE_Z)
     node.SetValue(SHAPE_CHANGE_ABSOLUTE,shape_update)
 
-# Apply boundary conditions
-penalty_factor_displacement_coupling = 1e4
-penalty_factor_rotation_coupling = 1e4
-penalty_factor_dirichlet_condition = 1e5
-edges_with_specific_dirichlet_conditions = []
-# edges_with_specific_dirichlet_conditions = [ [1001,[False,True,False]], [1003,[False,True,False]] ]
-edges_with_enforced_tangent_continuity = []
-# edges_with_enforced_tangent_continuity = [ [1004, 1e3] ]
-mapper.apply_boundary_conditions( penalty_factor_displacement_coupling, 
-                                  penalty_factor_rotation_coupling, 
-                                  penalty_factor_dirichlet_condition,
-                                  edges_with_specific_dirichlet_conditions,
-                                  edges_with_enforced_tangent_continuity )
-
 # Perform mapping
-mapper.map_to_cad_space()
+mapper.map_to_cad_space_2()
+
+#########################################################################
+file_to_write = "{0}x{1}_updated.txt".format(u_res, v_res)
+mapper.print_nearest_points(file_to_write)
+#########################################################################
 
 # Output some surface nodes of updated cad geometry
 file_to_write = "surface_nodes_of_updated_cad_geometry.txt"
 u_resolution = 250
 v_resolution = 250
 mapper.output_surface_points(file_to_write, u_resolution, v_resolution, -1)
+
 
 # Output control point update in gid-format 
 mapper.output_control_point_displacements()

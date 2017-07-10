@@ -1295,6 +1295,8 @@ class CADMapper
 
 				double delta_u = (u_max-u_min) / u_resolution;
 				double delta_v = (v_max-v_min) / v_resolution;
+				KRATOS_WATCH(delta_u);
+				KRATOS_WATCH(delta_v);
 
 				// Loop over all u & v according to specified resolution
 				for(unsigned int i=0; i<=u_resolution; i++)
@@ -2095,6 +2097,7 @@ class CADMapper
 		std::cout << "\n> Finished writing results" << std::endl;
 		
 	}
+
 	void compute_a_matrix()
 	{
 		std::cout << "\n> Starting computation of a matrix..." << std::endl;
@@ -2168,6 +2171,92 @@ class CADMapper
 						for(unsigned int m=0; m<3; m++)
 						{
 							m_a_matrix(3*row_id + m, 3*col_id + m) = R_i;
+						}
+					}
+				}
+		}
+	}
+	void compute_lhs_matrix()
+	{
+		std::cout << "\n> Starting computation of a matrix..." << std::endl;
+		// Count relevant control points and assign each a unique mapping matrix Id (iterator over points)		
+		// First we identify relevant control points affecting the cad points on the surface
+		m_n_control_points = 0; 
+		m_n_relevant_control_points = 0;
+		unsigned int mapping_matrix_id = 0;
+		for (PatchVector::iterator patch_i = m_patches.begin(); patch_i != m_patches.end(); ++patch_i)
+		{
+			for (ControlPointVector::iterator cp_i = patch_i->GetSurface().GetControlPoints().begin(); cp_i != patch_i->GetSurface().GetControlPoints().end(); ++cp_i)
+			{
+				if(cp_i->IsRelevantForMapping())
+				{
+					cp_i->SetMappingMatrixId(mapping_matrix_id);
+					++m_n_relevant_control_points;
+					++mapping_matrix_id;
+				}
+				++m_n_control_points;
+			}
+		}
+		std::cout << "\n> Number of control points in total = " << m_n_control_points << "." << std::endl;
+		std::cout << "\n> Number of control points relevant for mapping = " << m_n_relevant_control_points << ".\n" << std::endl;
+
+		// Count FE nodes and assign each a unique mapping matrix id (iterator over nodes)
+		m_n_relevant_fem_points = 0;
+		for (ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i != mr_fe_model_part.NodesEnd(); ++node_i)
+		{
+			node_i->SetValue(MAPPING_MATRIX_ID,m_n_relevant_fem_points); // ??? A_MAPPING_MATRIX
+			m_n_relevant_fem_points++;
+		}
+		
+		// Initialize a matrix
+		double number_of_FE_dofs = 3 * m_n_relevant_fem_points;
+		double number_of_CAD_dofs = 3 * m_n_relevant_control_points;
+		m_lhs_matrix.resize(number_of_FE_dofs, number_of_CAD_dofs);
+		m_lhs_matrix.clear();
+
+		// Compute a matrix
+	    for(ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i!=mr_fe_model_part.NodesEnd(); node_i++)
+		{
+				// Get the corresponding id of FE-node in the matrix			
+				int row_id = node_i->GetValue(MAPPING_MATRIX_ID); // ??? A_MAPPING_MATRIX
+				
+				// Recover information about nearest CAD point				
+				double u_of_nearest_point = m_list_of_u_of_nearest_points[row_id];
+				double v_of_nearest_point = m_list_of_v_of_nearest_points[row_id];
+				unsigned int span_u_of_nearest_point = m_list_of_span_u_of_nearest_points[row_id];
+				unsigned int span_v_of_nearest_point = m_list_of_span_v_of_nearest_points[row_id];
+				unsigned int patch_itr_of_nearest_point = m_list_of_patch_of_nearest_points[row_id];
+				
+				// Get CAD-shape-function-value for all control points affecting the nearest cad point
+				matrix<double> R_CAD_Pi;
+				m_patches[patch_itr_of_nearest_point].GetSurface().EvaluateNURBSFunctions( span_u_of_nearest_point,
+																						   span_v_of_nearest_point,
+																						   u_of_nearest_point, 
+																						   v_of_nearest_point,
+																						   R_CAD_Pi );
+				
+				// Get the corresponding id of control points in the matrix
+				matrix<unsigned int> mapping_matrix_ids_cad = m_patches[patch_itr_of_nearest_point].GetSurface().GetMappingMatrixIds( span_u_of_nearest_point, span_v_of_nearest_point, u_of_nearest_point, v_of_nearest_point);
+
+				// Assemble a matrix
+				for(unsigned int i=0; i<mapping_matrix_ids_cad.size1(); i++)
+				{
+					for(unsigned int j=0; j<mapping_matrix_ids_cad.size2(); j++)
+					{
+						for(unsigned int k=0; k<mapping_matrix_ids_cad.size1(); k++)
+						{
+							for(unsigned int l=0; l<mapping_matrix_ids_cad.size2(); l++)
+							{
+								unsigned int row_id = mapping_matrix_ids_cad(i,j);
+								unsigned int col_id = mapping_matrix_ids_cad(k,l);
+								double R_ij = R_CAD_Pi(i,j);
+								double R_kl = R_CAD_Pi(k,l);
+								for(unsigned int m=0; m<3; m++)
+								{
+									// add contribution of 
+									m_lhs_matrix(3*row_id+m, 3*col_id+m) += R_ij*R_kl;
+								}
+							}
 						}
 					}
 				}
@@ -2361,7 +2450,7 @@ class CADMapper
 		int deg = p*q-1; //2->3 //3->8
 		int number_of_Gauss_points = (deg+1) / 2; //2->2 //3->5
 		KRATOS_WATCH(number_of_Gauss_points);
-		std::cout << "\n> Warning: Gauss quadrature coordinates and weights currently hardcoded!!!" << std::endl;
+		std::cout << "> Warning: Gauss quadrature coordinates and weights currently hardcoded!!!" << std::endl;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 // HARD CODING GAUSS POINTS COORDINATES AND WEIGHTS
@@ -2449,7 +2538,7 @@ w.push_back(0.2369268850561890875142640);
 		if(number_of_Gauss_points !=2 and number_of_Gauss_points != 5) return -1;
 		for(int s_it = 0; s_it < number_of_Gauss_points; s_it++)
 		{
-			s = x[s_it];
+			s = (x[s_it]+1)/2; // mapping: x goes belongs to [-1, 1], s belongs to [0, 1]
 			weight_s = w[s_it];
 
 			// 1: compute derivative of gamma with respect to s at s (tangent vector)
@@ -2493,7 +2582,7 @@ w.push_back(0.2369268850561890875142640);
 			length += norm_2_gamma_prime_s * weight_s;
 		}
 
-		std::cout << "\n> Finished computing real length." << std::endl;
+		std::cout << "> Finished computing real length." << std::endl;
 		return length/2; // <-- Jacobian is 1/2
 	}
     // ==============================================================================
@@ -2537,6 +2626,7 @@ w.push_back(0.2369268850561890875142640);
 	SparseMatrixType m_mapping_matrix_CAD_FEM;
 	Vector m_mapping_rhs_vector;
 	Matrix m_a_matrix; // rectangular NURBS matrix
+	Matrix m_lhs_matrix;
 	// arrays for debugging 1 //???
 	NodeVector m_list_of_nearest_points;	
 	DoubleVector m_list_of_u_of_nearest_points;

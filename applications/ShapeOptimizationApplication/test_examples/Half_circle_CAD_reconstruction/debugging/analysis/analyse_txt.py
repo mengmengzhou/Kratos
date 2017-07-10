@@ -121,7 +121,7 @@ fe_new_lis = list()
 nr_new_lis = list()
 
 # read original data
-input_file = "500x500.txt"
+input_file = "fine/500x500.txt"
 with open(input_file) as file:
     reader = csv.reader(file, delimiter=" ")
     # ignore two header lines
@@ -136,7 +136,7 @@ with open(input_file) as file:
         newton_rap.append(Point(new_rap))
 
 # read updated data
-input_file = "500x500_updated.txt"
+input_file = "fine/500x500_updated.txt"
 with open(input_file) as file:
     reader = csv.reader(file, delimiter=" ")
     # ignore two header lines
