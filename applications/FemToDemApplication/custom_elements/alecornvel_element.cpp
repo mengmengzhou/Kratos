@@ -87,7 +87,7 @@ namespace Kratos
 
 	void AleCornVelElement::FinalizeSolutionStep(ProcessInfo& rCurrentProcessInfo)
 	{
-		double CurrentfSigma = 0.0, damage_element = 0.0;;
+		double CurrentfSigma = 0.0, damage_element = 0.0;
 		
 			for (int cont = 0;cont < 3;cont++)
 			{
