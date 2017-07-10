@@ -67,6 +67,7 @@ public:
                           Parameters& rJsonParameters) : MapperMatrixBased(
                                   i_model_part_origin, i_model_part_destination, rJsonParameters)
     {
+        // @Jordi the "Condition_Gauss_Point" can be of the type that Riccardo suggested. Then we can get directly the ShapeFunctionValues that we need
         mpMapperCommunicator->InitializeOrigin(MapperUtilities::Condition_Gauss_Point);
         mpMapperCommunicator->InitializeDestination(MapperUtilities::Condition_Gauss_Point);
         mpMapperCommunicator->Initialize();
@@ -219,6 +220,8 @@ private:
 
     void FillMappingMatrix() override
     {
+        // @Jordi I hope this is possible. And I hope we only need to access data in this row.
+        // For NN and NE this is the case, for Mortar I am not sure atm.
         // local information: row for destination Node
 
 
@@ -231,17 +234,16 @@ private:
         // Mortar:
 
         // @Jordi Here the integration would be done. I would like to follow what Vicente does for Contact
-        // to not reinvent the wheel. 
+        // to not reinvent the wheel. He has a utility ("exact_mortar_segmentation_utility.h") which seems to do the
+        // integration, but I want to talk to him when he comes next week.
+
+        // Unitl Vicente comes next week I will also try to catch up again on the Mortar Theory, esp the triangulaton.
+
+        // The data that is necessary will be querried from the communicator. Aditya is currently trying to extend the 
+        // communicator for sending arbitrary data, this he needs for his MPC stuff. We could then also use this
+        // Or the global pointers, lets see how it goes
+
         
-        // std::vector<int> neighbor_IDs = mpCommunicator->GetNeighborIDs();
-        // int i = 0;
-
-        // for (auto &local_node : rModelPart.GetCommunicator().LocalMesh().Nodes())
-        // {
-        //     mM_do(local_node.Id() , neighbor_IDs[i]) = 1.0f; // Fill the local part of the matrix
-        //     ++i;
-        // }
-
         mpCommunicator->AssembleMappingMatrix(mM_do);
     }
 

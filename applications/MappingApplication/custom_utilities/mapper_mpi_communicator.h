@@ -171,12 +171,14 @@ public:
 
     void BuildCommunicationGraph() override
     {
+        // @Jordi
         // Build the Communication Graph (Epetra) for the MappingMatrix based on the Neighbor Pairs, 
         // i.e. with the info of which ranks have to communicate
     }
 
     virtual void AssembleMappingMatrix() override
     {
+        // @Jordi
         // This function is called after the local matrices have been assembled
         // It does not assemble the rank-local part of the matrix, since this is
         // already done by the "FillMappingMatrix" Function of the Matrix-based Mapper

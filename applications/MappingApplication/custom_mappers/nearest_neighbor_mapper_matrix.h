@@ -210,6 +210,9 @@ private:
 
     void FillMappingMatrix() override
     {
+        // @Jordi what do you think abt this function?
+        // Also look for the comments in the same function of the MortarMapper
+
         // local information: row for destination Node
 
 
@@ -219,7 +222,7 @@ private:
         // Ask the communicator for the information needed for filling the matrix
         // NN: Neighbor Indices
         // NE: Neighbor Indices and corresponding shape function values
-        // Mortar:
+        // Mortar: ...?
 
         
         std::vector<int> neighbor_IDs = mpCommunicator->GetNeighborIDs();
