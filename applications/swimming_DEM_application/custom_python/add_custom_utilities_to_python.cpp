@@ -73,6 +73,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "custom_utilities/fields/cellular_flow_field.h"
 #include "custom_utilities/fields/ethier_flow_field.h"
 #include "custom_utilities/fields/pouliot_flow_field.h"
+#include "custom_utilities/fields/shear_flow_1D_with_exponential_viscosity_field.h"
 #include "custom_utilities/basset_force_tools.h"
 #include "custom_utilities/statistics/sampling_tool.h"
 #include "custom_utilities/derivative_recovery_meshing_tools.h"
@@ -175,6 +176,10 @@ using namespace boost::python;
         ;
 
     class_<ConstantVelocityField, bases<VelocityField> > ("ConstantVelocityField", init<const double, const double, const double>())
+        ;    
+
+    class_<ShearFlow1DWithExponentialViscosityField, bases<VelocityField> > ("ShearFlow1DWithExponentialViscosityField", init<const double, const double, const double>())
+        .def("SetRimZoneThickness", &ShearFlow1DWithExponentialViscosityField::SetRimZoneThickness)
         ;
 
     class_<CellularFlowField, bases<VelocityField> > ("CellularFlowField",  init<const double, const double, const double, const double>())
@@ -375,6 +380,7 @@ using namespace boost::python;
         .def("AddDEMCouplingVariable", &BinBasedDEMFluidCoupledMapping <3,SphericParticle> ::AddDEMCouplingVariable)
         .def("AddFluidCouplingVariable", &BinBasedDEMFluidCoupledMapping <3,SphericParticle> ::AddFluidCouplingVariable)
         .def("AddDEMVariablesToImpose", &BinBasedDEMFluidCoupledMapping <3,SphericParticle> ::AddDEMVariablesToImpose)
+        .def("AddFluidVariableToBeTimeFiltered", &BinBasedDEMFluidCoupledMapping <3,SphericParticle> ::AddFluidVariableToBeTimeFiltered)
         ;
 
     class_<BinBasedDEMFluidCoupledMapping <3, NanoParticle> >
@@ -391,6 +397,7 @@ using namespace boost::python;
         .def("AddFluidCouplingVariable", &BinBasedDEMFluidCoupledMapping <3,NanoParticle> ::AddFluidCouplingVariable)
         .def("AddFluidCouplingVariable", &BinBasedDEMFluidCoupledMapping <3,NanoParticle> ::AddFluidCouplingVariable)
         .def("AddDEMVariablesToImpose", &BinBasedDEMFluidCoupledMapping <3,NanoParticle> ::AddDEMVariablesToImpose)
+        .def("AddFluidVariableToBeTimeFiltered", &BinBasedDEMFluidCoupledMapping <3,NanoParticle> ::AddFluidVariableToBeTimeFiltered)
         ;
 
     class_<DerivativeRecoveryMeshingTools> ("DerivativeRecoveryMeshingTools", init<>())
