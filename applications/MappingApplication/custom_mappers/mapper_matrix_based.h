@@ -67,7 +67,13 @@ public:
                           Parameters& rJsonParameters) : Mapper(
                                   i_model_part_origin, i_model_part_destination, rJsonParameters)
     {
-        
+        // @Jordi should the BuilderAndSolver be a member of this class or of the Communicator?
+        // In case of mortar we need two (one for Mdo and one for Mdd). The one for Mdd is specific to Mortar and should 
+        // imo not be in the communicator. In order to be consistent it might make sense to have also the Mdo-BuilderAndSolver as a
+        // member of this class.
+        // If we don't use a BuilderAndSolver for Mdo then the above is obsolete.
+        // In any case, if the BuilderAndSolver is member of the Mapper, how can we destinguish btw serial and parallel?
+        mpCommunicator->InitializeBuilderAndSolverForMdo();
     }
 
     /// Destructor.
@@ -161,7 +167,8 @@ protected:
     ///@}
     ///@name Protected member Variables
     ///@{
-
+    
+    // @Jordi can these be members here? Or do they have to be members of the BuilderAndSolver?
     TSystemMatrixType mM_do;
     TSystemVectorType mQ_o;
     TSystemVectorType mQ_d;
@@ -177,13 +184,18 @@ protected:
 
     void InterpolateToDestinationMesh(TSystemVectorType& q_res) 
     {
-        mpMapperCommunicator->GetBuilderAndMultiplier()->BuildRHSAndMultiply(scheme, modelpart, Mdo, q_res, q_o);
-        // from your mail: MatrixBasedMapper::GetOriginValues(q_o) 
+        // Do Multiplication based on Spaces stuff
+        q_res = mM_do * mQ_o
+
+        // old:
+        // // mpMapperCommunicator->GetBuilderAndMultiplier()->BuildRHSAndMultiply(scheme, modelpart, Mdo, q_res, q_o);
+        // // from your mail: MatrixBasedMapper::GetOriginValues(q_o) 
     }
 
     void SetNodalValues()
     {
-        mpMapperCommunicator->GetScheme()->Update(q_d);
+        // @Jordi is this the way to do it?
+        mpMapperCommunicator->GetScheme()->Update(mQ_d);
     }
 
     // This function is required by every mapper
@@ -222,39 +234,6 @@ private:
     ///@}
     ///@name Private Operations
     ///@{
-
-    template <typename T>
-    static T GetValueOfNode(InterfaceObject* pInterfaceObject, //TODO const
-                            const Variable< T >& rVariable,
-                            const Kratos::Flags& rOptions,
-                            const std::vector<double>& rShapeFunctionValues)
-    {
-        Node<3>* p_base_node = static_cast<InterfaceNode*>(pInterfaceObject)->pGetBase();
-        KRATOS_ERROR_IF_NOT(p_base_node) << "Base Pointer is nullptr!!!" << std::endl;
-
-        return p_base_node->FastGetSolutionStepValue(rVariable);
-    }
-
-
-    template <typename T>
-    static void SetValueOfNode(InterfaceObject* pInterfaceObject,
-                               const T& rValue,
-                               const Variable< T >& rVariable,
-                               const Kratos::Flags& rOptions,
-                               const double Factor)
-    {
-        Node<3>* p_base_node = static_cast<InterfaceNode*>(pInterfaceObject)->pGetBase();
-        KRATOS_ERROR_IF_NOT(p_base_node) << "Base Pointer is nullptr!!!" << std::endl;
-
-        if (rOptions.Is(MapperFlags::ADD_VALUES))
-        {
-            p_base_node->FastGetSolutionStepValue(rVariable) += rValue * Factor;
-        }
-        else
-        {
-            p_base_node->FastGetSolutionStepValue(rVariable) = rValue * Factor;
-        }
-    }
 
     ///@}
     ///@name Private  Access

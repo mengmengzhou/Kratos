@@ -71,7 +71,7 @@ public:
         mpMapperCommunicator->InitializeDestination(MapperUtilities::Node_Coords);
         mpMapperCommunicator->Initialize();
 
-        FillMappingMatrix();
+        FillMappingMatrix(); // Fill the local part of Mdd
 
         //mpMapperCommunicator->GetBuilderAndMultiplier()->BuildLHS(scheme, modelpart, Mdo); // could be moved to baseclass...?
     }
@@ -97,7 +97,7 @@ public:
              const Variable<double>& rDestinationVariable,
              Kratos::Flags MappingOptions) override
     {   
-        InterpolateToDestinationMesh(q_d)
+        InterpolateToDestinationMesh(mQ_d) // here the Multiplication is done
         SetNodalValues();
     }
 
@@ -213,7 +213,7 @@ private:
         // local information: row for destination Node
 
 
-        mM_do->Reset();
+        mM_do->Reset(); // necessary? (small detail)
 
 
         // Ask the communicator for the information needed for filling the matrix

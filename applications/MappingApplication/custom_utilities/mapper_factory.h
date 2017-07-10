@@ -25,6 +25,7 @@
 #include "includes/kratos_parameters.h"
 
 #include "custom_mappers/nearest_neighbor_mapper.h"
+#include "custom_mappers/nearest_neighbor_matrix_mapper.h"
 #include "custom_mappers/nearest_element_mapper.h"
 #include "custom_mappers/mortar_mapper.h"
 
@@ -413,6 +414,13 @@ private:
             mpMapper = Mapper::Pointer(new NearestNeighborMapper(*mpInterfaceModelPartOrigin,
                                                                  *mpInterfaceModelPartDestination,
                                                                   mrJsonParameters));
+        }
+        else if (mMapperType == "NearestNeighborMatrix")
+        {
+            mpMapper = Mapper::Pointer(new NearestNeighborMapperMatrix(*mpInterfaceModelPartOrigin,
+                                                                       *mpInterfaceModelPartDestination,
+                                                                        mrJsonParameters));
+
         }
         else if (mMapperType == "NearestElement")
         {

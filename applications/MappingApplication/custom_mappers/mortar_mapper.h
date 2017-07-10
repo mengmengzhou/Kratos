@@ -72,9 +72,9 @@ public:
         mpMapperCommunicator->Initialize();
         // these three steps correspond to "MapperCommunicator::BuildInterface()"
 
-        mpMapperCommunicator->GetBuilderAndMultiplier()->BuildLHS(scheme, modelpart, Mdo); // could be moved to baseclass...?
-
-        mpMapperCommunicator->GetBuilderAndSolver()->BuildLHS(scheme, modelpart, Mdd); // this would also initialize this "BuilderAndSolver"
+        //mpMapperCommunicator->GetBuilderAndMultiplier()->BuildLHS(scheme, modelpart, Mdo); // could be moved to baseclass...?
+        FillMappingMatrix();
+        mpMapperCommunicator->GetBuilderAndSolver()->BuildLHS(scheme, modelpart, mM_dd); // this would also initialize this "BuilderAndSolver" => same as below, should be member of this class?
     }
 
     /// Destructor.
@@ -98,9 +98,10 @@ public:
              const Variable<double>& rDestinationVariable,
              Kratos::Flags MappingOptions) override
     {   
-        InterpolateToDestinationMesh(q_tmp)
+        InterpolateToDestinationMesh(mQ_tmp) // here the Multiplication is done
         
-        mpMapperCommunicator->GetBuilderAndSolver()->BuildRHSAndSolve(scheme, modelpart, Mdd, q_d, q_tmp);
+        // @Jordi this BuilderAndSolver is only needed for Mortar. Can it be a member of this class then?
+        mpMapperCommunicator->GetBuilderAndSolver()->BuildRHSAndSolve(scheme, modelpart, mM_dd, mQ_d, mQ_tmp);
 
         SetNodalValues();
     }
@@ -203,9 +204,10 @@ private:
     ///@}
     ///@name Member Variables
     ///@{
-
-    TSystemMatrixType M_dd;
-    TSystemVectorType q_tmp;
+    
+    // @Jordi same question as for the base class
+    TSystemMatrixType mM_dd;
+    TSystemVectorType mQ_tmp;
 
     ///@}
     ///@name Private Operators
@@ -214,6 +216,34 @@ private:
     ///@}
     ///@name Private Operations
     ///@{
+
+    void FillMappingMatrix() override
+    {
+        // local information: row for destination Node
+
+
+        mM_do->Reset();
+
+
+        // Ask the communicator for the information needed for filling the matrix
+        // NN: Neighbor Indices
+        // NE: Neighbor Indices and corresponding shape function values
+        // Mortar:
+
+        // @Jordi Here the integration would be done. I would like to follow what Vicente does for Contact
+        // to not reinvent the wheel. 
+        
+        // std::vector<int> neighbor_IDs = mpCommunicator->GetNeighborIDs();
+        // int i = 0;
+
+        // for (auto &local_node : rModelPart.GetCommunicator().LocalMesh().Nodes())
+        // {
+        //     mM_do(local_node.Id() , neighbor_IDs[i]) = 1.0f; // Fill the local part of the matrix
+        //     ++i;
+        // }
+
+        mpCommunicator->AssembleMappingMatrix(mM_do);
+    }
 
     ///@}
     ///@name Private  Access
