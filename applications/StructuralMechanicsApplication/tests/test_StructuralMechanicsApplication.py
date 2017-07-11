@@ -47,15 +47,15 @@ from SmallTests import TLThreeDShearHexaPatchTest       as TTLThreeDShearHexaPat
 from SmallTests import TLThreeDShearTetraPatchTest      as TTLThreeDShearTetraPatchTest
 from SmallTests import TLThreeDTensionHexaPatchTest     as TTLThreeDTensionHexaPatchTest
 from SmallTests import TLThreeDTensionTetraPatchTest    as TTLThreeDTensionTetraPatchTest
-## Patch test Updated Lagrangian
-###from SmallTests import ULTwoDShearQuaPatchTest          as TULTwoDShearQuaPatchTest
-###from SmallTests import ULTwoDShearTriPatchTest          as TULTwoDShearTriPatchTest
-###from SmallTests import ULTwoDTensionQuaPatchTest        as TULTwoDTensionQuaPatchTest
-###from SmallTests import ULTwoDTensionTriPatchTest        as TULTwoDTensionTriPatchTest
-###from SmallTests import ULThreeDShearHexaPatchTest       as TULThreeDShearHexaPatchTest
-###from SmallTests import ULThreeDShearTetraPatchTest      as TULThreeDShearTetraPatchTest
-###from SmallTests import ULThreeDTensionHexaPatchTest     as TULThreeDTensionHexaPatchTest
-###from SmallTests import ULThreeDTensionTetraPatchTest    as TULThreeDTensionTetraPatchTest
+# Patch test Updated Lagrangian
+from SmallTests import ULTwoDShearQuaPatchTest          as TULTwoDShearQuaPatchTest
+from SmallTests import ULTwoDShearTriPatchTest          as TULTwoDShearTriPatchTest
+from SmallTests import ULTwoDTensionQuaPatchTest        as TULTwoDTensionQuaPatchTest
+from SmallTests import ULTwoDTensionTriPatchTest        as TULTwoDTensionTriPatchTest
+from SmallTests import ULThreeDShearHexaPatchTest       as TULThreeDShearHexaPatchTest
+from SmallTests import ULThreeDShearTetraPatchTest      as TULThreeDShearTetraPatchTest
+from SmallTests import ULThreeDTensionHexaPatchTest     as TULThreeDTensionHexaPatchTest
+from SmallTests import ULThreeDTensionTetraPatchTest    as TULThreeDTensionTetraPatchTest
 # SPRISM tests
 from SmallTests import SprismMembranePatchTests         as TSprismMembranePatchTests
 from SmallTests import SprismBendingPatchTests          as TSprismBendingPatchTests
@@ -102,8 +102,15 @@ def AssambleTestSuites():
     # Create a test suit with the selected tests (Small tests):
     smallSuite = suites['small']
     # Simple patch tests
-    smallSuite.addTest(TTestPatchTestSmallStrain('test_execution'))
-    smallSuite.addTest(TTestPatchTestLargeStrain('test_execution'))
+    smallSuite.addTest(TTestPatchTestSmallStrain('test_SmallDisplacementElement_2D_triangle'))
+    smallSuite.addTest(TTestPatchTestSmallStrain('test_SmallDisplacementElement_2D_quadrilateral'))
+    smallSuite.addTest(TTestPatchTestSmallStrain('test_SmallDisplacementElement_3D_hexa'))
+    smallSuite.addTest(TTestPatchTestLargeStrain('test_TL_2D_triangle'))
+    smallSuite.addTest(TTestPatchTestLargeStrain('test_TL_2D_quadrilateral'))
+    smallSuite.addTest(TTestPatchTestLargeStrain('test_TL_3D_hexa'))
+    smallSuite.addTest(TTestPatchTestLargeStrain('test_UL_2D_triangle'))
+    smallSuite.addTest(TTestPatchTestLargeStrain('test_UL_2D_quadrilateral'))
+    smallSuite.addTest(TTestPatchTestLargeStrain('test_UL_3D_hexa'))
     # Test loading conditions
     smallSuite.addTest(TestLoadingConditions('test_execution'))
     # Basic moving mesh test
@@ -132,14 +139,14 @@ def AssambleTestSuites():
     smallSuite.addTest(TTLThreeDTensionHexaPatchTest('test_execution'))
     smallSuite.addTest(TTLThreeDTensionTetraPatchTest('test_execution'))
     # Patch test Updated Lagrangian
-    ####smallSuite.addTest(TULTwoDShearQuaPatchTest('test_execution'))
-    ####smallSuite.addTest(TULTwoDShearTriPatchTest('test_execution'))
-    ####smallSuite.addTest(TULTwoDTensionQuaPatchTest('test_execution'))
-    ####smallSuite.addTest(TULTwoDTensionTriPatchTest('test_execution'))
-    ####smallSuite.addTest(TULThreeDShearHexaPatchTest('test_execution'))
-    ####smallSuite.addTest(TULThreeDShearTetraPatchTest('test_execution'))
-    ####smallSuite.addTest(TULThreeDTensionHexaPatchTest('test_execution'))
-    ####smallSuite.addTest(TULThreeDTensionTetraPatchTest('test_execution'))
+    smallSuite.addTest(TULTwoDShearQuaPatchTest('test_execution'))
+    smallSuite.addTest(TULTwoDShearTriPatchTest('test_execution'))
+    smallSuite.addTest(TULTwoDTensionQuaPatchTest('test_execution'))
+    smallSuite.addTest(TULTwoDTensionTriPatchTest('test_execution'))
+    smallSuite.addTest(TULThreeDShearHexaPatchTest('test_execution'))
+    smallSuite.addTest(TULThreeDShearTetraPatchTest('test_execution'))
+    smallSuite.addTest(TULThreeDTensionHexaPatchTest('test_execution'))
+    smallSuite.addTest(TULThreeDTensionTetraPatchTest('test_execution'))
     # SPRISM tests
     smallSuite.addTest(TSprismMembranePatchTests('test_execution'))
     smallSuite.addTest(TSprismBendingPatchTests('test_execution'))
@@ -204,14 +211,14 @@ def AssambleTestSuites():
             TTLThreeDShearTetraPatchTest,
             TTLThreeDTensionHexaPatchTest,
             TTLThreeDTensionTetraPatchTest,
-            ########TULTwoDShearQuaPatchTest,
-            ########TULTwoDShearTriPatchTest,
-            ########TULTwoDTensionQuaPatchTest,
-            ########TULTwoDTensionTriPatchTest,
-            ########TULThreeDShearHexaPatchTest,
-            ########TULThreeDShearTetraPatchTest,
-            ########TULThreeDTensionHexaPatchTest,
-            ########TULThreeDTensionTetraPatchTest,
+            TULTwoDShearQuaPatchTest,
+            TULTwoDShearTriPatchTest,
+            TULTwoDTensionQuaPatchTest,
+            TULTwoDTensionTriPatchTest,
+            TULThreeDShearHexaPatchTest,
+            TULThreeDShearTetraPatchTest,
+            TULThreeDTensionHexaPatchTest,
+            TULThreeDTensionTetraPatchTest,
             TSprismMembranePatchTests,
             TSprismBendingPatchTests,
             TFofi4PointTentnoCableTests,
@@ -222,7 +229,7 @@ def AssambleTestSuites():
             TShellT3ThinDrillingRollUpTests,
             TShellT3IsotropicScordelisTests,
             ####TIsotropicDamageSimoJuPSTest, # FIXME: Need CL correspondent
-            ####TSprismPanTests # FIXME: Needs point load and get up to date
+            ####TSprismPanTests # FIXME: Needs get up to date
         ])
     )
         
