@@ -132,13 +132,31 @@ class Pouliot2012EdgeMaterialAccelerationRecoverer(Pouliot2012EdgeGradientRecove
 class Pouliot2012EdgeLaplacianRecoverer(Pouliot2012EdgeMaterialAccelerationRecoverer, recoverer.LaplacianRecoverer):
     def __init__(self, pp, model_part, cplusplus_recovery_tool):
         Pouliot2012EdgeDerivativesRecoverer.__init__(self, pp, model_part, cplusplus_recovery_tool)
-        self.element_type = "ComputeVelocityLaplacianSimplex3D"
-        self.condition_type = "ComputeLaplacianSimplexCondition3D"
+        self.element_type = self.GetElementType(pp)
+        self.condition_type = self.GetConditionType(pp)
         self.FillUpModelPart(self.element_type)
-        self.DOFs = (VELOCITY_LAPLACIAN_X, VELOCITY_LAPLACIAN_Y, VELOCITY_LAPLACIAN_Z)
+        self.DOFs = self.GetDofs(pp)
         self.AddDofs(self.DOFs)
 
     def RecoverVelocityLaplacian(self):
         print("\nSolving for the laplacian...")
         self.SetToZero(VELOCITY_LAPLACIAN)
         self.recovery_strategy.Solve()
+
+    def GetElementType(self, pp):
+        if pp.domain_size == 2:
+            return 'ComputeVelocityLaplacianSimplex2D'
+        else:
+            return 'ComputeVelocityLaplacianSimplex3D'
+
+    def GetConditionType(self, pp):
+        if pp.domain_size == 2:
+            return 'ComputeLaplacianSimplexCondition2D'
+        else:
+            return 'ComputeLaplacianSimplexCondition3D'
+
+    def GetDofs(self, pp):
+        if pp.domain_size == 2:
+            return (VELOCITY_LAPLACIAN_X, VELOCITY_LAPLACIAN_Y)
+        else:
+            return (VELOCITY_LAPLACIAN_X, VELOCITY_LAPLACIAN_Y, VELOCITY_LAPLACIAN_Z)
