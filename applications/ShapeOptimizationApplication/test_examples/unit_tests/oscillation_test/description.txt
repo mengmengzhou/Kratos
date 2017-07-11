@@ -1,0 +1,56 @@
+In this folder, some tests are performed to investigate the cause of oscillations in the
+reconstructed CAD model, which occur near the border of patches. 
+
+IDEA:
+    cause of oscillation:
+    The LSE is underdetermined, because the associated matrix, even though is square, is
+    not full-rank (i.e. some rows have only zero entries).
+    The matrix is determined according to the relevant CPs and the relevant CPs are, those
+    whose associated NURBS function is non-zero in a specified knot-span. However a NURBS
+    function, which is in general non-zero in a specified knot-span, might still take 
+    value zero in a particular point (at multiple knots), as often happens at the border of
+    a patch.
+
+TEST:
+    1:
+        test_1_geometry.json
+        test_1.mdpa
+
+        FE-nodes are influenced by 4 CPs, although all the 16 CPs are considered relevant.
+        Hence the reconstructed CAD should show weird oscillations.
+
+        - print LHS -> check zero entries
+        - print RHS -> check zero entries
+        - print points on updated CAD -> expected wavy surface
+        - generate updated .json file -> expected wavy surface
+
+    2:
+        test_1_geometry.json
+        test_1_small.mdpa
+
+        Fe-nodes are not exactly on the corners of the patch, but shifted inside the patch.
+        All 16 CPs are actually relevant. The result should be good.
+
+        - print LHS -> no zero entries
+        - print RHS -> no zero entries
+        - print points on updated CAD -> expected smooth surface
+        - generate updated .json file -> expected smooth surface
+
+    3:
+        Benchmark_halbkreis_32x16_multipatch_geometry.json
+        optimized_shell_3418_elements.mdpa
+
+        - print LHS -> search with a python script for zero-entries rows
+        - print points on updated CAD -> expected wavy surface
+        - generate updated .json file -> expected wavy surface
+    
+    4:
+        test_1_geometry.json
+        test_1_fine.mdpa
+
+        All 16 CPs are actually relevant. The result should be good.
+
+        - print LHS -> no zero entries
+        - print RHS -> no zero entries
+        - print points on updated CAD -> expected smooth surface
+        - generate updated .json file -> expected smooth surface

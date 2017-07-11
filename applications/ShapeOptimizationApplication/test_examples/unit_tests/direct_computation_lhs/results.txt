@@ -1,0 +1,39 @@
+direct_way.txt and indirect_way.txt contain the entries of the lhs matrix.
+The file have been obtained with the following code
+
+		std::ofstream file_to_write(output_filename);
+		for(unsigned int i=0; i!=3*m_n_relevant_control_points; i++)
+		{
+			for(unsigned int j=0; j!=3*m_n_relevant_control_points; j++)
+			{
+				file_to_write << m_lhs_matrix(i,j) << " ";
+			}
+			file_to_write << std::endl;
+		}
+		file_to_write.close();
+
+and
+
+		std::ofstream file_to_write(output_filename);
+		for(unsigned int i=0; i!=3*m_n_relevant_control_points; i++)
+		{
+			for(unsigned int j=0; j!=3*m_n_relevant_control_points; j++)
+			{
+				file_to_write << lhs(i,j) << " ";
+			}
+			file_to_write << std::endl;
+		}
+		file_to_write.close();
+        
+text comparison shows that the files are identical.
+
+indirect_way.py:
+computation of m_a_matrix in                                    0.015615 s
+transposition + computation of matrix by matrix product in      90.842786s
+-----------------------------------------------------------------------------
+total time needed                                              ~90 s
+
+direct_way.py:
+direct computation of lhs in                                     0.015655 s
+-----------------------------------------------------------------------------
+total time needed                                              ~ 0 s

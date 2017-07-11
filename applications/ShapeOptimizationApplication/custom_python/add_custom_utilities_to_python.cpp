@@ -171,6 +171,7 @@ void  AddCustomUtilitiesToPython()
             .def("map_to_cad_space_2", &CADMapper::map_to_cad_space_2)            
             .def("print_nearest_points", &CADMapper::print_nearest_points)            
             .def("compute_real_length", &CADMapper::compute_real_length)            
+            .def("compute_lhs_matrix", &CADMapper::compute_lhs_matrix)            
             
 
             ;                      

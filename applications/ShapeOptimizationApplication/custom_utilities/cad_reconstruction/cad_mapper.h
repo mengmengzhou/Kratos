@@ -2101,6 +2101,7 @@ class CADMapper
 	void compute_a_matrix()
 	{
 		std::cout << "\n> Starting computation of a matrix..." << std::endl;
+		boost::timer a_matrix_timer;
 		// Count relevant control points and assign each a unique mapping matrix Id (iterator over points)		
 		// First we identify relevant control points affecting the cad points on the surface
 		m_n_control_points = 0; 
@@ -2175,10 +2176,159 @@ class CADMapper
 					}
 				}
 		}
+		std::cout << "\n> Computation of a matrix finished in " << a_matrix_timer.elapsed() << " s." << std::endl;			
 	}
+	
+	void test_rectangular_matrix()
+	{
+		// 1: define relevant CPs vector
+		Vector x_CP = ZeroVector(3*m_n_relevant_control_points);
+		for (PatchVector::iterator patch_i = m_patches.begin(); patch_i != m_patches.end(); ++patch_i)
+		{
+			for (ControlPointVector::iterator cp_i = patch_i->GetSurface().GetControlPoints().begin(); cp_i != patch_i->GetSurface().GetControlPoints().end(); ++cp_i)
+			{
+				if(cp_i->IsRelevantForMapping())
+				{
+					int cp_id = cp_i->GetMappingMatrixId(); //??? line 1982:	cp_i->SetMappingMatrixId(mapping_matrix_id);
+					x_CP[3*cp_id] = cp_i->getX();
+					x_CP[3*cp_id+1] = cp_i->getY();
+					x_CP[3*cp_id+2] = cp_i->getZ();
+					// std::cout << std::endl; //???
+					// KRATOS_WATCH(cp_i->getX()); //???
+					// KRATOS_WATCH(cp_i->getY()); //???
+					// KRATOS_WATCH(cp_i->getZ()); //???
+				}
+			}
+		}
+		// KRATOS_WATCH(x_CP); //???	
+
+		// 2: compute product result
+		Vector product_result = ZeroVector(3*m_n_relevant_fem_points);
+		noalias(product_result) = prod(m_a_matrix,x_CP);
+		
+		// 3: define CAD points vector (i.e. expected result)
+		Vector x_CAD = ZeroVector(3*m_n_relevant_fem_points);
+	    for(ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i!=mr_fe_model_part.NodesEnd(); node_i++)
+		{
+			// std::cout << std::endl; //???
+            // ModelPart::NodeType& node = *node_i; //???
+			// KRATOS_WATCH(node.Coordinates()); //???
+			int i_id = node_i->GetValue(MAPPING_MATRIX_ID); // ??? A_MAPPING_MATRIX	 //??? GetValue() could be avoided as the id are in ascending order		
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->X()); //???
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Y()); //???
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Z()); //???
+			x_CAD[3*i_id] = m_list_of_nearest_points[i_id]->X(); //??? bla? store m_list_of_nearest_points as attribute or take it as input?
+			x_CAD[3*i_id+1] = m_list_of_nearest_points[i_id]->Y();		// bla == i_id, since m_list_of_nearest_points is filled looping over nodes
+			x_CAD[3*i_id+2] = m_list_of_nearest_points[i_id]->Z();
+		}
+		// KRATOS_WATCH(x_CAD); //???
+		// KRATOS_WATCH(product_result); //???
+		// KRATOS_WATCH(m_a_matrix); //???
+
+		// 4: compare x_CAD with product_result
+		Vector difference = x_CAD - product_result;
+		double euclidean_norm = norm_2(difference);
+		std::cout << "\n> test_rectangular_matrix(): the euclidean norm is " << euclidean_norm << std::endl;
+	}
+
+	void map_to_cad_space_2()
+	{
+		std::cout << "\n> Starting to map to CAD space..." << std::endl;
+		boost::timer function_timer;
+		// 1: compute transpose
+		boost::timer lhs_timer;
+		std::cout << "\t> Computing transpose... \n";
+		Matrix transpose = trans(m_a_matrix); 
+		std::cout << "\t\t\t DONE" << std::endl;
+		// 2: compute left hand side
+		std::cout << "\t> Computing LHS...\n ";		
+		Matrix lhs;
+		std::cout << "\t\t[" << 3*m_n_relevant_control_points
+				  << "x" << 3*m_n_relevant_fem_points
+				  << "] [" << 3*m_n_relevant_fem_points
+				  << "x" << 3*m_n_relevant_control_points
+				  << "]\n";
+		lhs.resize(3*m_n_relevant_control_points, 3*m_n_relevant_control_points);
+		// noalias(lhs) = prod(transpose, m_a_matrix);
+		prod(transpose, m_a_matrix, lhs);
+		std::cout << "\t\t\t DONE" << std::endl;
+		std::cout << "\n> Computing  transpose and LHS finished in " << lhs_timer.elapsed() << " s." << std::endl;
+
+		// 3: compute right hand side
+		std::cout << "\t> Computing RHS... \n";		
+		Vector x_FEM = ZeroVector(3*m_n_relevant_fem_points);
+	    for(ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i!=mr_fe_model_part.NodesEnd(); node_i++)
+		{
+			// std::cout << std::endl; //???
+            // ModelPart::NodeType& node = *node_i; //???
+			// KRATOS_WATCH(node.Coordinates()); //???
+			int i_id = node_i->GetValue(MAPPING_MATRIX_ID); // ??? A_MAPPING_MATRIX	 //??? GetValue() could be avoided as the id are in ascending order		
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->X()); //???
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Y()); //???
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Z()); //???
+			
+			ModelPart::NodeType& node = *node_i;
+            array_1d<double,3>  node_coord = node.Coordinates();
+
+			x_FEM[3*i_id] = node_coord[0] + node_i->GetValue(SHAPE_CHANGE_ABSOLUTE_X);
+			x_FEM[3*i_id+1] = node_coord[1] + node_i->GetValue(SHAPE_CHANGE_ABSOLUTE_Y);
+			x_FEM[3*i_id+2] = node_coord[2] + node_i->GetValue(SHAPE_CHANGE_ABSOLUTE_Z);
+		}
+		Vector rhs = prod(transpose,x_FEM);		
+		std::cout << "\t\t\t DONE" << std::endl;
+		// 4: solve for x_CP: updated position of CP
+		std::cout << "\t> Solving... \n";	
+		Vector x_CP = ZeroVector(3*m_n_relevant_control_points);
+		CompressedMatrixType compressed_lhs = lhs;		
+		m_linear_solver->Solve(compressed_lhs, x_CP, rhs);		
+		std::cout << "\t\t\t DONE" << std::endl;
+
+		// 5: update
+		std::cout << "\t> Updating control points positions... ";
+		Vector x_CP_old = ZeroVector(3*m_n_relevant_control_points);
+		for (PatchVector::iterator patch_i = m_patches.begin(); patch_i != m_patches.end(); ++patch_i)
+		{
+			for (ControlPointVector::iterator cp_i = patch_i->GetSurface().GetControlPoints().begin(); cp_i != patch_i->GetSurface().GetControlPoints().end(); ++cp_i)
+			{
+				if(cp_i->IsRelevantForMapping())
+				{
+					int cp_id = cp_i->GetMappingMatrixId(); //??? line 1982:	cp_i->SetMappingMatrixId(mapping_matrix_id);
+					x_CP_old[3*cp_id] = cp_i->getX();
+					x_CP_old[3*cp_id+1] = cp_i->getY();
+					x_CP_old[3*cp_id+2] = cp_i->getZ();
+					// std::cout << std::endl; //???
+					// KRATOS_WATCH(cp_i->getX()); //???
+					// KRATOS_WATCH(cp_i->getY()); //???
+					// KRATOS_WATCH(cp_i->getZ()); //???
+				}
+			}
+		}
+		Vector ds = x_CP - x_CP_old; // CP position update
+		m_cad_reader.UpdateControlPoints(m_patches, ds);
+
+		std::cout << "\n> Mapping to CAD space finished in " << function_timer.elapsed() << " s." << std::endl;	
+
+		// 6: testing purpose
+		Vector x_CAD = ZeroVector(3*m_n_relevant_fem_points);
+	    for(ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i!=mr_fe_model_part.NodesEnd(); node_i++)
+		{
+			// std::cout << std::endl; //???
+            // ModelPart::NodeType& node = *node_i; //???
+			// KRATOS_WATCH(node.Coordinates()); //???
+			int i_id = node_i->GetValue(MAPPING_MATRIX_ID); // ??? A_MAPPING_MATRIX	 //??? GetValue() could be avoided as the id are in ascending order		
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->X()); //???
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Y()); //???
+			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Z()); //???
+			x_CAD[3*i_id] = m_list_of_nearest_points[i_id]->X(); //??? bla? store list_of_nearest_points as attribute or take it as input?
+			x_CAD[3*i_id+1] = m_list_of_nearest_points[i_id]->Y();		// bla == i_id, since list_of_nearest_points is filled looping over nodes
+			x_CAD[3*i_id+2] = m_list_of_nearest_points[i_id]->Z();
+		}
+	}
+	
 	void compute_lhs_matrix()
 	{
-		std::cout << "\n> Starting computation of a matrix..." << std::endl;
+		std::cout << "\n> Starting direct computation of LHS..." << std::endl;
+		boost::timer lhs_timer;
 		// Count relevant control points and assign each a unique mapping matrix Id (iterator over points)		
 		// First we identify relevant control points affecting the cad points on the surface
 		m_n_control_points = 0; 
@@ -2261,82 +2411,19 @@ class CADMapper
 					}
 				}
 		}
-	}
-
-	void test_rectangular_matrix()
-	{
-		// 1: define relevant CPs vector
-		Vector x_CP = ZeroVector(3*m_n_relevant_control_points);
-		for (PatchVector::iterator patch_i = m_patches.begin(); patch_i != m_patches.end(); ++patch_i)
-		{
-			for (ControlPointVector::iterator cp_i = patch_i->GetSurface().GetControlPoints().begin(); cp_i != patch_i->GetSurface().GetControlPoints().end(); ++cp_i)
-			{
-				if(cp_i->IsRelevantForMapping())
-				{
-					int cp_id = cp_i->GetMappingMatrixId(); //??? line 1982:	cp_i->SetMappingMatrixId(mapping_matrix_id);
-					x_CP[3*cp_id] = cp_i->getX();
-					x_CP[3*cp_id+1] = cp_i->getY();
-					x_CP[3*cp_id+2] = cp_i->getZ();
-					// std::cout << std::endl; //???
-					// KRATOS_WATCH(cp_i->getX()); //???
-					// KRATOS_WATCH(cp_i->getY()); //???
-					// KRATOS_WATCH(cp_i->getZ()); //???
-				}
-			}
-		}
-		// KRATOS_WATCH(x_CP); //???	
-
-		// 2: compute product result
-		Vector product_result = ZeroVector(3*m_n_relevant_fem_points);
-		noalias(product_result) = prod(m_a_matrix,x_CP);
-		
-		// 3: define CAD points vector (i.e. expected result)
-		Vector x_CAD = ZeroVector(3*m_n_relevant_fem_points);
-	    for(ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i!=mr_fe_model_part.NodesEnd(); node_i++)
-		{
-			// std::cout << std::endl; //???
-            // ModelPart::NodeType& node = *node_i; //???
-			// KRATOS_WATCH(node.Coordinates()); //???
-			int i_id = node_i->GetValue(MAPPING_MATRIX_ID); // ??? A_MAPPING_MATRIX	 //??? GetValue() could be avoided as the id are in ascending order		
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->X()); //???
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Y()); //???
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Z()); //???
-			x_CAD[3*i_id] = m_list_of_nearest_points[i_id]->X(); //??? bla? store m_list_of_nearest_points as attribute or take it as input?
-			x_CAD[3*i_id+1] = m_list_of_nearest_points[i_id]->Y();		// bla == i_id, since m_list_of_nearest_points is filled looping over nodes
-			x_CAD[3*i_id+2] = m_list_of_nearest_points[i_id]->Z();
-		}
-		// KRATOS_WATCH(x_CAD); //???
-		// KRATOS_WATCH(product_result); //???
-		// KRATOS_WATCH(m_a_matrix); //???
-
-		// 4: compare x_CAD with product_result
-		Vector difference = x_CAD - product_result;
-		double euclidean_norm = norm_2(difference);
-		std::cout << "\n> test_rectangular_matrix(): the euclidean norm is " << euclidean_norm << std::endl;
+		std::cout << "\n> Direct computation of LHS finished in " << lhs_timer.elapsed() << " s." << std::endl;			
 	}
 	
-	void map_to_cad_space_2()
+	void compute_rhs_matrix()
+	{
+		
+	}
+	void map_to_cad_space_3()
 	{
 		std::cout << "\n> Starting to map to CAD space..." << std::endl;
 		boost::timer function_timer;
-		// 1: compute transpose
-		std::cout << "\t> Computing transpose... \n";
-		Matrix transpose = trans(m_a_matrix); 
-		std::cout << "\t\t\t DONE" << std::endl;
+		m_lhs_matrix
 
-		// 2: compute left hand side
-		std::cout << "\t> Computing LHS...\n ";		
-		Matrix lhs;
-		std::cout << "\t\t[" << 3*m_n_relevant_control_points
-				  << "x" << 3*m_n_relevant_fem_points
-				  << "] [" << 3*m_n_relevant_fem_points
-				  << "x" << 3*m_n_relevant_control_points
-				  << "]\n";
-		lhs.resize(3*m_n_relevant_control_points, 3*m_n_relevant_control_points);
-		// noalias(lhs) = prod(transpose, m_a_matrix);
-		prod(transpose, m_a_matrix, lhs);
-		std::cout << "\t\t\t DONE" << std::endl;
- 
 		// 3: compute right hand side
 		std::cout << "\t> Computing RHS... \n";		
 		Vector x_FEM = ZeroVector(3*m_n_relevant_fem_points);
@@ -2359,7 +2446,6 @@ class CADMapper
 		}
 		Vector rhs = prod(transpose,x_FEM);		
 		std::cout << "\t\t\t DONE" << std::endl;
-
 		// 4: solve for x_CP: updated position of CP
 		std::cout << "\t> Solving... \n";	
 		Vector x_CP = ZeroVector(3*m_n_relevant_control_points);

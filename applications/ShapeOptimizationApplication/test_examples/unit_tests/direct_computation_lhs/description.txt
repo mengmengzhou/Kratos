@@ -1,0 +1,10 @@
+In this folder, the direct computation of the lhs is tested.
+The result is compared to the one obtained through the transpose and matrix multiplication operations.
+
+TEST:
+    1:
+        Benchmark_halbkreis_32x16_multipatch_geometry.json 
+        optimized_shell_3418_elements.mdpa
+
+        - direct txt comparison of KRATOS_WATCH output -> same result expected
+        - comparison of computation times -> shorter computation time with direct computation

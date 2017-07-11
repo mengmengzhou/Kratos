@@ -1,0 +1,46 @@
+Begin ModelPartData
+//  VARIABLE_NAME value
+End ModelPartData
+
+Begin Properties 0
+End Properties
+Begin Properties 1
+    THICKNESS   1.00000E+00 
+    DENSITY   7.85000E+03 
+    YOUNG_MODULUS   2.06900E+11 
+    POISSON_RATIO   2.90000E-01 
+End Properties
+
+Begin Nodes
+    1        0.00000        0.00000        0.00000
+    2        1.00000        0.00000        0.00000
+    3        0.00000        1.00000        0.00000
+    4        1.00000        1.00000        0.00000
+End Nodes
+
+
+Begin Conditions ShapeOptimizationCondition3D3N// GUI group identifier: solid
+         1          1          1          2          3 
+         2          1          2          4          3 
+End Conditions
+
+Begin NodalData SHAPE_CHANGE_ABSOLUTE_X
+1   0   0
+2	0	-0.3
+3	0	0.3
+4   0   0
+End NodalData
+
+Begin NodalData SHAPE_CHANGE_ABSOLUTE_Y
+1   0   0
+2	0	0.3
+3	0	-0.3
+4   0   0
+End NodalData
+
+Begin NodalData SHAPE_CHANGE_ABSOLUTE_Z
+1   0   0
+2	0	0.5
+3	0	0.5
+4   0   0
+End NodalData

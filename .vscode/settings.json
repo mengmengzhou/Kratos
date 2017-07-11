@@ -38,6 +38,9 @@
         "system_error": "cpp",
         "type_traits": "cpp",
         "typeinfo": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "dcabs1.c": "cpp",
+        "triangle.c": "cpp",
+        "hashtab.c": "cpp"
     }
 }
