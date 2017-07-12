@@ -1718,6 +1718,12 @@ namespace Kratos
 			// Don't do anything here.
 			// The shear contribution will be added with 3GPs later on.
 		}
+		else if (data.smoothedDSG)
+		{
+			// Use smoothed DSG formulation according to [Nguyen-Thoi et al., 2013]
+			std::cout << "Using smoothed DSG" << std::endl;
+			CalculateSmoothedDSGBMatrix(data);
+		}
 		else if (data.basicTriCST == false)
 		{
 			// Use DSG method as per Bletzinger (2000)
@@ -1727,6 +1733,7 @@ namespace Kratos
 			const double b = y21;
 			const double c = y31;
 			const double d = x31;
+
 			//node 1
 			data.B(6, 2) = b - c;
 			data.B(6, 4) = A;
@@ -1747,7 +1754,7 @@ namespace Kratos
 			//node 3
 			data.B(6, 14) = -1.0 * b;
 			data.B(6, 15) = b*c / 2.0;
-			data.B(6, 16) = -b*d / 2.0; //altered by -1
+			data.B(6, 16) = -b*d / 2.0;
 
 			data.B(7, 14) = a;
 			data.B(7, 15) = -1.0 * a*c / 2.0;
@@ -1758,7 +1765,7 @@ namespace Kratos
 			// Basic CST displacement derived shear
 			// strain displacement matrix.
 			// Only for testing!
-
+			std::cout << "Using basic CST shear formulation!" << std::endl;
 			const Matrix & shapeFunctions = 
 				GetGeometry().ShapeFunctionsValues(mThisIntegrationMethod);
 
@@ -1835,9 +1842,9 @@ namespace Kratos
 
 		// choose formulation options
 		bool use_pure_bubble_mode = false;
-		bool use_no_bubble_mode = false;
+		bool use_no_bubble_mode = true;
 		bool use_reconstructed_shear_gaps = false;
-		bool use_original_dsg = true;
+		bool use_original_dsg = false;
 		bool use_original_dsg_with_bubble = false;
 
 		// Material matrix data.D is already multiplied with A!!!
@@ -1952,24 +1959,24 @@ namespace Kratos
 				// pure no bubble mode formulation below with no alterations
 				// DOFs are [w1,w2,w3,Rx1,...]
 
-				BSuper(0, 0) = 1.0*b - 1.0*c;
-				BSuper(0, 1) = 1.0*c;
-				BSuper(0, 2) = -1.0*b;
-				BSuper(0, 3) = -0.5*b*loc1 + 0.5*b - 0.5*c*loc2;
-				BSuper(0, 4) = 0.5*b*loc1 + 0.5*c*loc2;
-				BSuper(0, 5) = 0.5*b;
-				BSuper(0, 6) = -0.5*b*loc1 - 0.5*c*loc2 + 0.5*c;
-				BSuper(0, 7) = 0.5*c;
-				BSuper(0, 8) = 0.5*b*loc1 + 0.5*c*loc2;
-				BSuper(1, 0) = -1.0*a + 1.0*d;
-				BSuper(1, 1) = -1.0*d;
-				BSuper(1, 2) = 1.0*a;
-				BSuper(1, 3) = 0.5*a*loc1 - 0.5*a + 0.5*d*loc2;
-				BSuper(1, 4) = -0.5*a*loc1 - 0.5*d*loc2;
-				BSuper(1, 5) = -0.5*a;
-				BSuper(1, 6) = 0.5*a*loc1 + 0.5*d*loc2 - 0.5*d;
-				BSuper(1, 7) = -0.5*d;
-				BSuper(1, 8) = -0.5*a*loc1 - 0.5*d*loc2;
+				BSuper(0, 0) = b - c;
+				BSuper(0, 1) = c;
+				BSuper(0, 2) = -b;
+				BSuper(0, 3) = 0.5*(b - c)*(b*loc1 + c*loc2);
+				BSuper(0, 4) = -0.5*b*b * loc1 + 0.5*b*c*loc1 - 0.5*b*c*loc2 - 0.5*b*c + 0.5*c*c * loc2;
+				BSuper(0, 5) = 0.5*b*b * loc1 - 0.5*b*c*loc1 + 0.5*b*c*loc2 + 0.5*b*c - 0.5*c*c * loc2;
+				BSuper(0, 6) = -0.5*a*b*loc1 - 0.5*a*c*loc2 + 0.5*a*c + 0.5*b*d*loc1 - 0.5*b*d + 0.5*c*d*loc2;
+				BSuper(0, 7) = -0.5*a*b*loc1 - 0.5*a*c*loc2 + 0.5*a*c + 0.5*b*d*loc1 + 0.5*c*d*loc2;
+				BSuper(0, 8) = 0.5*a*b*loc1 + 0.5*a*c*loc2 - 0.5*b*d*loc1 - 0.5*b*d - 0.5*c*d*loc2;
+				BSuper(1, 0) = -a + d;
+				BSuper(1, 1) = -d;
+				BSuper(1, 2) = a;
+				BSuper(1, 3) = -0.5*a*b*loc1 + 0.5*a*c*loc1 - 0.5*a*c - 0.5*b*d*loc2 + 0.5*b*d + 0.5*c*d*loc2;
+				BSuper(1, 4) = 0.5*a*b*loc1 - 0.5*a*c*loc1 + 0.5*b*d*loc2 + 0.5*b*d - 0.5*c*d*loc2;
+				BSuper(1, 5) = -0.5*a*b*loc1 + 0.5*a*c*loc1 - 0.5*a*c - 0.5*b*d*loc2 + 0.5*c*d*loc2;
+				BSuper(1, 6) = 0.5*(a - d)*(a*loc1 + d*loc2);
+				BSuper(1, 7) = 0.5*a*a * loc1 - 0.5*a*d*loc1 + 0.5*a*d*loc2 - 0.5*a*d - 0.5*d*d * loc2;
+				BSuper(1, 8) = -0.5*a*a * loc1 + 0.5*a*d*loc1 - 0.5*a*d*loc2 + 0.5*a*d + 0.5*d*d * loc2;
 
 				BSuper /= (2.0*data.TotalArea);
 			}
@@ -2029,17 +2036,17 @@ namespace Kratos
 				std::cout << "use_original_dsg with bubble" << std::endl;
 
 				BSuper(0, 0) = 1.0*b - 1.0*c;
-				BSuper(0, 1) = c;
-				BSuper(0, 2) = -b;
+				BSuper(0, 1) = 1.0*c*(1.0);
+				BSuper(0, 2) = -1.0*b*(1.0);
 				BSuper(0, 3) = 0.0;
 				BSuper(0, 4) = -1.0*b*c*(3.0*loc1*loc1 + 12.0*loc1*loc2 - 3.0*loc1 + 3.0*loc2*loc2 - 3.0*loc2 + 0.5);
 				BSuper(0, 5) = 1.0*b*c*(3.0*loc1*loc1 + 12.0*loc1*loc2 - 3.0*loc1 + 3.0*loc2*loc2 - 3.0*loc2 + 0.5);
 				BSuper(0, 6) = 0.5*a*c - 0.5*b*d;
 				BSuper(0, 7) = 6.0*a*c*loc1*loc2 + 3.0*a*c*loc2*loc2 - 3.0*a*c*loc2 + 0.5*a*c + 3.0*b*d*loc1*loc1 + 6.0*b*d*loc1*loc2 - 3.0*b*d*loc1;
 				BSuper(0, 8) = -6.0*a*c*loc1*loc2 - 3.0*a*c*loc2*loc2 + 3.0*a*c*loc2 - 3.0*b*d*loc1*loc1 - 6.0*b*d*loc1*loc2 + 3.0*b*d*loc1 - 0.5*b*d;
-				BSuper(1, 0) = -1.0*a + 1.0*d;
-				BSuper(1, 1) = -d;
-				BSuper(1, 2) = a;
+				BSuper(1, 0) = - 1.0*a + 1.0*d;
+				BSuper(1, 1) = -1.0*d*(1.0);
+				BSuper(1, 2) = 1.0*a*(1.0);
 				BSuper(1, 3) = -0.5*a*c + 0.5*b*d;
 				BSuper(1, 4) = 3.0*a*c*loc1*loc1 + 6.0*a*c*loc1*loc2 - 3.0*a*c*loc1 + 6.0*b*d*loc1*loc2 + 3.0*b*d*loc2*loc2 - 3.0*b*d*loc2 + 0.5*b*d;
 				BSuper(1, 5) = -3.0*a*c*loc1*loc1 - 6.0*a*c*loc1*loc2 + 3.0*a*c*loc1 - 0.5*a*c - 6.0*b*d*loc1*loc2 - 3.0*b*d*loc2*loc2 + 3.0*b*d*loc2;
@@ -2074,6 +2081,158 @@ namespace Kratos
 			Matrix temp = Matrix(prod(trans(data.B), data.D*integration_weight));
 			rLeftHandSideMatrix += prod(temp, data.B);
 		}
+	}
+
+	void ShellThickElement3D3N::CalculateSmoothedDSGBMatrix(CalculationData & data)
+	{
+		// Use smoothed DSG formulation according to [Nguyen-Thoi et al., 2013]
+		//
+
+		//meta-triangle centre coords
+		const double x0 = (data.LCS0.X1() + data.LCS0.X2() + data.LCS0.X3()) / 3.0;
+		const double y0 = (data.LCS0.Y1() + data.LCS0.Y2() + data.LCS0.Y3()) / 3.0;
+
+
+		// Assemble sub triangle coords
+		std::vector<Vector3> subTriangleXCoords = std::vector<Vector3>(3);
+		std::vector<Vector3> subTriangleYCoords = std::vector<Vector3>(3);
+		for (size_t i = 0; i < 3; i++)
+		{
+			subTriangleXCoords[i][0] = x0;
+			subTriangleYCoords[i][0] = y0;
+		}
+		subTriangleXCoords[0][1] = data.LCS0.X1();
+		subTriangleXCoords[0][2] = data.LCS0.X2();
+		subTriangleYCoords[0][1] = data.LCS0.Y1();
+		subTriangleYCoords[0][2] = data.LCS0.Y2();
+
+		subTriangleXCoords[1][1] = data.LCS0.X2();
+		subTriangleXCoords[1][2] = data.LCS0.X3();
+		subTriangleYCoords[1][1] = data.LCS0.Y2();
+		subTriangleYCoords[1][2] = data.LCS0.Y3();
+
+		subTriangleXCoords[2][1] = data.LCS0.X1();
+		subTriangleXCoords[2][2] = data.LCS0.X3();
+		subTriangleYCoords[2][1] = data.LCS0.Y1();
+		subTriangleYCoords[2][2] = data.LCS0.Y3();
+
+
+		// The mapping controls how the nodally grouped entries of the virgin 
+		// sub-triangle B matrices are added to the meta-triangle shear B matrix
+		std::vector<Vector3> matrixMapping = std::vector<Vector3>(3);
+		matrixMapping[0][0] = 2; // node number, not index (number = index + 1)
+		matrixMapping[0][1] = 3;
+		matrixMapping[0][2] = 9; // signify no addition contribution needed
+
+		matrixMapping[1][0] = 9;
+		matrixMapping[1][1] = 2;
+		matrixMapping[1][2] = 3;
+
+		matrixMapping[2][0] = 2;
+		matrixMapping[2][1] = 9;
+		matrixMapping[2][2] = 3;
+
+
+		// Setup variables
+		std::vector<Matrix> convertedShearMatrices = std::vector<Matrix>(3.0);
+		Vector3 subTriangleAreas = ZeroVector(3);
+
+
+		// Loop over all sub triangles
+		for (size_t subTriangle = 0; subTriangle < 3; subTriangle++)
+		{
+			double a = subTriangleXCoords[subTriangle][1] - subTriangleXCoords[subTriangle][0];
+			double b = subTriangleYCoords[subTriangle][1] - subTriangleYCoords[subTriangle][0];
+			double c = subTriangleYCoords[subTriangle][2] - subTriangleYCoords[subTriangle][0];
+			double d = subTriangleXCoords[subTriangle][2] - subTriangleXCoords[subTriangle][0];
+			subTriangleAreas[subTriangle] = 0.5*(a*c - b*d);
+
+			// Calculate the DSG shear B matrix for only the current subtriangle
+			Matrix virginSubTriangleShearMatrix = Matrix(2, 18, 0.0);
+			CalculateDSGShearBMatrix(virginSubTriangleShearMatrix, a, b, c, d, subTriangleAreas[subTriangle]);
+			virginSubTriangleShearMatrix /= (2.0*subTriangleAreas[subTriangle]);
+
+
+			// Setup converted matrix container for the current triangle
+			convertedShearMatrices[subTriangle].resize(2, 18, false);
+			convertedShearMatrices[subTriangle].clear();
+
+			// Convert from the subtriangle to the meta-triangle
+			for (size_t node = 0; node < 3; node++)
+			{
+				for (size_t row = 0; row < 2; row++)
+				{
+					for (size_t col = 0; col < 6; col++)
+					{
+						// add in B_0 / 3.0 for all nodes in B matrix
+						convertedShearMatrices[subTriangle](row, node * 6 + col) = virginSubTriangleShearMatrix(row, col) / 3.0;
+					}
+				}
+
+				if (matrixMapping[subTriangle][node] == 9)
+				{
+					// do nothing, entries already covered by operation above
+				}
+				else
+				{
+					// add in new entries
+					for (size_t row = 0; row < 2; row++)
+					{
+						for (size_t col = 0; col < 6; col++)
+						{
+							convertedShearMatrices[subTriangle](row, node * 6 + col) += virginSubTriangleShearMatrix(row, 6*(matrixMapping[subTriangle][node] - 1) + col) / 3.0;
+						}
+					}
+				}
+			}
+		}
+
+		Matrix smoothedShearMatrix = Matrix(2, 18, 0.0);
+		for (size_t subtriangle = 0; subtriangle < 3; subtriangle++)
+		{
+			smoothedShearMatrix += (convertedShearMatrices[subtriangle] * subTriangleAreas[subtriangle]);
+		}
+
+		smoothedShearMatrix /= data.TotalArea;
+		smoothedShearMatrix *= (2.0*data.TotalArea); // to nullify data.B/=2A in main pipeline
+
+		// copy over entries to main B matrix
+		for (size_t row = 0; row < 2; row++)
+		{
+			for (size_t col = 0; col < 18; col++)
+			{
+				data.B(row + 6, col) = smoothedShearMatrix(row, col);
+			}
+		}
+	}
+
+	void ShellThickElement3D3N::CalculateDSGShearBMatrix(Matrix& shearBMatrix,const double & a, const double & b, const double & c, const double & d, const double & A)
+	{
+		
+		//node 1
+		shearBMatrix(0, 2) = b - c;
+		shearBMatrix(0, 4) = A;
+
+		shearBMatrix(1, 2) = d - a;
+		shearBMatrix(1, 3) = -1.0*A;
+
+		//node 2
+		shearBMatrix(0, 8) = c;
+		shearBMatrix(0, 9) = -1.0 * b*c / 2.0;
+		shearBMatrix(0, 10) = a*c / 2.0;
+
+		shearBMatrix(1, 8) = -1.0 * d;
+		shearBMatrix(1, 9) = b*d / 2.0;
+		shearBMatrix(1, 10) = -1.0 * a*d / 2.0;
+
+		//node 3
+		shearBMatrix(0, 14) = -1.0 * b;
+		shearBMatrix(0, 15) = b*c / 2.0;
+		shearBMatrix(0, 16) = -b*d / 2.0;
+
+		shearBMatrix(1, 14) = a;
+		shearBMatrix(1, 15) = -1.0 * a*c / 2.0;
+		shearBMatrix(1, 16) = a*d / 2.0;
 	}
 
 	void ShellThickElement3D3N::AddBodyForces(CalculationData& data, VectorType& rRightHandSideVector)

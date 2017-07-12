@@ -261,19 +261,24 @@ namespace Kratos
 			// ---------------------------------------
 			// Testing flags
 			// ---------------------------------------
-			// These should both be FALSE unless you are testing, or 
+			// These should all be FALSE unless you are testing, or 
 			// investigating the effects of element enhancements!
 
-			const bool basicTriCST = false;	/*!< flag to use basic CST 
-											displacement-based formulation. This 
-											should be false unless you are 
-											testing! */
+			const bool basicTriCST = false;	// bool to use basic CST 
+			// displacement-based shear formulation. This should be FALSE unless 
+			// you are testing
 
-			const bool ignore_shear_stabilization = false; /*!< flag to 
-											stabilize the transverse shear part of the											material matrix. This should be false unless 
-											you are testing! */
+			const bool ignore_shear_stabilization = false; // bool to 
+			// ignore stabilizing the transverse shear part of the material 
+			// matrix. This should be false unless you are testing
 
-			const bool specialDSGc3 = false;
+			const bool smoothedDSG = true; // bool to use smoothed DSG 
+			// formulation according to [Nguyen-Thoi et al., 2013]. 
+			// This should be false unless you are testing
+
+			const bool specialDSGc3 = false; // bool to use experimental
+			// DSGc3 formulation not yet complete.
+			// This should be false unless you are testing
 
 			// ---------------------------------------
 			// calculation-variable data
@@ -350,6 +355,10 @@ namespace Kratos
 		void InitializeCalculationData(CalculationData& data);
 
 		void CalculateDSGc3Contribution(CalculationData& data, MatrixType& rLeftHandSideMatrix);
+
+		void CalculateSmoothedDSGBMatrix(CalculationData& data);
+
+		void CalculateDSGShearBMatrix(Matrix& shearBMatrix, const double& a, const double& b, const double& c, const double& d, const double& A);
 
 		void AddBodyForces(CalculationData& data, VectorType& rRightHandSideVector);
 

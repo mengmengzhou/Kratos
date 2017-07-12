@@ -157,6 +157,7 @@ namespace Kratos {
 					rSubModelpart.Name() << " has zero length" << std::endl;
 			}
 
+			// Normalize
 			GlobalFiberDirection /= std::sqrt(inner_prod(GlobalFiberDirection, GlobalFiberDirection));
 
 			for (auto& element : rSubModelpart.Elements())
@@ -168,43 +169,22 @@ namespace Kratos {
 				element.Calculate(LOCAL_ELEMENT_ORIENTATION, LCSOrientation, rCurrentProcessInfo);
 
 
-				// Project general global orientation onto element plane
-				// global cartesian coords.
-				Vector3& A = GlobalFiberDirection;
-				Vector3 B; // global cartesian element normal
-				for (size_t i = 0; i < 3; i++)
-				{
-					B[i] = LCSOrientation(2, i);
-				}
-				double magB = std::sqrt(inner_prod(B, B));
+				// Hardcoded projection vector: Y axis
+				Vector3 projectionDir = ZeroVector(3);
+				projectionDir[1] = 1.0;
 
-				Vector temp1 = MathUtils<double>::CrossProduct(A, B);
-				temp1 /= magB;
-				Vector projGlobalFiber = MathUtils<double>::CrossProduct(B, temp1);
-				projGlobalFiber /= magB;
-				//std::cout << "\nprojected global fiber = " << projGlobalFiber << std::endl;
-				projGlobalFiber /= std::sqrt(inner_prod(projGlobalFiber, projGlobalFiber));
-				//std::cout << "normalised projected global fiber = " << projGlobalFiber << std::endl;
-
-				localGlobalFiberDirection = prod(LCSOrientation, GlobalFiberDirection);
-				//std::cout << "pure local fiber = " << localGlobalFiberDirection << std::endl;
-				localGlobalFiberDirection[2] = 0.0;
-				localGlobalFiberDirection /= std::sqrt(inner_prod(localGlobalFiberDirection, localGlobalFiberDirection));
-
-				//std::cout << "local fiber = " << localGlobalFiberDirection << std::endl;
-
-				Vector3 localAxis2;
+				
 
 				// get element local axis 1 vector
+				Vector3 localAxis2, localAxis3;
 				for (size_t i = 0; i < 3; i++)
 				{
 					localAxis1[i] = LCSOrientation(0, i);
 					localAxis2[i] = LCSOrientation(1, i);
+					localAxis3[i] = LCSOrientation(2, i);
 				}
 
-				//std::cout << "global ax1 = " << localAxis1 << std::endl;
-				//std::cout << "global ax2 = " << localAxis2 << std::endl;
-				//std::cout << "global ax3 = " << B << std::endl;
+
 
 				localAxis1 = prod(LCSOrientation, localAxis1);
 				localAxis1 /= std::sqrt(inner_prod(localAxis1, localAxis1));
@@ -214,23 +194,29 @@ namespace Kratos {
 				localAxis2 /= std::sqrt(inner_prod(localAxis2, localAxis2));
 				//std::cout << "flattened lc2 = " << localAxis2 << std::endl;
 
-				B = prod(LCSOrientation, B);
-				B /= std::sqrt(inner_prod(B, B));
-				//std::cout << "flattened lc3 = " << B << std::endl;
+				localAxis3 /= std::sqrt(inner_prod(localAxis3, localAxis3));
 
-				// compute angle 'theta' between local axis 1 and
-				// localGlobalFiberDirection
+
+				// Get local fiber direction in element space
+				//Vector3 transformedGlobalFiber = ZeroVector(3);
+				//computeTransformedFiber(LCSOrientation, GlobalFiberDirection, projectionDir, transformedGlobalFiber);
+				//localGlobalFiberDirection = prod(LCSOrientation, transformedGlobalFiber);
+
+				localGlobalFiberDirection = prod(LCSOrientation, GlobalFiberDirection);
+				localGlobalFiberDirection[2] = 0.0;
+				localGlobalFiberDirection /= std::sqrt(inner_prod(localGlobalFiberDirection, localGlobalFiberDirection));
+
+
+
+				// compute angle 'theta' between local axis 1 and localGlobalFiberDirection
 				cosTheta = inner_prod(localAxis1, localGlobalFiberDirection);
-				//cosTheta /= (std::sqrt(inner_prod(localAxis1, localAxis1)));
-				//cosTheta /= (std::sqrt(inner_prod(localGlobalFiberDirection, localGlobalFiberDirection)));
 				theta = std::acos(cosTheta);
-
-				
 				//std::cout << "angle in degrees: " << theta / 2.0 / 3.14 * 360 << std::endl;
+
+
 
 				// dot between lc2 and localFiberDir
 				double dotCheck = inner_prod(localAxis2, localGlobalFiberDirection);
-				//std::cout << "lc2 dot localGlobalfiber = " << dotCheck << std::endl;
 				if (dotCheck < 0.0)
 				{
 					// theta is currently negative, flip to positive definition
@@ -238,37 +224,6 @@ namespace Kratos {
 				}
 
 
-				// Rotate by 180 degrees if we need to
-				Matrix localToFiberRotation = Matrix(3, 3, 0.0);
-				double c = std::cos(theta);
-				double s = std::sin(theta);
-				localToFiberRotation(0, 0) = c;
-				localToFiberRotation(0, 1) = -s;
-				localToFiberRotation(1, 0) = s;
-				localToFiberRotation(1, 1) = c;
-				localToFiberRotation(2, 2) = 1.0;
-				Vector3 temp = prod(localToFiberRotation, localGlobalFiberDirection);
-
-				//std::cout << "temp = " << temp << std::endl;
-				double dotCheck1 = inner_prod(temp, localAxis1);
-				//std::cout << "temp dot localAxis1 = " << dotCheck << std::endl;
-				double dotCheck2 = inner_prod(temp, localAxis2);
-				//std::cout << "temp dot localAxis2 = " << dotCheck << std::endl;
-
-				/*
-				if (dotCheck1 < 0.0)
-				{
-					theta += KRATOS_M_PI;
-				}
-				else if (dotCheck2 < 0.0)
-				{
-					theta += KRATOS_M_PI;
-				}
-				*/
-				if (std::abs(theta) > 2.0*KRATOS_M_PI)
-				{
-					theta = 0.0;
-				}
 				
 				bool test_lc1_global = false;
 				if (test_lc1_global)
@@ -291,6 +246,8 @@ namespace Kratos {
 					std::cout << "recovered global fiber = " << recoveredGlobalFiber << std::endl;
 				}
 
+
+
 				// set required rotation in element
 				pElementProps = element.pGetProperties();
 				pElementProps->SetValue(ORTHOTROPIC_ORIENTATION_ASSIGNMENT, theta);
@@ -300,6 +257,102 @@ namespace Kratos {
 					// or maybe this should be a separate python call
 			}// sub-modelpart element loop
 		}
+
+		void computeTransformedFiber(const Matrix& elementOrientation, const Vector3& originalGlobalFiber, const Vector3& projectionVector, Vector3& transformedFiber)
+		{
+			Vector3 localAxis1, localAxis2, elementNormal;
+			for (size_t i = 0; i < 3; i++)
+			{
+				localAxis1[i] = elementOrientation(0, i);
+				localAxis2[i] = elementOrientation(1, i);
+				elementNormal[i] = elementOrientation(2, i);
+			}
+
+			// Y axis projection
+			// rotation about x and z to get dot prod = 1.0;
+
+			// Y-X plane, rotation about Z
+			// Z coord = 0!
+			Vector3 XYplaneFiber = Vector3(originalGlobalFiber);
+			XYplaneFiber[2] = 0.0;
+			normalizeVector3(XYplaneFiber);
+			double cosTheta = inner_prod(elementNormal, XYplaneFiber);
+			std::cout << cosTheta << std::endl;
+			double thetaZ = std::acos(cosTheta);
+			// dot between lc1 and localFiberDir
+			double dotCheck = inner_prod(localAxis1, XYplaneFiber);
+			if (dotCheck < 0.0)
+			{
+				thetaZ *= -1.0;
+			}
+
+
+			// Y-Z plane, rotation about X
+			// X coord = 0!
+			Vector3 YZplaneFiber = Vector3(originalGlobalFiber);
+			YZplaneFiber[0] = 0.0;
+			normalizeVector3(YZplaneFiber);
+			cosTheta = inner_prod(elementNormal, YZplaneFiber);
+			double thetaX = std::acos(cosTheta);
+			// dot between lc2 and localFiberDir
+			dotCheck = inner_prod(localAxis2, YZplaneFiber);
+			if (dotCheck < 0.0)
+			{
+				thetaX *= -1.0;
+			}
+			
+			// Make rotation matrices
+			Matrix zRot, xRot;
+			makeXrotationMatrix(xRot, thetaX);
+			makeZrotationMatrix(zRot, thetaZ);
+			Matrix totalRotation = prod(xRot, zRot);
+
+			// Give rotated global fiber orientation
+			transformedFiber = prod(totalRotation, originalGlobalFiber);
+		}
+
+		void normalizeVector3(Vector3& rVector)
+		{
+			rVector /= std::sqrt(inner_prod(rVector, rVector));
+		}
+
+		void makeXrotationMatrix(Matrix& xRotation, double& angleX)
+		{
+			xRotation.resize(3, 3, 0.0);
+			xRotation(0, 0) = 1.0;
+
+			xRotation(1, 1) = std::cos(angleX);
+			xRotation(1, 2) = -std::sin(angleX);
+			xRotation(2, 1) = std::sin(angleX);
+			xRotation(2, 2) = std::cos(angleX);
+		}
+
+		void makeYrotationMatrix(Matrix& yRotation, double& angleY)
+		{
+			yRotation.resize(3, 3, 0.0);
+			
+			yRotation(0, 0) = std::cos(angleY);
+			yRotation(0, 2) = std::sin(angleY);
+
+			yRotation(1, 1) = 1.0;
+
+			yRotation(2, 0) = -std::sin(angleY);
+			yRotation(2, 2) = std::cos(angleY);
+		}
+
+		void makeZrotationMatrix(Matrix& zRotation, double& angleZ)
+		{
+			zRotation.resize(3, 3, 0.0);
+			
+
+			zRotation(0, 0) = std::cos(angleZ);
+			zRotation(0, 1) = -std::sin(angleZ);
+			zRotation(1, 0) = std::sin(angleZ);
+			zRotation(1, 1) = std::cos(angleZ);
+
+			zRotation(2, 2) = 1.0;
+		}
+		
 
 		///@}
 		///@name Private  Access
