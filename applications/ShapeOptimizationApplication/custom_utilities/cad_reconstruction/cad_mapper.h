@@ -2279,7 +2279,10 @@ class CADMapper
 		// 4: solve for x_CP: updated position of CP
 		std::cout << "\t> Solving... \n";	
 		Vector x_CP = ZeroVector(3*m_n_relevant_control_points);
-		CompressedMatrixType compressed_lhs = lhs;		
+		CompressedMatrixType compressed_lhs = lhs;
+		KRATOS_WATCH(compressed_lhs);	
+		KRATOS_WATCH(x_CP);	
+		KRATOS_WATCH(rhs);	
 		m_linear_solver->Solve(compressed_lhs, x_CP, rhs);		
 		std::cout << "\t\t\t DONE" << std::endl;
 
@@ -2414,28 +2417,14 @@ class CADMapper
 		std::cout << "\n> Direct computation of LHS finished in " << lhs_timer.elapsed() << " s." << std::endl;			
 	}
 	
-	void compute_rhs_matrix()
+	void compute_rhs_vector(Vector& rhs)
 	{
-		
-	}
-	void map_to_cad_space_3()
-	{
-		std::cout << "\n> Starting to map to CAD space..." << std::endl;
-		boost::timer function_timer;
-		m_lhs_matrix
-
 		// 3: compute right hand side
 		std::cout << "\t> Computing RHS... \n";		
 		Vector x_FEM = ZeroVector(3*m_n_relevant_fem_points);
 	    for(ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i!=mr_fe_model_part.NodesEnd(); node_i++)
 		{
-			// std::cout << std::endl; //???
-            // ModelPart::NodeType& node = *node_i; //???
-			// KRATOS_WATCH(node.Coordinates()); //???
 			int i_id = node_i->GetValue(MAPPING_MATRIX_ID); // ??? A_MAPPING_MATRIX	 //??? GetValue() could be avoided as the id are in ascending order		
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->X()); //???
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Y()); //???
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Z()); //???
 			
 			ModelPart::NodeType& node = *node_i;
             array_1d<double,3>  node_coord = node.Coordinates();
@@ -2444,16 +2433,31 @@ class CADMapper
 			x_FEM[3*i_id+1] = node_coord[1] + node_i->GetValue(SHAPE_CHANGE_ABSOLUTE_Y);
 			x_FEM[3*i_id+2] = node_coord[2] + node_i->GetValue(SHAPE_CHANGE_ABSOLUTE_Z);
 		}
-		Vector rhs = prod(transpose,x_FEM);		
+		Matrix transpose = trans(m_a_matrix);
+		rhs.clear(); 
+		rhs = prod(transpose,x_FEM);		
 		std::cout << "\t\t\t DONE" << std::endl;
-		// 4: solve for x_CP: updated position of CP
+	}
+
+	void map_to_cad_space_3()
+	{
+		std::cout << "\n> Starting to map to CAD space..." << std::endl;
+		boost::timer function_timer;
+
+		// 1: compute lhs and rhs
+		// m_lhs_matrix = compute_lhs_matrix();
+		compute_lhs_matrix();
+		Vector rhs;
+		compute_rhs_vector(rhs);
+
+		// 2: solve for x_CP: updated position of CP
 		std::cout << "\t> Solving... \n";	
 		Vector x_CP = ZeroVector(3*m_n_relevant_control_points);
-		CompressedMatrixType compressed_lhs = lhs;		
+		CompressedMatrixType compressed_lhs = m_lhs_matrix; //???
 		m_linear_solver->Solve(compressed_lhs, x_CP, rhs);		
 		std::cout << "\t\t\t DONE" << std::endl;
 
-		// 5: update
+		// 3: update
 		std::cout << "\t> Updating control points positions... ";
 		Vector x_CP_old = ZeroVector(3*m_n_relevant_control_points);
 		for (PatchVector::iterator patch_i = m_patches.begin(); patch_i != m_patches.end(); ++patch_i)
@@ -2466,10 +2470,6 @@ class CADMapper
 					x_CP_old[3*cp_id] = cp_i->getX();
 					x_CP_old[3*cp_id+1] = cp_i->getY();
 					x_CP_old[3*cp_id+2] = cp_i->getZ();
-					// std::cout << std::endl; //???
-					// KRATOS_WATCH(cp_i->getX()); //???
-					// KRATOS_WATCH(cp_i->getY()); //???
-					// KRATOS_WATCH(cp_i->getZ()); //???
 				}
 			}
 		}
@@ -2477,23 +2477,203 @@ class CADMapper
 		m_cad_reader.UpdateControlPoints(m_patches, ds);
 
 		std::cout << "\n> Mapping to CAD space finished in " << function_timer.elapsed() << " s." << std::endl;	
-
-		// 6: testing purpose
-		Vector x_CAD = ZeroVector(3*m_n_relevant_fem_points);
-	    for(ModelPart::NodesContainerType::iterator node_i = mr_fe_model_part.NodesBegin(); node_i!=mr_fe_model_part.NodesEnd(); node_i++)
-		{
-			// std::cout << std::endl; //???
-            // ModelPart::NodeType& node = *node_i; //???
-			// KRATOS_WATCH(node.Coordinates()); //???
-			int i_id = node_i->GetValue(MAPPING_MATRIX_ID); // ??? A_MAPPING_MATRIX	 //??? GetValue() could be avoided as the id are in ascending order		
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->X()); //???
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Y()); //???
-			// KRATOS_WATCH(m_list_of_nearest_points[i_id]->Z()); //???
-			x_CAD[3*i_id] = m_list_of_nearest_points[i_id]->X(); //??? bla? store list_of_nearest_points as attribute or take it as input?
-			x_CAD[3*i_id+1] = m_list_of_nearest_points[i_id]->Y();		// bla == i_id, since list_of_nearest_points is filled looping over nodes
-			x_CAD[3*i_id+2] = m_list_of_nearest_points[i_id]->Z();
-		}
 	}
+	// EXTERNAL: separating FE-mesh data from computation //
+		void external_compute_lhs()
+		{
+			std::cout << "\n\t\t> Starting direct computation of LHS..." << std::endl;
+			boost::timer lhs_timer;
+			// 1: Identify relevant control points affecting the cad points on the surface and assign them an id
+				// Flag relevant control points
+				for(int i = 0; i < m_number_of_points_external; i++)
+				{
+					double u = m_list_of_u_external[i];
+					double v = m_list_of_v_external[i];
+					unsigned int patch_id = m_list_of_patch_ids_external[i];
+					m_patches[patch_id].GetSurface().FlagControlPointsForMapping(-1, 
+																				 -1,
+																				 u,
+																				 v);
+				}
+				// Count them and assign each a unique mapping matrix Id	
+				m_n_control_points = 0; 
+				m_n_relevant_control_points = 0;
+				unsigned int mapping_matrix_id = 0;
+				for (PatchVector::iterator patch_i = m_patches.begin(); patch_i != m_patches.end(); ++patch_i)
+				{
+					for (ControlPointVector::iterator cp_i = patch_i->GetSurface().GetControlPoints().begin(); cp_i != patch_i->GetSurface().GetControlPoints().end(); ++cp_i)
+					{
+						if(cp_i->IsRelevantForMapping())
+						{
+							cp_i->SetMappingMatrixId(mapping_matrix_id);
+							++m_n_relevant_control_points;
+							++mapping_matrix_id;
+						}
+						++m_n_control_points;
+					}
+				}
+				std::cout << "\n> Number of control points in total = " << m_n_control_points << "." << std::endl;
+				std::cout << "\n> Number of control points relevant for mapping = " << m_n_relevant_control_points << ".\n" << std::endl;
+
+			// 2: Compute lhs matrix
+				// Initialize lhs matrix
+				double number_of_CAD_dofs = 3 * m_n_relevant_control_points;
+				m_lhs_external.resize(number_of_CAD_dofs, number_of_CAD_dofs);
+				m_lhs_external.clear();
+				// loop over points to map and add their contribution
+				for(int i = 0; i < m_number_of_points_external; i++)
+				{
+					double u = m_list_of_u_external[i];
+					double v = m_list_of_v_external[i];
+					unsigned int patch_id = m_list_of_patch_ids_external[i];
+
+					// Get CAD-shape-function-value for all control points affecting the nearest cad point
+					matrix<double> R_CAD_Pi;
+					m_patches[patch_id].GetSurface().EvaluateNURBSFunctions( -1,
+																			  -1,
+																			  u, 
+																			  v,
+																			  R_CAD_Pi );
+																						   
+					// Get the corresponding id of control points in the matrix
+					matrix<unsigned int> mapping_matrix_ids_cad = m_patches[patch_id].GetSurface().GetMappingMatrixIds( -1,
+																														-1,
+																														u,
+																														v);
+
+					// Assemble a matrix
+					for(unsigned int i=0; i<mapping_matrix_ids_cad.size1(); i++)
+					{
+						for(unsigned int j=0; j<mapping_matrix_ids_cad.size2(); j++)
+						{
+							for(unsigned int k=0; k<mapping_matrix_ids_cad.size1(); k++)
+							{
+								for(unsigned int l=0; l<mapping_matrix_ids_cad.size2(); l++)
+								{
+									unsigned int row_id = mapping_matrix_ids_cad(i,j);
+									unsigned int col_id = mapping_matrix_ids_cad(k,l);
+									double R_ij = R_CAD_Pi(i,j);
+									double R_kl = R_CAD_Pi(k,l);
+									for(unsigned int m=0; m<3; m++)
+									{
+										// add contribution of 
+										m_lhs_external(3*row_id+m, 3*col_id+m) += R_ij*R_kl;
+									}
+								}
+							}
+						}
+					}
+				}
+			std::cout << "\t\t> Direct computation of LHS finished in " << lhs_timer.elapsed() << " s." << std::endl;
+			KRATOS_WATCH(m_lhs_external);			
+		}
+
+		void external_compute_rhs()
+		{
+			std::cout << "\n\t\t> Starting direct computation of RHS..." << std::endl;
+			boost::timer rhs_timer;
+			// 1: Compute transposed rectangular matrix
+				// Initialize a matrix
+				double number_of_points_dofs = 3 * m_number_of_points_external;
+				double number_of_CAD_dofs = 3 * m_n_relevant_control_points;
+				m_a_matrix.resize(number_of_CAD_dofs, number_of_points_dofs);
+				m_a_matrix.clear();
+
+				// Compute a matrix
+				for(int i = 0; i < m_number_of_points_external; i++)
+				{
+					// Get the corresponding id of FE-node in the matrix			
+					int row_id = i;
+					double u = m_list_of_u_external[i];
+					double v = m_list_of_v_external[i];
+					unsigned int patch_id = m_list_of_patch_ids_external[i];
+
+					// Get CAD-shape-function-value for all control points affecting the nearest cad point
+					matrix<double> R_CAD_Pi;
+					m_patches[patch_id].GetSurface().EvaluateNURBSFunctions( -1,
+																			  -1,
+																			  u, 
+																			  v,
+																			  R_CAD_Pi );
+				
+					// Get the corresponding id of control points in the matrix
+					matrix<unsigned int> mapping_matrix_ids_cad = m_patches[patch_id].GetSurface().GetMappingMatrixIds( -1,
+																														-1,
+																														u,
+																														v);
+					// Assemble a matrix
+					for(unsigned int i=0; i<mapping_matrix_ids_cad.size1();i++)
+					{
+						for(unsigned int j=0; j<mapping_matrix_ids_cad.size2();j++)
+						{
+							unsigned int col_id = mapping_matrix_ids_cad(i,j);
+							double R_i = R_CAD_Pi(i,j);
+						
+							for(unsigned int m=0; m<3; m++)
+							{
+								m_a_matrix(3*col_id + m, 3*row_id + m) = R_i;
+							}
+						}
+					}
+				}
+			// 2: Compute points coordinates vector
+				Vector x_points = ZeroVector(3*m_number_of_points_external);
+				for(int i = 0; i < m_number_of_points_external; i++)
+				{
+					x_points[3*i] = m_list_of_updated_x_external[i];
+					x_points[3*i+1] = m_list_of_updated_y_external[i];
+					x_points[3*i+2] = m_list_of_updated_z_external[i];
+				}
+			// 3: Compute matrix vector multiplication
+				m_rhs_external.clear(); 
+				m_rhs_external = prod(m_a_matrix,x_points);
+			
+			std::cout << "\t\t> Direct computation of RHS finished in " << rhs_timer.elapsed() << " s." << std::endl;
+			KRATOS_WATCH(m_rhs_external);					
+		}
+		
+		void external_map_to_cad_space()
+		{
+			std::cout << "\n> Mapping to CAD space..." << std::endl;			
+			boost::timer map_timer;
+			// 1: Solve system
+				external_compute_lhs();
+				external_compute_rhs();
+				// CompressedMatrixType compressed_lhs = m_lhs_matrix; //???
+				Vector x_CP = ZeroVector(3*m_n_relevant_control_points);
+				m_linear_solver->Solve(m_lhs_external, x_CP, m_rhs_external);		
+			// 2: Update control points position //??? CHANGE FUNCTION UpdateControlPoints
+				Vector x_CP_old = ZeroVector(3*m_n_relevant_control_points);
+				for (PatchVector::iterator patch_i = m_patches.begin(); patch_i != m_patches.end(); ++patch_i)
+				{
+					for (ControlPointVector::iterator cp_i = patch_i->GetSurface().GetControlPoints().begin(); cp_i != patch_i->GetSurface().GetControlPoints().end(); ++cp_i)
+					{
+						if(cp_i->IsRelevantForMapping())
+						{
+							int cp_id = cp_i->GetMappingMatrixId(); //??? line 1982:	cp_i->SetMappingMatrixId(mapping_matrix_id);
+							x_CP_old[3*cp_id] = cp_i->getX();
+							x_CP_old[3*cp_id+1] = cp_i->getY();
+							x_CP_old[3*cp_id+2] = cp_i->getZ();
+						}
+					}
+				}
+				Vector ds = x_CP - x_CP_old; // CP position update
+				m_cad_reader.UpdateControlPoints(m_patches, ds);
+			std::cout << "\n> Mapping finished in " << map_timer.elapsed() << " s." << std::endl;			
+		}
+
+		void set_point(unsigned int patch_id, const double u, const double v,
+					   const double updated_x, const double updated_y, const double updated_z)
+		{
+				m_number_of_points_external++;
+				m_list_of_patch_ids_external.push_back(patch_id);
+				m_list_of_u_external.push_back(u);
+				m_list_of_v_external.push_back(v);
+				m_list_of_updated_x_external.push_back(updated_x);
+				m_list_of_updated_y_external.push_back(updated_y);
+				m_list_of_updated_z_external.push_back(updated_z);
+		}
+	////////////////////////////////////////////////////////
 
 	double compute_real_length(unsigned int patch_itr, const double u_a, const double v_a, const double u_b, const double v_b)
 	{
@@ -2538,87 +2718,86 @@ class CADMapper
 		KRATOS_WATCH(number_of_Gauss_points);
 		std::cout << "> Warning: Gauss quadrature coordinates and weights currently hardcoded!!!" << std::endl;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-// HARD CODING GAUSS POINTS COORDINATES AND WEIGHTS
-DoubleVector x, w;
-/* n = 2 */
-		if(number_of_Gauss_points == 2)
-{
-x.push_back(-0.5773502691896257645091488);
-x.push_back(0.5773502691896257645091488);
-w.push_back(1.0000000000000000000000000);
-w.push_back(1.0000000000000000000000000);
-}
-// /* n = 3 */
-// 		if(number_of_Gauss_points == 3)
-// {
-// double x[3] = {-0.7745966692414833770358531,0.0000000000000000000000000,0.7745966692414833770358531};
-// double w[3] = {0.5555555555555555555555556,0.8888888888888888888888889,0.5555555555555555555555556};
-// }
-// /* n = 4 */
-// 		if(number_of_Gauss_points == 4)
-// {
-// double x[4] = {-0.8611363115940525752239465,-0.3399810435848562648026658,0.3399810435848562648026658,0.8611363115940525752239465};
-// double w[4] = {0.3478548451374538573730639,0.6521451548625461426269361,0.6521451548625461426269361,0.3478548451374538573730639};
-// }
+		///////HARD CODING GAUSS POINTS COORDINATES AND WEIGHTS////////////////////////////////////////////////////
+			DoubleVector x, w;
+			/* n = 2 */
+					if(number_of_Gauss_points == 2)
+			{
+			x.push_back(-0.5773502691896257645091488);
+			x.push_back(0.5773502691896257645091488);
+			w.push_back(1.0000000000000000000000000);
+			w.push_back(1.0000000000000000000000000);
+			}
+			// /* n = 3 */
+			// 		if(number_of_Gauss_points == 3)
+			// {
+			// double x[3] = {-0.7745966692414833770358531,0.0000000000000000000000000,0.7745966692414833770358531};
+			// double w[3] = {0.5555555555555555555555556,0.8888888888888888888888889,0.5555555555555555555555556};
+			// }
+			// /* n = 4 */
+			// 		if(number_of_Gauss_points == 4)
+			// {
+			// double x[4] = {-0.8611363115940525752239465,-0.3399810435848562648026658,0.3399810435848562648026658,0.8611363115940525752239465};
+			// double w[4] = {0.3478548451374538573730639,0.6521451548625461426269361,0.6521451548625461426269361,0.3478548451374538573730639};
+			// }
 
-/* n = 5 */
-		if(number_of_Gauss_points == 5)
-{
-x.push_back(-0.9061798459386639927976269);
-x.push_back(-0.5384693101056830910363144);
-x.push_back(0.0000000000000000000000000);
-x.push_back(0.5384693101056830910363144);
-x.push_back(0.9061798459386639927976269);
-w.push_back(0.2369268850561890875142640);
-w.push_back(0.4786286704993664680412915);
-w.push_back(0.5688888888888888888888889);
-w.push_back(0.4786286704993664680412915);
-w.push_back(0.2369268850561890875142640);
-}
-// /* n = 6 */
-// 		if(number_of_Gauss_points == 6)
-// {
-// double x[6] = {-0.9324695142031520278123016,-0.6612093864662645136613996,-0.2386191860831969086305017,0.2386191860831969086305017,0.6612093864662645136613996,0.9324695142031520278123016};
-// double w[6] = {0.1713244923791703450402961,0.3607615730481386075698335,0.4679139345726910473898703,0.4679139345726910473898703,0.3607615730481386075698335,0.1713244923791703450402961};
-// }
-// /* n = 7 */
-// 		if(number_of_Gauss_points == 7)
-// {
-// double x[7] = {-0.9491079123427585245261897,-0.7415311855993944398638648,-0.4058451513773971669066064,0.0000000000000000000000000,0.4058451513773971669066064,0.7415311855993944398638648,0.9491079123427585245261897};
-// double w[7] = {0.1294849661688696932706114,0.2797053914892766679014678,0.3818300505051189449503698,0.4179591836734693877551020,0.3818300505051189449503698,0.2797053914892766679014678,0.1294849661688696932706114};
-// }
-// /* n = 8 */
-// 		if(number_of_Gauss_points == 8)
-// {
-// double x[8] = {-0.9602898564975362316835609,-0.7966664774136267395915539,-0.5255324099163289858177390,-0.1834346424956498049394761,0.1834346424956498049394761,0.5255324099163289858177390,0.7966664774136267395915539,0.9602898564975362316835609};
-// double w[8] = {0.1012285362903762591525314,0.2223810344533744705443560,0.3137066458778872873379622,0.3626837833783619829651504,0.3626837833783619829651504,0.3137066458778872873379622,0.2223810344533744705443560,0.1012285362903762591525314	};
-// }
-// /* n = 9 */
-// 		if(number_of_Gauss_points == 9)
-// {
-// double x[9] = {-0.9681602395076260898355762,-0.8360311073266357942994298,-0.6133714327005903973087020,-0.3242534234038089290385380,0.0000000000000000000000000,0.3242534234038089290385380,0.6133714327005903973087020,0.8360311073266357942994298,0.9681602395076260898355762};
-// double w[9] = {0.0812743883615744119718922,0.1806481606948574040584720,0.2606106964029354623187429,0.3123470770400028400686304,0.3302393550012597631645251,0.3123470770400028400686304,0.2606106964029354623187429,0.1806481606948574040584720,0.0812743883615744119718922};
-// }
-// /* n = 10 */
-// 		if(number_of_Gauss_points == 10)
-// {
-// double x[10] = {-0.9739065285171717200779640,-0.8650633666889845107320967,-0.6794095682990244062343274,-0.4333953941292471907992659,-0.1488743389816312108848260,0.1488743389816312108848260,0.4333953941292471907992659,0.6794095682990244062343274,0.8650633666889845107320967,0.9739065285171717200779640};
-// double w[10] = {0.0666713443086881375935688,0.1494513491505805931457763,0.2190863625159820439955349,0.2692667193099963550912269,0.2955242247147528701738930,0.2955242247147528701738930,0.2692667193099963550912269,0.2190863625159820439955349,0.1494513491505805931457763,0.0666713443086881375935688};
-// }
-// /* n = 11 */
-// 		if(number_of_Gauss_points == 11)
-// {
-// double x[11] = {-0.9782286581460569928039380,-0.8870625997680952990751578,-0.7301520055740493240934163,-0.5190961292068118159257257,-0.2695431559523449723315320,0.0000000000000000000000000,0.2695431559523449723315320,0.5190961292068118159257257,0.7301520055740493240934163,0.8870625997680952990751578,0.9782286581460569928039380};
-// double w[11] = {0.0556685671161736664827537,0.1255803694649046246346943,0.1862902109277342514260976,0.2331937645919904799185237,0.2628045445102466621806889,0.2729250867779006307144835,0.2628045445102466621806889,0.2331937645919904799185237,0.1862902109277342514260976,0.1255803694649046246346943,0.0556685671161736664827537};
-// }
-// /* n = 12 */
-// 		if(number_of_Gauss_points == 12)
-// {
-// double x[12] = {-0.9815606342467192506905491,-0.9041172563704748566784659,-0.7699026741943046870368938,-0.5873179542866174472967024,-0.3678314989981801937526915,-0.1252334085114689154724414,0.1252334085114689154724414,0.3678314989981801937526915,0.5873179542866174472967024,0.7699026741943046870368938,0.9041172563704748566784659,0.9815606342467192506905491};
-// double w[12] = {0.0471753363865118271946160,0.1069393259953184309602547,0.1600783285433462263346525,0.2031674267230659217490645,0.2334925365383548087608499,0.2491470458134027850005624,0.2491470458134027850005624,0.2334925365383548087608499,0.2031674267230659217490645,0.1600783285433462263346525,0.1069393259953184309602547,0.0471753363865118271946160};
-// }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			/* n = 5 */
+					if(number_of_Gauss_points == 5)
+			{
+			x.push_back(-0.9061798459386639927976269);
+			x.push_back(-0.5384693101056830910363144);
+			x.push_back(0.0000000000000000000000000);
+			x.push_back(0.5384693101056830910363144);
+			x.push_back(0.9061798459386639927976269);
+			w.push_back(0.2369268850561890875142640);
+			w.push_back(0.4786286704993664680412915);
+			w.push_back(0.5688888888888888888888889);
+			w.push_back(0.4786286704993664680412915);
+			w.push_back(0.2369268850561890875142640);
+			}
+			// /* n = 6 */
+			// 		if(number_of_Gauss_points == 6)
+			// {
+			// double x[6] = {-0.9324695142031520278123016,-0.6612093864662645136613996,-0.2386191860831969086305017,0.2386191860831969086305017,0.6612093864662645136613996,0.9324695142031520278123016};
+			// double w[6] = {0.1713244923791703450402961,0.3607615730481386075698335,0.4679139345726910473898703,0.4679139345726910473898703,0.3607615730481386075698335,0.1713244923791703450402961};
+			// }
+			// /* n = 7 */
+			// 		if(number_of_Gauss_points == 7)
+			// {
+			// double x[7] = {-0.9491079123427585245261897,-0.7415311855993944398638648,-0.4058451513773971669066064,0.0000000000000000000000000,0.4058451513773971669066064,0.7415311855993944398638648,0.9491079123427585245261897};
+			// double w[7] = {0.1294849661688696932706114,0.2797053914892766679014678,0.3818300505051189449503698,0.4179591836734693877551020,0.3818300505051189449503698,0.2797053914892766679014678,0.1294849661688696932706114};
+			// }
+			// /* n = 8 */
+			// 		if(number_of_Gauss_points == 8)
+			// {
+			// double x[8] = {-0.9602898564975362316835609,-0.7966664774136267395915539,-0.5255324099163289858177390,-0.1834346424956498049394761,0.1834346424956498049394761,0.5255324099163289858177390,0.7966664774136267395915539,0.9602898564975362316835609};
+			// double w[8] = {0.1012285362903762591525314,0.2223810344533744705443560,0.3137066458778872873379622,0.3626837833783619829651504,0.3626837833783619829651504,0.3137066458778872873379622,0.2223810344533744705443560,0.1012285362903762591525314	};
+			// }
+			// /* n = 9 */
+			// 		if(number_of_Gauss_points == 9)
+			// {
+			// double x[9] = {-0.9681602395076260898355762,-0.8360311073266357942994298,-0.6133714327005903973087020,-0.3242534234038089290385380,0.0000000000000000000000000,0.3242534234038089290385380,0.6133714327005903973087020,0.8360311073266357942994298,0.9681602395076260898355762};
+			// double w[9] = {0.0812743883615744119718922,0.1806481606948574040584720,0.2606106964029354623187429,0.3123470770400028400686304,0.3302393550012597631645251,0.3123470770400028400686304,0.2606106964029354623187429,0.1806481606948574040584720,0.0812743883615744119718922};
+			// }
+			// /* n = 10 */
+			// 		if(number_of_Gauss_points == 10)
+			// {
+			// double x[10] = {-0.9739065285171717200779640,-0.8650633666889845107320967,-0.6794095682990244062343274,-0.4333953941292471907992659,-0.1488743389816312108848260,0.1488743389816312108848260,0.4333953941292471907992659,0.6794095682990244062343274,0.8650633666889845107320967,0.9739065285171717200779640};
+			// double w[10] = {0.0666713443086881375935688,0.1494513491505805931457763,0.2190863625159820439955349,0.2692667193099963550912269,0.2955242247147528701738930,0.2955242247147528701738930,0.2692667193099963550912269,0.2190863625159820439955349,0.1494513491505805931457763,0.0666713443086881375935688};
+			// }
+			// /* n = 11 */
+			// 		if(number_of_Gauss_points == 11)
+			// {
+			// double x[11] = {-0.9782286581460569928039380,-0.8870625997680952990751578,-0.7301520055740493240934163,-0.5190961292068118159257257,-0.2695431559523449723315320,0.0000000000000000000000000,0.2695431559523449723315320,0.5190961292068118159257257,0.7301520055740493240934163,0.8870625997680952990751578,0.9782286581460569928039380};
+			// double w[11] = {0.0556685671161736664827537,0.1255803694649046246346943,0.1862902109277342514260976,0.2331937645919904799185237,0.2628045445102466621806889,0.2729250867779006307144835,0.2628045445102466621806889,0.2331937645919904799185237,0.1862902109277342514260976,0.1255803694649046246346943,0.0556685671161736664827537};
+			// }
+			// /* n = 12 */
+			// 		if(number_of_Gauss_points == 12)
+			// {
+			// double x[12] = {-0.9815606342467192506905491,-0.9041172563704748566784659,-0.7699026741943046870368938,-0.5873179542866174472967024,-0.3678314989981801937526915,-0.1252334085114689154724414,0.1252334085114689154724414,0.3678314989981801937526915,0.5873179542866174472967024,0.7699026741943046870368938,0.9041172563704748566784659,0.9815606342467192506905491};
+			// double w[12] = {0.0471753363865118271946160,0.1069393259953184309602547,0.1600783285433462263346525,0.2031674267230659217490645,0.2334925365383548087608499,0.2491470458134027850005624,0.2491470458134027850005624,0.2334925365383548087608499,0.2031674267230659217490645,0.1600783285433462263346525,0.1069393259953184309602547,0.0471753363865118271946160};
+			// }
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		// for s in GP: //???
 		if(number_of_Gauss_points !=2 and number_of_Gauss_points != 5) return -1;
@@ -2727,6 +2906,16 @@ w.push_back(0.2369268850561890875142640);
 	DoubleVector m_list_of_span_u_of_neighbour_points;
 	DoubleVector m_list_of_span_v_of_neighbour_points;		
 	IntVector m_list_of_patch_of_neighbour_points;
+	// EXTERNAL: separating FE-mesh data from computation //
+	double m_number_of_points_external = 0;
+	DoubleVector m_list_of_patch_ids_external;
+	DoubleVector m_list_of_u_external;
+	DoubleVector m_list_of_v_external;
+	DoubleVector m_list_of_updated_x_external;
+	DoubleVector m_list_of_updated_y_external;
+	DoubleVector m_list_of_updated_z_external;
+	CompressedMatrixType m_lhs_external;
+	Vector m_rhs_external;
 	
 	const Condition::GeometryType::IntegrationMethod m_integration_method = GeometryData::GI_GAUSS_5;
 

@@ -172,7 +172,10 @@ void  AddCustomUtilitiesToPython()
             .def("print_nearest_points", &CADMapper::print_nearest_points)            
             .def("compute_real_length", &CADMapper::compute_real_length)            
             .def("compute_lhs_matrix", &CADMapper::compute_lhs_matrix)            
-            
+            .def("map_to_cad_space_3", &CADMapper::map_to_cad_space_3)            
+            // EXTERNAL: separating FE-mesh data from computation //
+            .def("external_map_to_cad_space", &CADMapper::external_map_to_cad_space)            
+            .def("set_point", &CADMapper::set_point)            
 
             ;                      
 }
