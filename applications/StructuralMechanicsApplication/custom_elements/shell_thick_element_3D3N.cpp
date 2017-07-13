@@ -2098,23 +2098,25 @@ namespace Kratos
 		std::vector<Vector3> subTriangleYCoords = std::vector<Vector3>(3);
 		for (size_t i = 0; i < 3; i++)
 		{
+			subTriangleXCoords[i].clear();
+			subTriangleYCoords[i].clear();
 			subTriangleXCoords[i][0] = x0;
 			subTriangleYCoords[i][0] = y0;
 		}
-		subTriangleXCoords[0][1] = data.LCS0.X1();
+		subTriangleXCoords[0][1] = data.LCS0.X1(); //subtri_1 = 0, 1, 2
 		subTriangleXCoords[0][2] = data.LCS0.X2();
 		subTriangleYCoords[0][1] = data.LCS0.Y1();
 		subTriangleYCoords[0][2] = data.LCS0.Y2();
 
-		subTriangleXCoords[1][1] = data.LCS0.X2();
+		subTriangleXCoords[1][1] = data.LCS0.X2(); //subtri_2 = 0, 2, 3
 		subTriangleXCoords[1][2] = data.LCS0.X3();
 		subTriangleYCoords[1][1] = data.LCS0.Y2();
 		subTriangleYCoords[1][2] = data.LCS0.Y3();
 
-		subTriangleXCoords[2][1] = data.LCS0.X1();
-		subTriangleXCoords[2][2] = data.LCS0.X3();
-		subTriangleYCoords[2][1] = data.LCS0.Y1();
-		subTriangleYCoords[2][2] = data.LCS0.Y3();
+		subTriangleXCoords[2][1] = data.LCS0.X3(); //subtri_3 = 0, 3, 1
+		subTriangleXCoords[2][2] = data.LCS0.X1();
+		subTriangleYCoords[2][1] = data.LCS0.Y3();
+		subTriangleYCoords[2][2] = data.LCS0.Y1();
 
 
 		// The mapping controls how the nodally grouped entries of the virgin 
@@ -2128,50 +2130,55 @@ namespace Kratos
 		matrixMapping[1][1] = 2;
 		matrixMapping[1][2] = 3;
 
-		matrixMapping[2][0] = 2;
+		matrixMapping[2][0] = 3;
 		matrixMapping[2][1] = 9;
-		matrixMapping[2][2] = 3;
+		matrixMapping[2][2] = 2;
 
 
 		// Setup variables
-		std::vector<Matrix> convertedShearMatrices = std::vector<Matrix>(3.0);
-		Vector3 subTriangleAreas = ZeroVector(3);
+		Matrix smoothedShearMatrix = Matrix(2, 18, 0.0);
+		Matrix virginSubTriangleShearMatrix = Matrix(2, 18, 0.0);
+		Matrix convertedSubTriangleShearMatrix = Matrix(2, 18, 0.0);
+		double a, b, c, d, subTriangleArea;
 
 
 		// Loop over all sub triangles
 		for (size_t subTriangle = 0; subTriangle < 3; subTriangle++)
 		{
-			double a = subTriangleXCoords[subTriangle][1] - subTriangleXCoords[subTriangle][0];
-			double b = subTriangleYCoords[subTriangle][1] - subTriangleYCoords[subTriangle][0];
-			double c = subTriangleYCoords[subTriangle][2] - subTriangleYCoords[subTriangle][0];
-			double d = subTriangleXCoords[subTriangle][2] - subTriangleXCoords[subTriangle][0];
-			subTriangleAreas[subTriangle] = 0.5*(a*c - b*d);
+			a = subTriangleXCoords[subTriangle][1] - subTriangleXCoords[subTriangle][0]; //x21
+			b = subTriangleYCoords[subTriangle][1] - subTriangleYCoords[subTriangle][0]; //y21
+			c = subTriangleYCoords[subTriangle][2] - subTriangleYCoords[subTriangle][0]; //y31
+			d = subTriangleXCoords[subTriangle][2] - subTriangleXCoords[subTriangle][0]; //x31
+			subTriangleArea = 0.5*(a*c - b*d);
+
 
 			// Calculate the DSG shear B matrix for only the current subtriangle
-			Matrix virginSubTriangleShearMatrix = Matrix(2, 18, 0.0);
-			CalculateDSGShearBMatrix(virginSubTriangleShearMatrix, a, b, c, d, subTriangleAreas[subTriangle]);
-			virginSubTriangleShearMatrix /= (2.0*subTriangleAreas[subTriangle]);
+			virginSubTriangleShearMatrix.clear();
+			CalculateDSGShearBMatrix(virginSubTriangleShearMatrix, a, b, c, d, subTriangleArea);
 
 
-			// Setup converted matrix container for the current triangle
-			convertedShearMatrices[subTriangle].resize(2, 18, false);
-			convertedShearMatrices[subTriangle].clear();
+			// Setup matrix to store shear B converted from subtriangle DOFs to
+			// meta-triangle DOFs
+			convertedSubTriangleShearMatrix.clear();
 
-			// Convert from the subtriangle to the meta-triangle
-			for (size_t node = 0; node < 3; node++)
+
+			// Express the subtriangle B matrix in terms of the 3 meta-triangle
+			// nodes
+			for (size_t metaNode = 0; metaNode < 3; metaNode++)
 			{
 				for (size_t row = 0; row < 2; row++)
 				{
 					for (size_t col = 0; col < 6; col++)
 					{
 						// add in B_0 / 3.0 for all nodes in B matrix
-						convertedShearMatrices[subTriangle](row, node * 6 + col) = virginSubTriangleShearMatrix(row, col) / 3.0;
+						convertedSubTriangleShearMatrix(row, metaNode * 6 + col) += virginSubTriangleShearMatrix(row, col) / 3.0;
 					}
 				}
 
-				if (matrixMapping[subTriangle][node] == 9)
+				if (matrixMapping[subTriangle][metaNode] == 9)
 				{
-					// do nothing, entries already covered by operation above
+					// centre point entry. do nothing, entries already covered 
+					// by operation above
 				}
 				else
 				{
@@ -2180,19 +2187,18 @@ namespace Kratos
 					{
 						for (size_t col = 0; col < 6; col++)
 						{
-							convertedShearMatrices[subTriangle](row, node * 6 + col) += virginSubTriangleShearMatrix(row, 6*(matrixMapping[subTriangle][node] - 1) + col) / 3.0;
+							convertedSubTriangleShearMatrix(row, metaNode * 6 + col) += virginSubTriangleShearMatrix(row, 6*(matrixMapping[subTriangle][metaNode] - 1) + col);
 						}
 					}
 				}
 			}
+
+			// Add subtriangle contribution to overall meta-triangle B matrix
+			smoothedShearMatrix += (convertedSubTriangleShearMatrix * subTriangleArea);
 		}
 
-		Matrix smoothedShearMatrix = Matrix(2, 18, 0.0);
-		for (size_t subtriangle = 0; subtriangle < 3; subtriangle++)
-		{
-			smoothedShearMatrix += (convertedShearMatrices[subtriangle] * subTriangleAreas[subtriangle]);
-		}
-
+		
+		// Smooth by averaging over area
 		smoothedShearMatrix /= data.TotalArea;
 		smoothedShearMatrix *= (2.0*data.TotalArea); // to nullify data.B/=2A in main pipeline
 
@@ -2208,7 +2214,6 @@ namespace Kratos
 
 	void ShellThickElement3D3N::CalculateDSGShearBMatrix(Matrix& shearBMatrix,const double & a, const double & b, const double & c, const double & d, const double & A)
 	{
-		
 		//node 1
 		shearBMatrix(0, 2) = b - c;
 		shearBMatrix(0, 4) = A;
@@ -2233,6 +2238,8 @@ namespace Kratos
 		shearBMatrix(1, 14) = a;
 		shearBMatrix(1, 15) = -1.0 * a*c / 2.0;
 		shearBMatrix(1, 16) = a*d / 2.0;
+
+		shearBMatrix /= (2.0*A);
 	}
 
 	void ShellThickElement3D3N::AddBodyForces(CalculationData& data, VectorType& rRightHandSideVector)
