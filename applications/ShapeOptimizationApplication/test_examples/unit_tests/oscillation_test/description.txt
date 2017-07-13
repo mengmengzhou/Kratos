@@ -37,14 +37,6 @@ TEST:
         - generate updated .json file -> expected smooth surface
 
     3:
-        Benchmark_halbkreis_32x16_multipatch_geometry.json
-        optimized_shell_3418_elements.mdpa
-
-        - print LHS -> search with a python script for zero-entries rows
-        - print points on updated CAD -> expected wavy surface
-        - generate updated .json file -> expected wavy surface
-    
-    4:
         test_1_geometry.json
         test_1_fine.mdpa
 
@@ -54,3 +46,14 @@ TEST:
         - print RHS -> no zero entries
         - print points on updated CAD -> expected smooth surface
         - generate updated .json file -> expected smooth surface
+
+    4:
+        test_1_geometry.json
+        test_1.mdpa <- could be whatever the data contained isn´t actually used
+
+        same as test 1, but neighbour_search + NR is skipped, since points to map are 
+        directly set from the python script. This test is performed only to prove that the 
+        new code computes the same LHS and the same RHS. (It isn´t properly and oscillation 
+        test)
+
+    

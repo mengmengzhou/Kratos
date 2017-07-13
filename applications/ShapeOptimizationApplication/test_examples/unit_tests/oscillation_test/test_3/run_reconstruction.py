@@ -18,7 +18,7 @@ import json as json
 # ======================================================================================================================================
 
 # Input parameters
-fem_input_filename = "test_1"
+fem_input_filename = "test_1_fine"
 cad_geometry_input_filename = "test_1_geometry.json" 
 cad_integration_input_filename = "Benchmark_halbkreis_32x16_multipatch_integration_data.json" 
 
@@ -46,32 +46,48 @@ with open(cad_integration_input_filename) as cad_data2:
     cad_integration_data = json.load(cad_data2)    
 
 # ======================================================================================================================================
-# Mapping
+# Testing nearest neighbour + Newton-Raphson
 # ======================================================================================================================================    
 
 # Create CAD-mapper
 linear_solver = SuperLUSolver()
 mapper = CADMapper(fe_model_part,cad_geometry,cad_integration_data,linear_solver)
 
-# Set nearest point + shape update to map
-# mapper.set_point(id, u, v, updated_x, updated_y, updated_z)
-mapper.set_point(0, 0, 0, 0, 0, 0)
-mapper.set_point(0, 5, 0, 3, 2, 2)
-mapper.set_point(0, 0, 5, 2, 3, 2)
-mapper.set_point(0, 5, 5, 5, 5, 0)
+# Compute nearest points
+u_res = 5
+v_res = 5
+mapper.compute_nearest_points(u_res,v_res)
+
+#########################################################################
+file_to_write = "{0}x{1}.txt".format(u_res, v_res)
+mapper.print_nearest_points(file_to_write)
+#########################################################################
+
+# Compute a matrix
+mapper.compute_a_matrix()
+
+# Set shape update to map
+for node in fe_model_part.Nodes:
+    shape_update = Vector(3)
+    shape_update[0] = node.GetSolutionStepValue(SHAPE_CHANGE_ABSOLUTE_X)
+    shape_update[1] = node.GetSolutionStepValue(SHAPE_CHANGE_ABSOLUTE_Y)
+    shape_update[2] = node.GetSolutionStepValue(SHAPE_CHANGE_ABSOLUTE_Z)
+    node.SetValue(SHAPE_CHANGE_ABSOLUTE,shape_update)
 
 # Perform mapping
-mapper.external_map_to_cad_space()
+mapper.map_to_cad_space_2()
 
-# ======================================================================================================================================
-# Writing results
-# ======================================================================================================================================
+#########################################################################
+file_to_write = "{0}x{1}_updated.txt".format(u_res, v_res)
+mapper.print_nearest_points(file_to_write)
+#########################################################################
 
 # Output some surface nodes of updated cad geometry
 file_to_write = "surface_nodes_of_updated_cad_geometry.txt"
 u_resolution = 20
 v_resolution = 20
 mapper.output_surface_points(file_to_write, u_resolution, v_resolution, -1)
+
 
 # Output control point update in gid-format 
 mapper.output_control_point_displacements()

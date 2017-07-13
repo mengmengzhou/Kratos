@@ -1,6 +1,6 @@
 # Making KratosMultiphysics backward compatible with python 2.6 and 2.7
 from __future__ import print_function, absolute_import, division 
-
+from math import sin, cos, pi, fabs
 # importing the Kratos Library
 from KratosMultiphysics import *
 from KratosMultiphysics.SolidMechanicsApplication import *
@@ -46,6 +46,16 @@ with open(cad_integration_input_filename) as cad_data2:
     cad_integration_data = json.load(cad_data2)    
 
 # ======================================================================================================================================
+# surface definition
+# ======================================================================================================================================    
+def surf_1(u,v):
+    x_1 = sin(pi/4) *  u - cos(pi/4) * v
+    # if x_1>0:
+    #     return [u,v, -x_1**2]
+    # else:
+    #     return [u,v, +x_1**2]
+    return [u,v,x_1**2]    
+# ======================================================================================================================================
 # Mapping
 # ======================================================================================================================================    
 
@@ -55,13 +65,37 @@ mapper = CADMapper(fe_model_part,cad_geometry,cad_integration_data,linear_solver
 
 # Set nearest point + shape update to map
 # mapper.set_point(id, u, v, updated_x, updated_y, updated_z)
-mapper.set_point(0, 0, 0, 0, 0, 0)
-mapper.set_point(0, 5, 0, 3, 2, 2)
-mapper.set_point(0, 0, 5, 2, 3, 2)
-mapper.set_point(0, 5, 5, 5, 5, 0)
+# for u in range(6):
+#     for v in range(6):
+#         [x,y,z] = surf_1(u, v)
+#         mapper.set_point(0, u, v, x, y, z)
 
-# Perform mapping
-mapper.external_map_to_cad_space()
+u=5
+v=0
+[x,y,z] = surf_1(u,u)
+mapper.set_point(0, u, v, x, y, z)
+u=0
+v=5
+[x,y,z] = surf_1(u,u)
+mapper.set_point(0, u, v, x, y, z)
+for u in range(6):
+    [x,y,z] = surf_1(u,u)
+    mapper.set_point(0, u, u, x, y, z)
+
+# u=0
+# v=0
+# [x,y,z] = surf_1(u,u)
+# mapper.set_point(0, u, v, x, y, z)
+# u=5
+# v=5
+# [x,y,z] = surf_1(u,u)
+# mapper.set_point(0, u, v, x, y, z)
+# for u in range(6):
+#     [x,y,z] = surf_1(u,5-u)
+#     mapper.set_point(0, u, 5-u, x, y, z)
+
+# # Perform mapping
+# mapper.external_map_to_cad_space()
 
 # ======================================================================================================================================
 # Writing results
@@ -69,8 +103,8 @@ mapper.external_map_to_cad_space()
 
 # Output some surface nodes of updated cad geometry
 file_to_write = "surface_nodes_of_updated_cad_geometry.txt"
-u_resolution = 20
-v_resolution = 20
+u_resolution = 30
+v_resolution = 30
 mapper.output_surface_points(file_to_write, u_resolution, v_resolution, -1)
 
 # Output control point update in gid-format 

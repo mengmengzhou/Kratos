@@ -41,6 +41,14 @@
         "valarray": "cpp",
         "dcabs1.c": "cpp",
         "triangle.c": "cpp",
-        "hashtab.c": "cpp"
+        "hashtab.c": "cpp",
+        "example.c": "cpp",
+        "minigzip.c": "cpp",
+        "cmyblas2.c": "cpp",
+        "dmyblas2.c": "cpp",
+        "smyblas2.c": "cpp",
+        "zmyblas2.c": "cpp",
+        "gun.c": "cpp",
+        "infcover.c": "cpp"
     }
 }

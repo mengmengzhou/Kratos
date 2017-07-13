@@ -13,9 +13,9 @@ End Properties
 
 Begin Nodes
     1        0.10000        0.10000        0.00000
-    2        0.90000        0.10000        0.00000
-    3        0.10000        0.90000        0.00000
-    4        0.90000        0.90000        0.00000
+    2        4.90000        0.10000        0.00000
+    3        0.10000        4.90000        0.00000
+    4        4.90000        4.90000        0.00000
 End Nodes
 
 
@@ -26,21 +26,21 @@ End Conditions
 
 Begin NodalData SHAPE_CHANGE_ABSOLUTE_X
 1   0   0
-2	0	-0.3
-3	0	0.3
+2	0	-2
+3	0	2
 4   0   0
 End NodalData
 
 Begin NodalData SHAPE_CHANGE_ABSOLUTE_Y
 1   0   0
-2	0   0.3
-3	0	-0.3
+2	0	2
+3	0	-2
 4   0   0
 End NodalData
 
 Begin NodalData SHAPE_CHANGE_ABSOLUTE_Z
 1   0   0
-2	0	0.5
-3	0	0.5
+2	0	2
+3	0	2
 4   0   0
 End NodalData
