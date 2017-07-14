@@ -12,6 +12,12 @@ class DerivativesRecoverer:
         self.model_part = model_part
         self.cplusplus_recovery_tool = cplusplus_recovery_tool
 
+    def GetCustomFunctionsTool(self):
+        if self.pp.domain_size == 2:
+            return CustomFunctionsCalculator2D()
+        else:
+            return CustomFunctionsCalculator3D()
+
 class EmptyGradientRecoverer(DerivativesRecoverer):
     def __init__(self, pp, model_part, cplusplus_recovery_tool):
         pass

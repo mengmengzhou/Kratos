@@ -10,7 +10,7 @@ BaseAlgorithm = ethier_benchmark_algorithm.Algorithm
 class Algorithm(BaseAlgorithm):
     def __init__(self, varying_parameters = dict()):
         BaseAlgorithm.__init__(self, varying_parameters)
-        self.pp.CFD_DEM.coupling_level_type = 0
+        # self.pp.CFD_DEM.coupling_level_type = 1
 
     def ReadFluidModelParts(self):
         model_part_io_fluid = ModelPartIO('benchmark2D')

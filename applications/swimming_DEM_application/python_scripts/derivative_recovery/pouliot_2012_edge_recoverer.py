@@ -11,9 +11,8 @@ class Pouliot2012EdgeDerivativesRecoverer(recoverer.DerivativesRecoverer):
         self.model_part = model_part
         self.use_lumped_mass_matrix = pp.CFD_DEM.material_acceleration_calculation_type == 3
         self.recovery_model_part = ModelPart("PostGradientFluidPart")
-        self.custom_functions_tool = CustomFunctionsCalculator3D()
+        self.custom_functions_tool = self.GetCustomFunctionsTool()
         self.calculate_vorticity = pp.CFD_DEM.vorticity_calculation_type > 0
-
         self.CreateCPluPlusStrategies()
 
     def FillUpModelPart(self, element_type):
@@ -21,8 +20,9 @@ class Pouliot2012EdgeDerivativesRecoverer(recoverer.DerivativesRecoverer):
         #self.FillSetOfAllEdges(set_of_all_edges)
         self.recovery_model_part.Nodes = self.model_part.Nodes
         self.recovery_model_part.ProcessInfo = self.model_part.ProcessInfo
-        self.meshing_tool = DerivativeRecoveryMeshingTools()
-        self.meshing_tool.FillUpEdgesModelPartFromTetrahedraModelPart(self.recovery_model_part, self.model_part, element_type)
+        self.meshing_tool = self.GetDerivativeRecoveryMeshingTools()
+        self.meshing_tool.FillUpEdgesModelPartFromSimplicesModelPart(self.recovery_model_part, self.model_part, element_type)
+
         # for i, edge in enumerate(set_of_all_edges):
         #     self.recovery_model_part.CreateNewElement(element_type, i + 1000000, list(edge), self.model_part.GetProperties()[0])
 
@@ -67,12 +67,20 @@ class Pouliot2012EdgeDerivativesRecoverer(recoverer.DerivativesRecoverer):
         elif type(variable).__name__ == 'Array1DVariable3':
             self.custom_functions_tool.SetValueOfAllNotes(self.model_part, ZeroVector(3), variable)
 
+    def GetDerivativeRecoveryMeshingTools(self):
+        if self.pp.domain_size == 2:
+            return DerivativeRecoveryMeshingTools2D()
+        else:
+            return DerivativeRecoveryMeshingTools3D()
+
+
 class Pouliot2012EdgeGradientRecoverer(Pouliot2012EdgeDerivativesRecoverer, recoverer.VorticityRecoverer):
     def __init__(self, pp, model_part, cplusplus_recovery_tool):
         Pouliot2012EdgeDerivativesRecoverer.__init__(self, pp, model_part, cplusplus_recovery_tool)
-        self.element_type = self.GetElementType(pp)
+        self.dimension = pp.domain_size
+        self.element_type = self.GetElementType()
         self.FillUpModelPart(self.element_type)
-        self.DOFs = self.GetDofs(pp)
+        self.DOFs = self.GetDofs()
         self.AddDofs(self.DOFs)
         self.calculate_vorticity = self.pp.CFD_DEM.lift_force_type
 
@@ -89,10 +97,11 @@ class Pouliot2012EdgeGradientRecoverer(Pouliot2012EdgeDerivativesRecoverer, reco
         self.model_part.ProcessInfo[CURRENT_COMPONENT] = 1
         self.Solve()
         self.custom_functions_tool.CopyValuesFromFirstToSecond(self.model_part, VELOCITY_Z_GRADIENT, VELOCITY_Y_GRADIENT)
-        self.model_part.ProcessInfo[CURRENT_COMPONENT] = 2
-        self.Solve() # and there is no need to copy anything
-        if self.calculate_vorticity:
-            self.cplusplus_recovery_tool.CalculateVorticityFromGradient(self.model_part, VELOCITY_X_GRADIENT, VELOCITY_Y_GRADIENT, VELOCITY_Z_GRADIENT, VORTICITY)
+        if self.pp.domain_size == 3:
+            self.model_part.ProcessInfo[CURRENT_COMPONENT] = 2
+            self.Solve() # and there is no need to copy anything
+            if self.calculate_vorticity:
+                self.cplusplus_recovery_tool.CalculateVorticityFromGradient(self.model_part, VELOCITY_X_GRADIENT, VELOCITY_Y_GRADIENT, VELOCITY_Z_GRADIENT, VORTICITY)
 
     def RecoverGradientOfVelocityComponent(self, component):
         self.model_part.ProcessInfo[CURRENT_COMPONENT] = component
@@ -100,14 +109,14 @@ class Pouliot2012EdgeGradientRecoverer(Pouliot2012EdgeDerivativesRecoverer, reco
         if self.calculate_vorticity:
             self.cplusplus_recovery_tool.CalculateVorticityContributionOfTheGradientOfAComponent(self.model_part, VELOCITY_Z_GRADIENT, VORTICITY)
 
-    def GetElementType(self, pp):
-        if pp.domain_size == 2:
+    def GetElementType(self):
+        if self.pp.domain_size == 2:
             return 'ComputeGradientPouliot20122DEdge'
         else:
             return 'ComputeGradientPouliot20123DEdge'
 
-    def GetDofs(self, pp):
-        if pp.domain_size == 2:
+    def GetDofs(self):
+        if self.pp.domain_size == 2:
             return (VELOCITY_Z_GRADIENT_X, VELOCITY_Z_GRADIENT_Y)
         else:
             return (VELOCITY_Z_GRADIENT_X, VELOCITY_Z_GRADIENT_Y, VELOCITY_Z_GRADIENT_Z)
@@ -126,19 +135,38 @@ class Pouliot2012EdgeMaterialAccelerationRecoverer(Pouliot2012EdgeGradientRecove
             self.cplusplus_recovery_tool.CalculateVectorMaterialDerivativeComponent(self.model_part, VELOCITY_Z_GRADIENT, ACCELERATION, MATERIAL_ACCELERATION)
             self.RecoverGradientOfVelocityComponent(1)
             self.cplusplus_recovery_tool.CalculateVectorMaterialDerivativeComponent(self.model_part, VELOCITY_Z_GRADIENT, ACCELERATION, MATERIAL_ACCELERATION)
-            self.RecoverGradientOfVelocityComponent(2)
-            self.cplusplus_recovery_tool.CalculateVectorMaterialDerivativeComponent(self.model_part, VELOCITY_Z_GRADIENT, ACCELERATION, MATERIAL_ACCELERATION)
+            if self.pp.domain_size == 3:
+                self.RecoverGradientOfVelocityComponent(2)
+                self.cplusplus_recovery_tool.CalculateVectorMaterialDerivativeComponent(self.model_part, VELOCITY_Z_GRADIENT, ACCELERATION, MATERIAL_ACCELERATION)
 
 class Pouliot2012EdgeLaplacianRecoverer(Pouliot2012EdgeMaterialAccelerationRecoverer, recoverer.LaplacianRecoverer):
     def __init__(self, pp, model_part, cplusplus_recovery_tool):
         Pouliot2012EdgeDerivativesRecoverer.__init__(self, pp, model_part, cplusplus_recovery_tool)
-        self.element_type = "ComputeVelocityLaplacianSimplex3D"
-        self.condition_type = "ComputeLaplacianSimplexCondition3D"
+        self.element_type = self.GetElementType()
+        self.condition_type = self.GetConditionType()
         self.FillUpModelPart(self.element_type)
-        self.DOFs = (VELOCITY_LAPLACIAN_X, VELOCITY_LAPLACIAN_Y, VELOCITY_LAPLACIAN_Z)
+        self.DOFs = self.GetDofs()
         self.AddDofs(self.DOFs)
 
     def RecoverVelocityLaplacian(self):
         print("\nSolving for the laplacian...")
         self.SetToZero(VELOCITY_LAPLACIAN)
         self.recovery_strategy.Solve()
+
+    def GetElementType(self):
+        if self.pp.domain_size == 2:
+            return 'ComputeVelocityLaplacianSimplex2D'
+        else:
+            return 'ComputeVelocityLaplacianSimplex3D'
+
+    def GetConditionType(self):
+        if self.pp.domain_size == 2:
+            return 'ComputeLaplacianSimplexCondition2D'
+        else:
+            return 'ComputeLaplacianSimplexCondition3D'
+
+    def GetDofs(self):
+        if self.pp.domain_size == 2:
+            return (VELOCITY_LAPLACIAN_X, VELOCITY_LAPLACIAN_Y)
+        else:
+            return (VELOCITY_LAPLACIAN_X, VELOCITY_LAPLACIAN_Y, VELOCITY_LAPLACIAN_Z)

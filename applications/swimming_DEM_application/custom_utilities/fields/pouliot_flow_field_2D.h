@@ -37,7 +37,7 @@ KRATOS_CLASS_POINTER_DEFINITION(PouliotFlowField2D);
 
 /// Default constructor.
 
-PouliotFlowField2D():VelocityField()
+PouliotFlowField2D(): VelocityField()
 {
     unsigned int number_of_threads = OpenMPUtils::GetNumThreads();
     ResizeVectorsForParallelism(number_of_threads);
@@ -75,7 +75,7 @@ void UnlockCoordinates(const int i_thread = 0) override;
 
 virtual std::string Info() const override
 {
-    return "";
+    return "PouliotFlowField2D";
 }
 
 /// Print information about this object.

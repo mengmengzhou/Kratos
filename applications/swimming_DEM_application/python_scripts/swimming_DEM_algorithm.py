@@ -305,7 +305,7 @@ class Algorithm(object):
         self.custom_functions_tool = SDP.FunctionsCalculator(self.pp)
 
         # creating a derivative recovery tool to calculate the necessary derivatives from the fluid solution (gradient, laplacian, material acceleration...)
-        self.derivative_recovery_tool = DerivativeRecoveryTool3D(self.fluid_model_part)
+        self.derivative_recovery_tool = self.GetDerivativeRecoveryTool()
 
         # creating a stationarity assessment tool
         self.stationarity_tool = SDP.StationarityAssessmentTool(self.pp.CFD_DEM.max_pressure_variation_rate_tol , self.custom_functions_tool)
@@ -713,6 +713,12 @@ class Algorithm(object):
 
     def GetRunCode(self):
         return SDP.CreateRunCode(self.pp)
+
+    def GetDerivativeRecoveryTool(self):
+        if self.pp.domain_size == 2:
+            return DerivativeRecoveryTool2D(self.fluid_model_part)
+        else:
+            return DerivativeRecoveryTool3D(self.fluid_model_part)
 
     def FillHistoryForcePrecalculatedVectors(self):
         # Warning: this estimation is based on a constant time step for DEM. This is usually the case, but could not be so. A more robust implementation is needed!

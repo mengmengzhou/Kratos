@@ -25,7 +25,6 @@ class DerivativeRecoveryStrategy:
         self.vorticity_type = pp.CFD_DEM.vorticity_calculation_type
         self.pressure_grad_type = pp.CFD_DEM.pressure_grad_recovery_type
         self.fluid_fraction_grad_type = pp.CFD_DEM.fluid_fraction_grad_type
-
         self.do_pre_recovery = False
         self.must_reconstruct_gradient = self.laplacian_type in {3, 4, 5, 6} and self.mat_deriv_type in {3, 4}
 
@@ -33,8 +32,8 @@ class DerivativeRecoveryStrategy:
             self.pre_computed_derivatives = pp.CFD_DEM.load_derivatives
         else:
             self.pre_computed_derivatives = False
-
         self.mat_deriv_tool = self.GetMatDerivTool()
+
         self.laplacian_tool = self.GetLaplacianTool()
         self.vorticity_tool = self.GetVorticityTool()
         self.velocity_grad_tool = self.GetVelocityGradTool()
@@ -58,7 +57,7 @@ class DerivativeRecoveryStrategy:
         elif self.mat_deriv_type == 5:
             return L2_projection_recoverer.L2ProjectionMaterialAccelerationRecoverer(self.pp, self.fluid_model_part, self.derivative_recovery_tool)
         elif self.mat_deriv_type == 6:
-            return pouliot_2012_edge_recoverer.Pouliot2012EdgeMaterialAccelerationRecoverer(self.pp, self.fluid_model_part, self.derivative_recovery_tool)            
+            return pouliot_2012_edge_recoverer.Pouliot2012EdgeMaterialAccelerationRecoverer(self.pp, self.fluid_model_part, self.derivative_recovery_tool)
             #return pouliot_2012_recoverer.Pouliot2012MaterialAccelerationRecoverer(self.pp, self.fluid_model_part, self.derivative_recovery_tool, self.do_pre_recovery)
         elif self.mat_deriv_type == 7:
             if self.store_full_gradient:

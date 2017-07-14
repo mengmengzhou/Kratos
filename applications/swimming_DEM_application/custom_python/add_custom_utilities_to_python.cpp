@@ -318,6 +318,24 @@ using namespace boost::python;
 //    RecoverGradientScalar RecoverSuperconvergentGradientScalar = &DerivativeRecovery<3>::RecoverSuperconvergentGradient<std::size_t TDim, class TScalarVariable>;
 //    RecoverGradientComponent RecoverSuperconvergentGradientComponent = &DerivativeRecovery<3>::RecoverSuperconvergentGradient<std::size_t TDim, class TScalarVariable>;
 
+    class_<DerivativeRecovery <3> > ("DerivativeRecoveryTool2D", init<ModelPart&>())
+        .def("AddTimeDerivativeComponent", &DerivativeRecovery <2>::AddTimeDerivativeComponent)
+        .def("RecoverSuperconvergentGradient", &DerivativeRecovery <2>::RecoverSuperconvergentGradient< Variable<double> >)
+        .def("RecoverSuperconvergentGradient", &DerivativeRecovery <2>::RecoverSuperconvergentGradient< VariableComponent<VectorComponentAdaptor<array_1d<double, 3> > >& >)
+        .def("RecoverSuperconvergentLaplacian", &DerivativeRecovery <2>::RecoverSuperconvergentLaplacian)
+        .def("RecoverSuperconvergentVelocityLaplacianFromGradient", &DerivativeRecovery <2>::RecoverSuperconvergentVelocityLaplacianFromGradient)
+        .def("RecoverSuperconvergentMatDeriv", &DerivativeRecovery <2>::RecoverSuperconvergentMatDeriv)
+        .def("CalculateVectorMaterialDerivativeFromGradient", &DerivativeRecovery <2>::CalculateVectorMaterialDerivativeFromGradient)
+        .def("CalculateVectorMaterialDerivativeComponent", &DerivativeRecovery <2>::CalculateVectorMaterialDerivativeComponent)
+        .def("CalculateVorticityFromGradient", &DerivativeRecovery <2>::CalculateVorticityFromGradient)
+        .def("CalculateVorticityContributionOfTheGradientOfAComponent", &DerivativeRecovery <2>::CalculateVorticityContributionOfTheGradientOfAComponent)
+        .def("RecoverSuperconvergentMatDerivAndLaplacian", &DerivativeRecovery <2>::RecoverSuperconvergentMatDerivAndLaplacian)
+        .def("CalculateGradient", &DerivativeRecovery <2>::CalculateGradient< Variable<double> >)
+        .def("CalculateVectorMaterialDerivative", &DerivativeRecovery <2>::CalculateVectorMaterialDerivative)
+        .def("CalculateVectorLaplacian", &DerivativeRecovery <2>::CalculateVectorLaplacian)
+        .def("CalculateVelocityLaplacianRate", &DerivativeRecovery <2>::CalculateVelocityLaplacianRate)
+        ;
+
     class_<DerivativeRecovery <3> > ("DerivativeRecoveryTool3D", init<ModelPart&>())
         .def("AddTimeDerivativeComponent", &DerivativeRecovery <3>::AddTimeDerivativeComponent)
         .def("RecoverSuperconvergentGradient", &DerivativeRecovery <3>::RecoverSuperconvergentGradient< Variable<double> >)
@@ -405,11 +423,11 @@ using namespace boost::python;
         ;
 
     class_<DerivativeRecoveryMeshingTools<2> > ("DerivativeRecoveryMeshingTools2D", init<>())
-        .def("FillUpEdgesModelPartFromTetrahedraModelPart", &DerivativeRecoveryMeshingTools<2>::FillUpEdgesModelPartFromTetrahedraModelPart)
+        .def("FillUpEdgesModelPartFromSimplicesModelPart", &DerivativeRecoveryMeshingTools<2>::FillUpEdgesModelPartFromSimplicesModelPart)
         ;
 
     class_<DerivativeRecoveryMeshingTools<3> > ("DerivativeRecoveryMeshingTools3D", init<>())
-        .def("FillUpEdgesModelPartFromTetrahedraModelPart", &DerivativeRecoveryMeshingTools<3>::FillUpEdgesModelPartFromTetrahedraModelPart)
+        .def("FillUpEdgesModelPartFromSimplicesModelPart", &DerivativeRecoveryMeshingTools<3>::FillUpEdgesModelPartFromSimplicesModelPart)
         ;
 
     class_<EmbeddedVolumeTool <3> >("EmbeddedVolumeTool", init<>())
