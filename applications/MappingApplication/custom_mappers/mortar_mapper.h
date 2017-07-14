@@ -102,7 +102,7 @@ public:
         InterpolateToDestinationMesh(mQ_tmp) // here the Multiplication is done
         
         // @Jordi this BuilderAndSolver is only needed for Mortar. Can it be a member of this class then?
-        mpMapperCommunicator->GetBuilderAndSolver()->BuildRHSAndSolve(scheme, modelpart, mM_dd, mQ_d, mQ_tmp);
+        mpMapperCommunicator->GetBuilderAndSolver()->Solve(scheme, modelpart_destination, mM_dd, mQ_d, mQ_tmp);
 
         SetNodalValues();
     }
@@ -209,6 +209,8 @@ private:
     // @Jordi same question as for the base class
     TSystemMatrixType mM_dd;
     TSystemVectorType mQ_tmp;
+
+    strategy
 
     ///@}
     ///@name Private Operators
