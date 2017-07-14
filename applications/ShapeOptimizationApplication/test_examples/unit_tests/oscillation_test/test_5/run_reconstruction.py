@@ -1,6 +1,6 @@
 # Making KratosMultiphysics backward compatible with python 2.6 and 2.7
 from __future__ import print_function, absolute_import, division 
-from math import sin, cos, pi, fabs
+from math import sin, cos, pi, fabs, sqrt
 # importing the Kratos Library
 from KratosMultiphysics import *
 from KratosMultiphysics.SolidMechanicsApplication import *
@@ -50,11 +50,109 @@ with open(cad_integration_input_filename) as cad_data2:
 # ======================================================================================================================================    
 def surf_1(u,v):
     x_1 = sin(pi/4) *  u - cos(pi/4) * v
-    # if x_1>0:
-    #     return [u,v, -x_1**2]
-    # else:
-    #     return [u,v, +x_1**2]
-    return [u,v,x_1**2]    
+    return [u,v,0.5*x_1**2]    
+def surf_2(u,v):
+    x_1 = sin(pi/4) *  u - cos(pi/4) * v
+    if x_1>0:
+        return [u,v, -0.5*x_1**2]
+    else:
+        return [u,v, +0.5*x_1**2]
+def surf_3(u,v):
+    x_1 = sin(pi/4) *  u - cos(pi/4) * v
+    return [u,v,-0.5*x_1**3]
+def surf_4(u,v):
+    x_1 = sin(pi/4) *  u - cos(pi/4) * v
+    return [u,v,fabs(x_1)]
+def surf_5(u,v):
+    return [u,v,u**2]
+# ======================================================================================================================================
+# mesh definition
+# ======================================================================================================================================    
+def mesh_1(surf): # "mesh of 4 nodes"
+    for u, v in [[0,0], [0,5], [5,0], [5,5]]:
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+def mesh_2(surf, n): # "mesh of n nodes"
+    mesh_1(surf) # 4 nodes
+    n = n-3
+    for i in range(1,n): # n-1 more nodes
+        u = i*5/n
+        v = u
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+def mesh_3(surf, n): # "mesh of n nodes"
+    mesh_1(surf)
+    n = n-3
+    for i in range(1,n):
+        u = i*5/n
+        v = 5 - u
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+def mesh_4(surf,n): # "mesh of n nodes"
+    n = int(sqrt(n))
+    for i in range(n):
+        for j in range(n):
+            u = i * 5/(n-1)
+            v = j * 5/(n-1)
+            [x,y,z] = surf(u,v)
+            mapper.set_point(0, u, v, x, y, z)
+def mesh_5(surf): # "mesh of 8 nodes"
+    mesh_1(surf)
+    for u, v in [[1.5,1.5], [1.5,3.5], [3.5,1.5], [3.5,3.5]]:
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+def mesh_6(surf,n,m): # "mesh of n x m nodes"
+    for i in range(n):
+        for j in range(m):
+            u = i * 5/(n-1)
+            v = j * 5/(m-1)
+            [x,y,z] = surf(u,v)
+            mapper.set_point(0, u, v, x, y, z)
+def mesh_7(surf,n):
+    mesh_3(surf, n-4)
+    for u, v in [[2.5,0], [0,2.5], [2.5,5], [5,2.5]]:
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+def mesh_8(surf,n):
+    n = int(n/4)
+    for i in range(n):
+        u = i * 5/n
+        v = 0
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+    for i in range(n):
+        u = 5
+        v = i * 5/n
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+    for i in range(n):
+        u = 5 - i * 5/n
+        v = 5
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+    for i in range(n):
+        u = 0
+        v = 5 - i * 5/n
+        [x,y,z] = surf(u,v)
+        mapper.set_point(0, u, v, x, y, z)
+def mesh_9(surf,n): # "mesh of 4 x r x r"
+    r = int(sqrt(n/4))
+    for i in range(r):
+        for j in range(r):
+            u = (i+1) * 5/(2*(r+1))
+            v = (j+1) * 5/(2*(r+1))
+            [x,y,z] = surf(u,v)
+            mapper.set_point(0, u, v, x, y, z)
+            u += 2.5
+            [x,y,z] = surf(u,v)
+            mapper.set_point(0, u, v, x, y, z)
+            v += 2.5
+            [x,y,z] = surf(u,v)
+            mapper.set_point(0, u, v, x, y, z)
+            u -= 2.5
+            [x,y,z] = surf(u,v)
+            mapper.set_point(0, u, v, x, y, z)
+
 # ======================================================================================================================================
 # Mapping
 # ======================================================================================================================================    
@@ -64,38 +162,16 @@ linear_solver = SuperLUSolver()
 mapper = CADMapper(fe_model_part,cad_geometry,cad_integration_data,linear_solver)
 
 # Set nearest point + shape update to map
-# mapper.set_point(id, u, v, updated_x, updated_y, updated_z)
-# for u in range(6):
-#     for v in range(6):
-#         [x,y,z] = surf_1(u, v)
-#         mapper.set_point(0, u, v, x, y, z)
+surf = surf_2
+mesh = mesh_4
+n = 16
+m = 3
 
-u=5
-v=0
-[x,y,z] = surf_1(u,u)
-mapper.set_point(0, u, v, x, y, z)
-u=0
-v=5
-[x,y,z] = surf_1(u,u)
-mapper.set_point(0, u, v, x, y, z)
-for u in range(6):
-    [x,y,z] = surf_1(u,u)
-    mapper.set_point(0, u, u, x, y, z)
+mesh(surf, 16)
 
-# u=0
-# v=0
-# [x,y,z] = surf_1(u,u)
-# mapper.set_point(0, u, v, x, y, z)
-# u=5
-# v=5
-# [x,y,z] = surf_1(u,u)
-# mapper.set_point(0, u, v, x, y, z)
-# for u in range(6):
-#     [x,y,z] = surf_1(u,5-u)
-#     mapper.set_point(0, u, 5-u, x, y, z)
 
 # # Perform mapping
-# mapper.external_map_to_cad_space()
+mapper.external_map_to_cad_space()
 
 # ======================================================================================================================================
 # Writing results
