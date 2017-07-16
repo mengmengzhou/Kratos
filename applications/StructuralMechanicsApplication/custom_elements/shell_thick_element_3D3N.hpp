@@ -272,7 +272,7 @@ namespace Kratos
 			// ignore stabilizing the transverse shear part of the material 
 			// matrix. This should be false unless you are testing
 
-			const bool smoothedDSG = true; // bool to use smoothed DSG 
+			const bool smoothedDSG = false; // bool to use smoothed DSG 
 			// formulation according to [Nguyen-Thoi et al., 2013]. 
 			// This should be false unless you are testing
 

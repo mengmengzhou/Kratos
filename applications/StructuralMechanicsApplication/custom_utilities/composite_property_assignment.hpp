@@ -142,7 +142,7 @@ namespace Kratos {
 		{
 			// Declare working variables
 			Matrix LCSOrientation;
-			Vector3 localGlobalFiberDirection;
+			Vector localGlobalFiberDirection;
 			Vector localAxis1 = ZeroVector(3);
 			double cosTheta, theta;
 			Properties::Pointer pElementProps;
@@ -168,14 +168,7 @@ namespace Kratos {
 				// get local orientation of GlobalFiberDirection
 				element.Calculate(LOCAL_ELEMENT_ORIENTATION, LCSOrientation, rCurrentProcessInfo);
 
-
-				// Hardcoded projection vector: Y axis
-				Vector3 projectionDir = ZeroVector(3);
-				projectionDir[1] = 1.0;
-
-				
-
-				// get element local axis 1 vector
+				// get element local axis vectors
 				Vector3 localAxis2, localAxis3;
 				for (size_t i = 0; i < 3; i++)
 				{
@@ -185,15 +178,18 @@ namespace Kratos {
 				}
 
 
-
-				localAxis1 = prod(LCSOrientation, localAxis1);
+				std::cout << "localAxis1 still in global cartesian!" << std::endl;
+				//localAxis1 = prod(LCSOrientation, localAxis1);
 				localAxis1 /= std::sqrt(inner_prod(localAxis1, localAxis1));
 				//std::cout << "flattened lc1 = " << localAxis1 << std::endl;
 
-				localAxis2 = prod(LCSOrientation, localAxis2);
+				std::cout << "localAxis2 still in global cartesian!" << std::endl;
+				//localAxis2 = prod(LCSOrientation, localAxis2);
 				localAxis2 /= std::sqrt(inner_prod(localAxis2, localAxis2));
 				//std::cout << "flattened lc2 = " << localAxis2 << std::endl;
 
+				std::cout << "localAxis3 still in global cartesian!" << std::endl;
+				//localAxis3 = prod(LCSOrientation, localAxis3);
 				localAxis3 /= std::sqrt(inner_prod(localAxis3, localAxis3));
 
 
@@ -202,11 +198,33 @@ namespace Kratos {
 				//computeTransformedFiber(LCSOrientation, GlobalFiberDirection, projectionDir, transformedGlobalFiber);
 				//localGlobalFiberDirection = prod(LCSOrientation, transformedGlobalFiber);
 
-				localGlobalFiberDirection = prod(LCSOrientation, GlobalFiberDirection);
-				localGlobalFiberDirection[2] = 0.0;
+				std::cout << "localGlobalFiberDirection still in global cartesian!" << std::endl;
+				localGlobalFiberDirection = GlobalFiberDirection;
+				//localGlobalFiberDirection = prod(LCSOrientation, GlobalFiberDirection);
+				//localGlobalFiberDirection[2] = 0.0;
 				localGlobalFiberDirection /= std::sqrt(inner_prod(localGlobalFiberDirection, localGlobalFiberDirection));
 
+				// flatten localGlobalFiberDirection to make it in-plane with the element
+				Vector Y_normal = Vector(3, 0.0);
+				Y_normal[1] = 1.0;
+				Vector rotation_axis = MathUtils<double>::CrossProduct(localAxis3, Y_normal);
+				double rotation_angle = inner_prod(Y_normal, localAxis3);
+				rotation_angle = std::acos(rotation_angle);
+				
+				//rotation_angle *= -1.0; // this rotates localGlobalFiberDirection to localAxis 3
+				// therefore we need to rotate by 90deg - rotation angle
+				
+				//rotation_angle = KRATOS_M_PI / 2.0 - rotation_angle;
+				
+				Matrix R = setUpRotationMatrix(rotation_angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]);
 
+
+				localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
+
+				
+				localAxis1 = prod(LCSOrientation, localAxis1);
+				localAxis2 = prod(LCSOrientation, localAxis2);
+				localGlobalFiberDirection = prod(LCSOrientation, localGlobalFiberDirection);
 
 				// compute angle 'theta' between local axis 1 and localGlobalFiberDirection
 				cosTheta = inner_prod(localAxis1, localGlobalFiberDirection);
@@ -256,6 +274,38 @@ namespace Kratos {
 				// add option to write out angles so they don't have to be computed next time
 					// or maybe this should be a separate python call
 			}// sub-modelpart element loop
+		}
+
+		Matrix setUpRotationMatrix(double angle, double u, double v, double w)
+		{
+			Matrix rotationMatrix(3, 3, 0.0);
+
+			double L = (u*u + v * v + w * w);
+			double u2 = u * u;
+			double v2 = v * v;
+			double w2 = w * w;
+
+			rotationMatrix(0,0) = (u2 + (v2 + w2) * cos(angle)) / L;
+			rotationMatrix(0,1) = (u * v * (1 - cos(angle)) - w * sqrt(L) * sin(angle)) / L;
+			rotationMatrix(0,2) = (u * w * (1 - cos(angle)) + v * sqrt(L) * sin(angle)) / L;
+			//rotationMatrix(0,3) = 0.0;
+							  
+			rotationMatrix(1,0) = (u * v * (1 - cos(angle)) + w * sqrt(L) * sin(angle)) / L;
+			rotationMatrix(1,1) = (v2 + (u2 + w2) * cos(angle)) / L;
+			rotationMatrix(1,2) = (v * w * (1 - cos(angle)) - u * sqrt(L) * sin(angle)) / L;
+			//rotationMatrix(1,3) = 0.0;
+							  
+			rotationMatrix(2,0) = (u * w * (1 - cos(angle)) - v * sqrt(L) * sin(angle)) / L;
+			rotationMatrix(2,1) = (v * w * (1 - cos(angle)) + u * sqrt(L) * sin(angle)) / L;
+			rotationMatrix(2,2) = (w2 + (u2 + v2) * cos(angle)) / L;
+			//rotationMatrix(2,3) = 0.0;
+							  
+			//rotationMatrix(3,0) = 0.0;
+			//rotationMatrix(3,1) = 0.0;
+			//rotationMatrix(3,2) = 0.0;
+			//rotationMatrix(3,3) = 1.0;
+
+			return rotationMatrix;
 		}
 
 		void computeTransformedFiber(const Matrix& elementOrientation, const Vector3& originalGlobalFiber, const Vector3& projectionVector, Vector3& transformedFiber)

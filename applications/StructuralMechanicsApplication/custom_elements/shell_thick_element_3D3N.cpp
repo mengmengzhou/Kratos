@@ -17,6 +17,7 @@
 
 #include <string>
 #include <iomanip>
+#include <boost/timer/timer.hpp> // TODO: remove
 
 #define OPT_NUM_NODES 3
 #define OPT_STRAIN_SIZE 6
@@ -1713,6 +1714,7 @@ namespace Kratos
 
 		//Shear components
 		//
+		//boost::timer::auto_cpu_timer t;
 		if (data.specialDSGc3)
 		{
 			// Don't do anything here.
@@ -1986,24 +1988,24 @@ namespace Kratos
 				// The reconstructed shear gap field is the same for 
 				// bubble and no bubble modes
 
-				BSuper(0, 0) = 1.0*b - 1.0*c;
-				BSuper(0, 1) = 1.0*c;
-				BSuper(0, 2) = -1.0*b;
-				BSuper(0, 3) = 0.5*b*c;
-				BSuper(0, 4) = 0;
+				BSuper(0, 0) = b - c;
+				BSuper(0, 1) = c;
+				BSuper(0, 2) = -b;
+				BSuper(0, 3) = -0.5*b*loc1 - 0.5*c*loc2;
+				BSuper(0, 4) = -0.5*b*c + 0.5*b*loc1 + 0.5*c*loc2;
 				BSuper(0, 5) = 0.5*b*c;
-				BSuper(0, 6) = 0.5*a*c;
+				BSuper(0, 6) = 0.5*a*c - 0.5*b*d - 0.5*b*loc1 - 0.5*c*loc2;
 				BSuper(0, 7) = 0.5*a*c;
-				BSuper(0, 8) = 0;
-				BSuper(1, 0) = -1.0*a + 1.0*d;
-				BSuper(1, 1) = -1.0*d;
-				BSuper(1, 2) = 1.0*a;
-				BSuper(1, 3) = -0.5*a*c;
-				BSuper(1, 4) = 0;
+				BSuper(0, 8) = -0.5*b*d + 0.5*b*loc1 + 0.5*c*loc2;
+				BSuper(1, 0) = -a + d;
+				BSuper(1, 1) = -d;
+				BSuper(1, 2) = a;
+				BSuper(1, 3) = -0.5*a*c + 0.5*a*loc1 + 0.5*b*d + 0.5*d*loc2;
+				BSuper(1, 4) = -0.5*a*loc1 + 0.5*b*d - 0.5*d*loc2;
 				BSuper(1, 5) = -0.5*a*c;
-				BSuper(1, 6) = -0.5*a*d;
+				BSuper(1, 6) = 0.5*a*loc1 + 0.5*d*loc2;
 				BSuper(1, 7) = -0.5*a*d;
-				BSuper(1, 8) = 0;
+				BSuper(1, 8) = 0.5*a*d - 0.5*a*loc1 - 0.5*d*loc2;
 
 				BSuper /= (2.0*data.TotalArea);
 			}
