@@ -194,43 +194,36 @@ namespace Kratos {
 
 
 				// Get local fiber direction in element space
-				//Vector3 transformedGlobalFiber = ZeroVector(3);
-				//computeTransformedFiber(LCSOrientation, GlobalFiberDirection, projectionDir, transformedGlobalFiber);
-				//localGlobalFiberDirection = prod(LCSOrientation, transformedGlobalFiber);
-
 				std::cout << "localGlobalFiberDirection still in global cartesian!" << std::endl;
 				localGlobalFiberDirection = GlobalFiberDirection;
 				//localGlobalFiberDirection = prod(LCSOrientation, GlobalFiberDirection);
 				//localGlobalFiberDirection[2] = 0.0;
 				localGlobalFiberDirection /= std::sqrt(inner_prod(localGlobalFiberDirection, localGlobalFiberDirection));
 
-				// flatten localGlobalFiberDirection to make it in-plane with the element
+
+				// get rotation matrix to align element normal with projection vec
 				Vector Y_normal = Vector(3, 0.0);
 				Y_normal[1] = 1.0;
 				Vector rotation_axis = MathUtils<double>::CrossProduct(localAxis3, Y_normal);
 				double rotation_angle = inner_prod(Y_normal, localAxis3);
-				rotation_angle = std::acos(rotation_angle);
+				if (abs(rotation_angle) < (1.0- 1E-6))
+				{
+					rotation_angle = std::acos(rotation_angle);
+					Matrix R = setUpRotationMatrix(rotation_angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]);
+					localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
+				}
 				
-				//rotation_angle *= -1.0; // this rotates localGlobalFiberDirection to localAxis 3
-				// therefore we need to rotate by 90deg - rotation angle
 				
-				//rotation_angle = KRATOS_M_PI / 2.0 - rotation_angle;
-				
-				Matrix R = setUpRotationMatrix(rotation_angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]);
 
-
-				localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
-
-				
+				// Put everything in local space
+				localGlobalFiberDirection = prod(LCSOrientation, localGlobalFiberDirection);
 				localAxis1 = prod(LCSOrientation, localAxis1);
 				localAxis2 = prod(LCSOrientation, localAxis2);
-				localGlobalFiberDirection = prod(LCSOrientation, localGlobalFiberDirection);
+				
 
 				// compute angle 'theta' between local axis 1 and localGlobalFiberDirection
 				cosTheta = inner_prod(localAxis1, localGlobalFiberDirection);
 				theta = std::acos(cosTheta);
-				//std::cout << "angle in degrees: " << theta / 2.0 / 3.14 * 360 << std::endl;
-
 
 
 				// dot between lc2 and localFiberDir
