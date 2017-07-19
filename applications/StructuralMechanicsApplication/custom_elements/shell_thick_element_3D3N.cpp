@@ -954,6 +954,7 @@ namespace Kratos
 			localToFiberRotation(1, 0) = s;
 			localToFiberRotation(1, 1) = c;
 			localToFiberRotation(2, 2) = 1.0;
+
 			Vector3 temp = prod(localToFiberRotation, localAxis1);
 
 			// Transform result back to global cartesian coords and normalize

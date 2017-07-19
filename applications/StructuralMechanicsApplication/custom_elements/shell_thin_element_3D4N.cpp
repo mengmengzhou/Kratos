@@ -1103,12 +1103,15 @@ namespace Kratos
 			// section orientation, which rotates the entrire element section 
 			// in-plane and is used in element stiffness calculation.
 
+			// Resize output
 			rValues.resize(4);
 			for (int i = 0; i < 4; ++i) rValues[i] = ZeroVector(3);
+
+
 			// Initialize common calculation variables
 			// Compute the local coordinate system.
 			ShellQ4_LocalCoordinateSystem localCoordinateSystem(
-				mpCoordinateTransformation->CreateLocalCoordinateSystem());
+				mpCoordinateTransformation->CreateReferenceCoordinateSystem());
 
 			// Get local axis 1 in flattened LCS space
 			Vector3 localAxis1 = localCoordinateSystem.P2() - localCoordinateSystem.P1();
@@ -1128,17 +1131,23 @@ namespace Kratos
 			Vector3 temp = prod(localToFiberRotation, localAxis1);
 
 			// Transform result back to global cartesian coords
-			Matrix localToGlobalLarge;
-			localCoordinateSystem.ComputeLocalToGlobalTransformationMatrix(localToGlobalLarge);
-			Matrix localToGlobalSmall = Matrix(3, 3, 0.0);
-			for (size_t i = 0; i < 3; i++)
-			{
-				for (size_t j = 0; j < 3; j++)
-				{
-					localToGlobalSmall(i, j) = localToGlobalLarge(i, j);
-				}
-			}
-			Vector3 fiberAxis1 = prod(localToGlobalSmall, temp);
+				// Includes warpage correction
+					/*
+					Matrix localToGlobalLarge;
+					localCoordinateSystem.ComputeLocalToGlobalTransformationMatrix(localToGlobalLarge);
+					Matrix localToGlobalSmall = Matrix(3, 3, 0.0);
+					for (size_t i = 0; i < 3; i++)
+					{
+						for (size_t j = 0; j < 3; j++)
+						{
+							localToGlobalSmall(i, j) = localToGlobalLarge(i, j);
+						}
+					}
+					*/
+				// Basic rotation without warpage correction
+					Matrix localToGlobalSmall = localCoordinateSystem.Orientation();
+
+			Vector3 fiberAxis1 = prod(trans(localToGlobalSmall), temp);
 			fiberAxis1 /= std::sqrt(inner_prod(fiberAxis1, fiberAxis1));
 
 			//write results
