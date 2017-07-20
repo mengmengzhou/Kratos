@@ -679,6 +679,7 @@ namespace Kratos
 		VectorType& rRightHandSideVector,
 		ProcessInfo& rCurrentProcessInfo)
 	{
+		//boost::timer::auto_cpu_timer t;
 		CalculateAll(rLeftHandSideMatrix, rRightHandSideVector, rCurrentProcessInfo, true, true);
 	}
 
@@ -2595,7 +2596,6 @@ namespace Kratos
 				iValue(0, 1) = iValue(1, 0) = data.generalizedStresses(5);
 				iValue(0, 2) = iValue(2, 0) = 0.0;
 				iValue(1, 2) = iValue(2, 1) = 0.0;
-				//std::cout << iValue << std::endl;
 			}
 			else if (ijob == 5) // SHELL_STRESS_TOP_SURFACE
 			{
