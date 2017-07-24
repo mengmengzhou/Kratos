@@ -546,7 +546,7 @@ namespace Kratos
 		}
 	}
 
-	void AleCornVelElement::AleCornVelElement::GetValueOnIntegrationPoints(const Variable<double>& rVariable, std::vector<double>& rValues,
+	void AleCornVelElement::GetValueOnIntegrationPoints(const Variable<double>& rVariable, std::vector<double>& rValues,
 		const ProcessInfo& rCurrentProcessInfo)
 	{
 		if (rVariable == DAMAGE_ELEMENT) {
