@@ -456,10 +456,6 @@ namespace Kratos
 		KRATOS_CATCH("")
 	}
 
-	void ShellThickElement3D3N::CleanMemory()
-	{
-	}
-
 	void ShellThickElement3D3N::GetValuesVector(Vector& values, int Step)
 	{
 		if (values.size() != OPT_NUM_DOFS)

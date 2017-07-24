@@ -124,8 +124,6 @@ namespace Kratos
 		
 		int Check(const ProcessInfo& rCurrentProcessInfo);
 
-		void CleanMemory();
-
 		void GetValuesVector(Vector& values, int Step = 0);
 
 		void GetFirstDerivativesVector(Vector& values, int Step = 0);
@@ -251,12 +249,6 @@ namespace Kratos
 			bool CalculateLHS; /*!< flag for the calculation of the left-hand-side vector */
 
 			const bool parabolic_composite_transverse_shear_strains = false;
-
-			// DSGc3 ansatz coefficients
-			VectorType a5 = ZeroVector(9);
-			VectorType a6 = ZeroVector(9);
-			VectorType a8 = ZeroVector(9);
-			VectorType a9 = ZeroVector(9);
 
 			// ---------------------------------------
 			// Testing flags
