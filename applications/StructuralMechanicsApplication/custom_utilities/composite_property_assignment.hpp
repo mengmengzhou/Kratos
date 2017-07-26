@@ -201,31 +201,65 @@ namespace Kratos {
 				localGlobalFiberDirection = Vector3(GlobalFiberDirection);
 
 				// get rotation matrix to align element normal with projection vec (global cartesian)
-				rotation_axis = MathUtils<double>::CrossProduct(localAxis3, normalVector);
+				//rotation_axis = MathUtils<double>::CrossProduct(localAxis3, normalVector); // original
+				rotation_axis = MathUtils<double>::CrossProduct(normalVector, localAxis3);
 				rotation_angle = inner_prod(normalVector, localAxis3);
 				if (abs(rotation_angle) < (1.0 - 1E-6)) // skip if already co-linear
 				{
 					rotation_angle = std::acos(rotation_angle);
-					R = setUpRotationMatrix(rotation_angle, rotation_axis);
+					R = setUpRotationMatrix(-rotation_angle, rotation_axis);
 					localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
 				}
 
-				// Put everything in local space (local cartesian)
-				localGlobalFiberDirection = prod(LCSOrientation, localGlobalFiberDirection);
-				localAxis1 = prod(LCSOrientation, localAxis1);
-				localAxis2 = prod(LCSOrientation, localAxis2);
 
-				// compute angle 'theta' between local axis 1 and localGlobalFiberDirection (local cartesian)
-				cosTheta = inner_prod(localAxis1, localGlobalFiberDirection);
-				theta = std::acos(cosTheta);
+				Vector mytemp = prod((R), normalVector);
 
-				// dot between lc2 and localFiberDir (local cartesian)
-				double dotCheck = inner_prod(localAxis2, localGlobalFiberDirection);
-				if (dotCheck < 0.0)
+
+
+				std::cout << "\nrotated normalVector dot localAxis3 = " << inner_prod(mytemp, localAxis3) << std::endl;
+				std::cout << "rotated localGlobalFiberDirection dot localAxis3 = " << inner_prod(localGlobalFiberDirection, localAxis3) << std::endl;
+				std::cout << "rotated normalVector  = " << mytemp << std::endl;
+				std::cout << "localAxis3  = " << localAxis3 << std::endl;
+				std::cout << "rotated localGlobalFiberDirection  = " << localGlobalFiberDirection << std::endl;
+				std::cout << "rotation angle = " << rotation_angle / KRATOS_M_PI *180.0 << std::endl;
+
+
+				bool global_approach = false;
+				if (global_approach)
 				{
-					// theta is currently negative, flip to positive definition
-					theta *= -1.0;
+					// get rotation matrix to align element normal with projection vec (global cartesian)
+					//rotation_axis = MathUtils<double>::CrossProduct(localAxis3, normalVector); // original
+					rotation_axis = localAxis3;
+					rotation_angle = inner_prod(localGlobalFiberDirection, localAxis1);
+					if (abs(rotation_angle) < (1.0 - 1E-6)) // skip if already co-linear
+					{
+						rotation_angle = std::acos(rotation_angle);
+						//R = setUpRotationMatrix(rotation_angle, rotation_axis);
+						//localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
+						theta = rotation_angle;
+					}
 				}
+				else
+				{
+					// Put everything in local space (local cartesian)
+					localGlobalFiberDirection = prod(LCSOrientation, localGlobalFiberDirection);
+					localAxis1 = prod(LCSOrientation, localAxis1);
+					localAxis2 = prod(LCSOrientation, localAxis2);
+
+					// compute angle 'theta' between local axis 1 and localGlobalFiberDirection (local cartesian)
+					cosTheta = inner_prod(localAxis1, localGlobalFiberDirection);
+					theta = std::acos(cosTheta);
+
+					// dot between lc2 and localFiberDir (local cartesian)
+					double dotCheck = inner_prod(localAxis2, localGlobalFiberDirection);
+					if (dotCheck < 0.0)
+					{
+						// theta is currently negative, flip to positive definition
+						theta *= -1.0;
+					}
+				}
+
+				
 
 				// set required rotation in element
 				pElementProps = element.pGetProperties();
