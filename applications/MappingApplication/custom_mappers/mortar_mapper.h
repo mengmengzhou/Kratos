@@ -64,7 +64,7 @@ public:
     ///@{
 
     MortarMapper(ModelPart& i_model_part_origin, ModelPart& i_model_part_destination,
-                          Parameters& rJsonParameters) : MapperMatrixBased(
+                          Parameters& rJsonParameters, BuilderAndSolver BuilderAndSolverMdd) : MapperMatrixBased(
                                   i_model_part_origin, i_model_part_destination, rJsonParameters)
     {
         // @Jordi the "Condition_Gauss_Point" can be of the type that Riccardo suggested. Then we can get directly the ShapeFunctionValues that we need
@@ -73,9 +73,9 @@ public:
         mpMapperCommunicator->Initialize();
         // these three steps correspond to "MapperCommunicator::BuildInterface()"
 
-        //mpMapperCommunicator->GetBuilderAndMultiplier()->BuildLHS(scheme, modelpart, Mdo); // could be moved to baseclass...?
-        FillMappingMatrix();
-        mpMapperCommunicator->GetBuilderAndSolver()->BuildLHS(scheme, modelpart, mM_dd); // this would also initialize this "BuilderAndSolver" => same as below, should be member of this class?
+        // //mpMapperCommunicator->GetBuilderAndMultiplier()->BuildLHS(scheme, modelpart, Mdo); // could be moved to baseclass...?
+        // FillMappingMatrix();
+        // mpMapperCommunicator->GetBuilderAndSolver()->BuildLHS(scheme, modelpart, mM_dd); // this would also initialize this "BuilderAndSolver" => same as below, should be member of this class?
     }
 
     /// Destructor.
@@ -99,12 +99,12 @@ public:
              const Variable<double>& rDestinationVariable,
              Kratos::Flags MappingOptions) override
     {   
-        InterpolateToDestinationMesh(mQ_tmp) // here the Multiplication is done
+        // InterpolateToDestinationMesh(mQ_tmp) // here the Multiplication is done
         
-        // @Jordi this BuilderAndSolver is only needed for Mortar. Can it be a member of this class then?
-        mpMapperCommunicator->GetBuilderAndSolver()->Solve(scheme, modelpart_destination, mM_dd, mQ_d, mQ_tmp);
+        // // @Jordi this BuilderAndSolver is only needed for Mortar. Can it be a member of this class then?
+        // mpMapperCommunicator->GetBuilderAndSolver()->Solve(scheme, modelpart_destination, mM_dd, mQ_d, mQ_tmp);
 
-        SetNodalValues();
+        // SetNodalValues();
     }
 
     /* This function maps from Origin to Destination */
@@ -183,6 +183,35 @@ protected:
     ///@name Protected Operations
     ///@{
 
+    void FillMappingMatrix() override
+    {
+        // // @Jordi I hope this is possible. And I hope we only need to access data in this row.
+        // // For NN and NE this is the case, for Mortar I am not sure atm.
+        // // local information: row for destination Node
+
+
+        // mM_do->Reset();
+
+
+        // // Ask the communicator for the information needed for filling the matrix
+        // // NN: Neighbor Indices
+        // // NE: Neighbor Indices and corresponding shape function values
+        // // Mortar:
+
+        // // @Jordi Here the integration would be done. I would like to follow what Vicente does for Contact
+        // // to not reinvent the wheel. He has a utility ("exact_mortar_segmentation_utility.h") which seems to do the
+        // // integration, but I want to talk to him when he comes next week.
+
+        // // Unitl Vicente comes next week I will also try to catch up again on the Mortar Theory, esp the triangulaton.
+
+        // // The data that is necessary will be querried from the communicator. Aditya is currently trying to extend the 
+        // // communicator for sending arbitrary data, this he needs for his MPC stuff. We could then also use this
+        // // Or the global pointers, lets see how it goes
+
+        
+        // mpCommunicator->AssembleMappingMatrix(mM_do);
+    }
+
     ///@}
     ///@name Protected  Access
     ///@{
@@ -206,11 +235,11 @@ private:
     ///@name Member Variables
     ///@{
     
-    // @Jordi same question as for the base class
-    TSystemMatrixType mM_dd;
-    TSystemVectorType mQ_tmp;
+    // // @Jordi same question as for the base class
+    // TSystemMatrixType mM_dd;
+    // TSystemVectorType mQ_tmp;
 
-    strategy
+    // strategy
 
     ///@}
     ///@name Private Operators
@@ -219,35 +248,6 @@ private:
     ///@}
     ///@name Private Operations
     ///@{
-
-    void FillMappingMatrix() override
-    {
-        // @Jordi I hope this is possible. And I hope we only need to access data in this row.
-        // For NN and NE this is the case, for Mortar I am not sure atm.
-        // local information: row for destination Node
-
-
-        mM_do->Reset();
-
-
-        // Ask the communicator for the information needed for filling the matrix
-        // NN: Neighbor Indices
-        // NE: Neighbor Indices and corresponding shape function values
-        // Mortar:
-
-        // @Jordi Here the integration would be done. I would like to follow what Vicente does for Contact
-        // to not reinvent the wheel. He has a utility ("exact_mortar_segmentation_utility.h") which seems to do the
-        // integration, but I want to talk to him when he comes next week.
-
-        // Unitl Vicente comes next week I will also try to catch up again on the Mortar Theory, esp the triangulaton.
-
-        // The data that is necessary will be querried from the communicator. Aditya is currently trying to extend the 
-        // communicator for sending arbitrary data, this he needs for his MPC stuff. We could then also use this
-        // Or the global pointers, lets see how it goes
-
-        
-        mpCommunicator->AssembleMappingMatrix(mM_do);
-    }
 
     ///@}
     ///@name Private  Access

@@ -97,6 +97,15 @@ public:
         return mpGeometry;
     }
 
+    void SetVectorIndices(const std::unordered_map<int, int>& IdIndexMap) override
+    {
+        // TODO do sth else and not push_back, see InterfaceNode::SetVectorIndices
+        for (int i = 0; i < mNumPoints; ++i)
+        {
+            mVectorIndices.push_back(IdIndexMap.at(mpGeometry->GetPoint(i).Id())); // should work since point is actually a node(...?)     
+        }
+    }
+
     bool EvaluateResult(const array_1d<double, 3>& rGlobalCoords,
                         double& rMinDistance, const double Distance,
                         std::vector<double>& rShapeFunctionValues) override   // I am an object in the bins

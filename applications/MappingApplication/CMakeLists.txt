@@ -5,7 +5,6 @@ message("**** configuring KratosMappingApplication ****")
 include_directories( ${CMAKE_SOURCE_DIR}/kratos )
 # include_directories( ${CMAKE_SOURCE_DIR}/applications/mpi_search_application ) # TODO can be removed for now
 
-
 # generate variables with the sources
 set( KRATOS_MAPPING_APPLICATION_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/mapping_application.cpp
@@ -18,7 +17,13 @@ set( KRATOS_MAPPING_APPLICATION_SOURCES
 set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS "")
 ## If we have mpi support, use it
 if(${MPI_NEEDED} MATCHES ON )
-	set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS ${KRATOS_MAPPING_APPLICATION_EXTRA_LIBS} ${MPI_LIBRARIES})
+    # @ Jordi is this the correct way of including trilinos?
+    include_directories( ${CMAKE_SOURCE_DIR}/applications/trilinos_application )
+    find_package(TRILINOS REQUIRED)
+    include_directories(${TRILINOS_INCLUDE_DIR}) # seems to work without this, too
+    link_directories(${TRILINOS_LIBRARIES})
+	set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS ${KRATOS_MAPPING_APPLICATION_EXTRA_LIBS} ${MPI_LIBRARIES}) # also is this needed? I seem to be the only one doing it...
+	# set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS ${KRATOS_MAPPING_APPLICATION_EXTRA_LIBS} ${TRILINOS_LIBRARIES}) @ Jordi why does it work without linking?
 endif(${MPI_NEEDED} MATCHES ON )
 
 # define library Kratos which defines the basic python interface

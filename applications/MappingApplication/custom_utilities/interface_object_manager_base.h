@@ -109,6 +109,14 @@ public:
         }
     }
 
+    void SetVectorIndices(const std::unordered_map<int, int>& IdIndexMap)
+    {
+        for (auto& interface_obj : mInterfaceObjects)
+        {
+            interface_obj->SetVectorIndices(IdIndexMap);
+        } 
+    }
+
     template <typename T>
     void MapInsertElement(std::unordered_map<int, T>& rMap, int Key, T& rValue)
     {

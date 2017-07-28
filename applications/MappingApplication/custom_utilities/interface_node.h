@@ -88,6 +88,12 @@ public:
         return mpNode;
     }
 
+    void SetVectorIndices(const std::unordered_map<int, int>& IdIndexMap) override
+    {
+        // TODO do reset of vector? Or some other operation, sth with initialize??
+        mVectorIndices.push_back(IdIndexMap.at(mpNode->Id()));        
+    }
+
     bool EvaluateResult(const array_1d<double, 3>& GlobalCooords,
                         double& rMinDistance, const double Distance,
                         std::vector<double>& rShapeFunctionValues) override   // I am an object in the bins

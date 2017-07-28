@@ -73,7 +73,7 @@ public:
         // member of this class.
         // If we don't use a BuilderAndSolver for Mdo then the above is obsolete.
         // In any case, if the BuilderAndSolver is member of the Mapper, how can we destinguish btw serial and parallel?
-        mpCommunicator->InitializeBuilderAndSolverForMdo();
+        // mpCommunicator->InitializeBuilderAndSolverForMdo();
     }
 
     /// Destructor.
@@ -167,11 +167,10 @@ protected:
     ///@}
     ///@name Protected member Variables
     ///@{
-    
-    // @Jordi can these be members here? Or do they have to be members of the BuilderAndSolver?
-    TSystemMatrixType mM_do;
-    TSystemVectorType mQ_o;
-    TSystemVectorType mQ_d;
+
+    MappingMatrixUtility::Pointer mpMappingMatrixUtility;
+    std::unordered_map<int, Node<3>*> mpIndexNodeMapOrigin;
+    std::unordered_map<int, Node<3>*> mpIndexNodeMapDestination;
     
 
     ///@}
@@ -181,23 +180,6 @@ protected:
     ///@}
     ///@name Protected Operations
     ///@{
-
-    void InterpolateToDestinationMesh(TSystemVectorType& q_res) 
-    {
-        // @Jordi
-        // Do Multiplication based on Spaces stuff
-        q_res = mM_do * mQ_o
-
-        // old:
-        // // mpMapperCommunicator->GetBuilderAndMultiplier()->BuildRHSAndMultiply(scheme, modelpart, Mdo, q_res, q_o);
-        // // from your mail: MatrixBasedMapper::GetOriginValues(q_o) 
-    }
-
-    void SetNodalValues()
-    {
-        // @Jordi is this the way to do it?
-        mpMapperCommunicator->GetScheme()->Update(mQ_d);
-    }
 
     // This function is required by every mapper
     // It is responsible for filling the (local) mapping matrix
@@ -225,8 +207,6 @@ private:
     ///@}
     ///@name Member Variables
     ///@{
-
-    Mapper::Pointer mpInverseMapper;
 
     ///@}
     ///@name Private Operators

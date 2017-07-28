@@ -25,9 +25,9 @@
 #include "includes/kratos_parameters.h"
 
 #include "custom_mappers/nearest_neighbor_mapper.h"
-#include "custom_mappers/nearest_neighbor_matrix_mapper.h"
+#include "custom_mappers/nearest_neighbor_mapper_matrix.h"
 #include "custom_mappers/nearest_element_mapper.h"
-#include "custom_mappers/mortar_mapper.h"
+// #include "custom_mappers/mortar_mapper.h"
 
 
 namespace Kratos
@@ -438,12 +438,12 @@ private:
                                                          *mpInterfaceModelPartDestination,
                                                          mrJsonParameters));
 
-          } */else if (mMapperType == "Mortar") {
+          } *//*else if (mMapperType == "Mortar") {
               mpMapper = Mapper::Pointer(new MortarMapper(*mpInterfaceModelPartOrigin,
                                                           *mpInterfaceModelPartDestination,
                                                            mrJsonParameters));
 
-          } /*else if (mMapperType == "IGA") {
+          } *//*else if (mMapperType == "IGA") {
               mpMapper = Mapper::Pointer(new IGAMapper(*mpInterfaceModelPartOrigin,
                                                          *mpInterfaceModelPartDestination,
                                                          mrJsonParameters));

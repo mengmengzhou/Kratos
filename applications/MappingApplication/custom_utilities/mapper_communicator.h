@@ -17,6 +17,7 @@
 #define  KRATOS_MAPPER_COMMUNICATOR_H_INCLUDED
 
 // System includes
+#include <unordered_map>
 
 // External includes
 
@@ -25,6 +26,7 @@
 #include "interface_object_manager_serial.h"
 #include "interface_search_structure.h"
 #include "mapper_utilities.h"
+#include "mapping_matrix_utility.h"
 
 
 namespace Kratos
@@ -143,6 +145,14 @@ public:
         InvokeSearch(mInitialSearchRadius, mMaxSearchIterations);
     }
 
+    void InitilizeMappingMatrixUtility(MappingMatrixUtility::Pointer pMappingMatrixUtility)
+    {
+        pMappingMatrixUtility = MappingMatrixUtility::Pointer ( new MappingMatrixUtility() );
+    }
+
+
+
+
     void UpdateInterface(Kratos::Flags& rOptions, double InitialSearchRadius)
     {
         if (rOptions.Is(MapperFlags::REMESHED))   // recompute the managers and the search structure
@@ -187,6 +197,14 @@ public:
         ExchangeDataLocal(FunctionPointerOrigin, FunctionPointerDestination);
     }
 
+    void GetNeighborIndices(std::function<int(InterfaceObject*, const std::vector<double>&)> FunctionPointerGetIndices,
+                            std::vector<int>& NeighborIndices)
+    {
+        mpInterfaceObjectManagerOrigin->FillBufferWithValues(FunctionPointerGetIndices, NeighborIndices);
+    }
+
+
+
     virtual int MyPID() // Copy from "kratos/includes/communicator.h"
     {
         return 0;
@@ -197,17 +215,6 @@ public:
         return 1;
     }
 
-    virtual void BuildCommunicationGraph() 
-    {
-        KRATOS_ERROR << "This function call should not happen, only needed in parallel Execution" << std::endl;
-    }
-
-    virtual void AssembleMappingMatrix()
-    {
-        // In the serial case this function does nothing, since the local matrix is the same as the global matrix
-    }
-
-
     void PrintTime(const std::string& rMapperName,
                    const std::string& rFunctionName,
                    const double& rElapsedTime)
@@ -217,6 +224,41 @@ public:
             std::cout  << "MAPPER TIMER: \"" << rMapperName << "\", \"" << rFunctionName
                        << "\" took " <<  rElapsedTime << " seconds" << std::endl;
         }
+    }
+
+    virtual void ComputeIndexMap(std::unordered_map<int, Node<3>*>& IndexNodeMapOrigin,
+                                 std::unordered_map<int, Node<3>*>& IndexNodeMapDestination,
+                                 std::unordered_map<int, int>& IdIndexMapDestination) 
+    {
+        // this function assigns an index to each interfaceObject
+        // This is it's index in the global vector
+
+        // Note even though I don't like working with Ids, I think here it is ok since I use them only temporarily
+
+        const int start_index_origin = 0; // in mpi this is determined after AllGather to get the starting index
+        const int start_index_destination = 0;
+
+        int index_origin = start_index_origin;
+        int index_destination = start_index_destination;
+
+        std::unordered_map<int, int> id_index_map_origin;
+
+        for (auto& node : mrModelPartOrigin.Nodes()) // Has to be the local Nodes in mpi
+        {
+            IndexNodeMapOrigin.emplace(index_origin, &node); // TODO check if this is a pointer
+            id_index_map_origin.emplace(node.Id(), index_origin);
+            ++index_origin;
+        }
+
+        for (auto& node : mrModelPartDestination.Nodes())
+        {
+            IndexNodeMapDestination.emplace(index_destination, &node); // TODO check if this is a pointer
+            IdIndexMapDestination.emplace(node.Id(), index_destination);
+            ++index_destination;
+        }
+
+        mpInterfaceObjectManagerOrigin->SetVectorIndices(id_index_map_origin);
+        mpInterfaceObjectManagerDestination->SetVectorIndices(IdIndexMapDestination);
     }
 
     ///@}

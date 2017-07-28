@@ -64,12 +64,14 @@ public:
     ///@{
 
     NearestNeighborMapperMatrix(ModelPart& i_model_part_origin, ModelPart& i_model_part_destination,
-                          Parameters& rJsonParameters) : MapperMatrixBased(
-                                  i_model_part_origin, i_model_part_destination, rJsonParameters)
+                                Parameters& rJsonParameters) : MapperMatrixBased(
+                                i_model_part_origin, i_model_part_destination, rJsonParameters)
     {
         mpMapperCommunicator->InitializeOrigin(MapperUtilities::Node_Coords);
         mpMapperCommunicator->InitializeDestination(MapperUtilities::Node_Coords);
         mpMapperCommunicator->Initialize();
+
+        mpMapperCommunicator->InitilizeMappingMatrixUtility(mpMappingMatrixUtility);
 
         FillMappingMatrix(); // Fill the local part of Mdd
 
@@ -97,8 +99,15 @@ public:
              const Variable<double>& rDestinationVariable,
              Kratos::Flags MappingOptions) override
     {   
-        InterpolateToDestinationMesh(mQ_d) // here the Multiplication is done
-        SetNodalValues();
+        mpMappingMatrixUtility->AssembleRHSOrigin(rOriginVariable, 
+                                                  MappingOptions, 
+                                                  mpIndexNodeMapOrigin); // Assemble m_Qo
+
+        mpMappingMatrixUtility->Multiply(); // here the Multiplication is done; m_Mdo * m_Qo
+
+        mpMappingMatrixUtility->UpdateDestination(rDestinationVariable, 
+                                                  MappingOptions, 
+                                                  mpIndexNodeMapDestination); // Set nodal Values from m_Qd
     }
 
     /* This function maps from Origin to Destination */
@@ -176,6 +185,28 @@ protected:
     ///@}
     ///@name Protected Operations
     ///@{
+        
+    void FillMappingMatrix() override
+    {
+        std::unordered_map<int, int> id_index_map_destination;
+
+        mpMapperCommunicator->ComputeIndexMap(mpIndexNodeMapOrigin,
+                                              mpIndexNodeMapDestination,
+                                              id_index_map_destination);
+
+        std::vector<int> neighbor_indices;
+        mpMapperCommunicator->GetNeighborIndices(GetNeighborIndex, neighbor_indices);
+
+        int i = 0;
+
+        for (auto &node : mModelPartDestination.GetCommunicator().LocalMesh().Nodes())
+        {
+            // Fill the local part of the matrix
+            mpMappingMatrixUtility->SetEntry(id_index_map_destination[node.Id()], neighbor_indices[i], 1.0f); 
+            ++i;
+        }
+    }
+
 
     ///@}
     ///@name Protected  Access
@@ -208,33 +239,10 @@ private:
     ///@name Private Operations
     ///@{
 
-    void FillMappingMatrix() override
+    static int GetNeighborIndex(InterfaceObject* pInterfaceObject,
+                                const std::vector<double>& rShapeFunctionValues)
     {
-        // @Jordi what do you think abt this function?
-        // Also look for the comments in the same function of the MortarMapper
-
-        // local information: row for destination Node
-
-
-        mM_do->Reset(); // necessary? (small detail)
-
-
-        // Ask the communicator for the information needed for filling the matrix
-        // NN: Neighbor Indices
-        // NE: Neighbor Indices and corresponding shape function values
-        // Mortar: ...?
-
-        
-        std::vector<int> neighbor_IDs = mpCommunicator->GetNeighborIDs();
-        int i = 0;
-
-        for (auto &local_node : rModelPart.GetCommunicator().LocalMesh().Nodes())
-        {
-            mM_do(local_node.Id() , neighbor_IDs[i]) = 1.0f; // Fill the local part of the matrix
-            ++i;
-        }
-
-        mpCommunicator->AssembleMappingMatrix(mM_do);
+        return pInterfaceObject->GetVectorIndices()[0];
     }
 
     ///@}

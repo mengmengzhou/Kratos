@@ -27,10 +27,19 @@
 
 // Project includes
 #include "includes/define.h"
+
+// Jordi is this correct?
+#include "spaces/ublas_space.h" // Always needed, for "LocalSpaceType"
+#ifdef KRATOS_USING_MPI // mpi-parallel compilation
+#include "trilinos_space.h"
+#include "Epetra_FEVector.h"
+#endif
+
 #include "custom_python/add_custom_mappers_to_python.h"
 
 #include "custom_utilities/mapper_flags.h"
 #include "custom_utilities/mapper_factory.h"
+
 
 
 namespace Kratos
@@ -94,6 +103,18 @@ void InverseMap(MapperFactory& dummy,
 
 void  AddCustomMappersToPython()
 {
+    // Jordi, is this correct?
+    // Does this stuff have to be inside the boost::python namespace?
+#ifdef KRATOS_USING_MPI // mpi-parallel compilation
+    typedef TrilinosSpace<Epetra_FECrsMatrix, Epetra_FEVector> SparseSpaceType;
+    typedef UblasSpace<double, Matrix, Vector> LocalSpaceType;
+#else // serial compilation
+    typedef UblasSpace<double, CompressedMatrix, Vector> SparseSpaceType;
+    typedef UblasSpace<double, Matrix, Vector> LocalSpaceType;
+#endif
+    typedef LinearSolver<SparseSpaceType, LocalSpaceType > LinearSolverType; // for Mortar
+    typedef BuilderAndSolver< SparseSpaceType, LocalSpaceType, LinearSolverType > BuilderAndSolverType; // for Mortar
+    
     using namespace boost::python;
 
     void (*pUpdateInterface)(MapperFactory &)
@@ -149,6 +170,13 @@ void  AddCustomMappersToPython()
             Kratos::Flags &)
         = &MapperFactory::InverseMap;
 
+    // Jordi how to get the spaces and the linear solver into the MapperFactory?
+    // Several Constructors? (3, one as is, 
+    //                           one with the SparseSpaceType (Do we also need LocalSpaceType?) and 
+    //                           one with SparseSpaceType, (LocalSpaceType) and LinearSolverType / BuilderAndSolverType)
+
+    // Also how can we initialize a BuilderAndSolver? Directly in the MortarMapper?
+    // Mike said that it should also be possible to pass a BuilderAndSolver into the MortarMapper
 
     class_< MapperFactory > mapper_factory = class_<MapperFactory>("MapperFactory", init<ModelPart&, ModelPart&, Parameters&>())
             .def("UpdateInterface",  pUpdateInterface)

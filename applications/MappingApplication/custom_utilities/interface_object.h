@@ -179,11 +179,21 @@ public:
         return mIsBeingSent;
     }
 
+    std::vector<int> GetVectorIndices()
+    {
+        return mVectorIndices;
+    }
+
+    virtual void SetVectorIndices(const std::unordered_map<int, int>& IdIndexMap)
+    {
+        KRATOS_ERROR << "Base class function called!" << std::endl;
+    }
+
     virtual bool EvaluateResult(const array_1d<double, 3>& rGlobalCoords,
                                 double& rMinDistance, const double Distance,
                                 std::vector<double>& rShapeFunctionValues)
     {
-        KRATOS_ERROR << "Base class function called!" << std::endl;
+        
         return false;
     }
 
@@ -253,6 +263,8 @@ protected:
     ///@name Protected member Variables
     ///@{
 
+    std::vector<int> mVectorIndices; // has to be a vector bcs a geometry can have more han one node!
+
 
     ///@}
     ///@name Protected Operators
@@ -269,6 +281,7 @@ protected:
         mPairingStatus = PairingStatus::NoNeighbor;
         mNeighborRank = 0;
         mIsBeingSent = false;
+        // mVectorIndex //TODO set some value here?
     }
 
     virtual void SetCoordinates()
