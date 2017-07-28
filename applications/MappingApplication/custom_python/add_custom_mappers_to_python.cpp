@@ -173,7 +173,7 @@ void  AddCustomMappersToPython()
     // Jordi how to get the spaces and the linear solver into the MapperFactory?
     // Several Constructors? (3, one as is, 
     //                           one with the SparseSpaceType (Do we also need LocalSpaceType?) and 
-    //                           one with SparseSpaceType, (LocalSpaceType) and LinearSolverType / BuilderAndSolverType)
+    //                           one with SparseSpaceType, (LocalSpaceType) and LinearSolverType / BuilderAndSolverType or the strategy we were discussing)
 
     // Also how can we initialize a BuilderAndSolver? Directly in the MortarMapper?
     // Mike said that it should also be possible to pass a BuilderAndSolver into the MortarMapper
