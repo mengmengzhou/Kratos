@@ -1,0 +1,137 @@
+{
+    "test_settings" : {
+        "execute_solve" : true
+    },
+    "problem_data"                     : {
+        "problem_name"    : "test_fmd_cylinder_coarse",
+        "model_part_name" : "MainModelPart",
+        "domain_size"     : 3,
+        "start_step"      : 0.0,
+        "nsteps"          : 30,
+        "time_step"       : 0.001
+    },
+    "output_configuration"             : {
+        "result_file_configuration" : {
+            "gidpost_flags"       : {
+                "GiDPostMode"           : "GiD_PostBinary",
+                "WriteDeformedMeshFlag" : "WriteDeformed",
+                "WriteConditionsFlag"   : "WriteConditions",
+                "MultiFileFlag"         : "SingleFile"
+            },
+            "file_label"          : "time",
+            "output_control_type" : "step",
+            "output_frequency"    : 1.0,
+            "body_output"         : true,
+            "node_output"         : false,
+            "skin_output"         : false,
+            "plane_output"        : [],
+            "nodal_results"       : ["VELOCITY","PRESSURE"],
+            "gauss_point_results" : []
+        },
+        "point_data_configuration"  : []
+    },
+    "restart_options"                  : {
+        "SaveRestart"      : "False",
+        "RestartFrequency" : 0,
+        "LoadRestart"      : "False",
+        "Restart_Step"     : 0
+    },
+    "solver_settings"                  : {
+        "solver_type"                   : "navier_stokes_solver_vmsmonolithic",
+        "model_import_settings"         : {
+            "input_type"     : "mdpa",
+            "input_filename" : "test_fmd_cylinder_coarse/test_fmd_cylinder_coarse"
+        },
+        "maximum_iterations"           : 10,
+        "dynamic_tau"                  : 1.0,
+        "oss_switch"                   : 0,
+        "echo_level"                   : 0,
+        "consider_periodic_conditions" : false,
+        "compute_reactions"            : true,
+        "divergence_clearance_steps"   : 0,
+        "reform_dofs_at_each_step"     : false,
+        "relative_velocity_tolerance"  : 1e-3,
+        "absolute_velocity_tolerance"  : 1e-5,
+        "relative_pressure_tolerance"  : 1e-3,
+        "absolute_pressure_tolerance"  : 1e-5,
+        "linear_solver_settings"       : {
+            "solver_type"         : "AMGCL",
+            "verbosity"           : 0,
+            "coarse_enough"       : 500
+        },
+        "volume_model_part_name"        : "Parts_fluid",
+        "skin_parts"                    : ["Inlet3D_inlet","Outlet3D_outlet","NoSlip3D_walls"],
+        "no_skin_parts"                 : []
+    },
+    "initial_conditions_process_list"  : [],
+    "boundary_conditions_process_list" : [{
+        "python_module" : "impose_vector_value_by_components_process",
+        "kratos_module" : "KratosMultiphysics",
+        "process_name"  : "ImposeVectorValueByComponentsProcess",
+        "Parameters"    : {
+            "mesh_id"         : 0,
+            "model_part_name" : "Inlet3D_inlet",
+            "variable_name"   : "VELOCITY",
+            "is_fixed_x"      : true,
+            "is_fixed_y"      : true,
+            "is_fixed_z"      : true,
+            "value"           : [0.0, 0.0, 1e-5]
+        }
+    },{
+        "python_module" : "impose_scalar_value_process",
+        "kratos_module" : "KratosMultiphysics.FluidDynamicsApplication",
+        "process_name"  : "ApplyOutletProcess",
+        "Parameters"    : {
+            "mesh_id"         : 0,
+            "model_part_name" : "Outlet3D_outlet",
+            "variable_name"   : "PRESSURE",
+            "value"           : 0
+        }
+    },{
+        "python_module"         : "apply_noslip_process",
+        "kratos_module"         : "KratosMultiphysics.FluidDynamicsApplication",
+        "process_name"          : "ApplyNoSlipProcess",
+        "Parameters"            : {
+            "mesh_id"         : 0,
+            "model_part_name" : "NoSlip3D_walls"
+        }
+    }],
+    "gravity"                          : [{
+        "python_module"         : "process_factory",
+        "kratos_module"         : "KratosMultiphysics",
+        "process_name"          : "ApplyConstantVectorValueProcess",
+        "Parameters"            : {
+            "mesh_id"         : 0,
+            "model_part_name" : "Parts_fluid",
+            "variable_name"   : "BODY_FORCE",
+            "modulus"         : 0,
+            "direction"       : [0.0,-1.0,0.0]
+        }
+    }],
+    "list_other_processes" :[{
+	"kratos_module"    : "KratosMultiphysics.AdjointFluidApplication",
+	"python_module"    : "output_primal_solution_process",
+	"help"             : "",
+	"process_name"     : "OutputPrimalSolutionProcess",
+	"Parameters"          : {
+	    "model_part_name" : "Parts_fluid",
+	    "file_name"       : "test_fmd_cylinder_coarse/test_fmd_cylinder_coarse",
+	    "variable_list"   : ["VELOCITY", "ACCELERATION", "PRESSURE"],
+	    "alpha_bossak"    :-0.3
+	}
+    },{
+    "kratos_module"    : "KratosMultiphysics.AdjointFluidApplication",
+	"python_module"    : "output_objective_value_process",
+	"help"             : "",
+	"process_name"     : "OutputObjectiveValueProcess3D",
+	"Parameters"          : {
+            "model_part_name"   : "MainModelPart",
+            "objective_settings" : {
+                "objective_type"                 : "flow_mal_distribution",
+                "surface_model_part_name"        : "Outlet3D_outlet",
+                "flow_mal_distribution_direction": [0.0, 0.0, 1.0],
+                "output_file"                    : "test_fmd_cylinder_coarse/flow_mal_distribution"
+                }
+        }
+    }]
+}
