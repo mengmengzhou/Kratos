@@ -180,7 +180,19 @@ public:
     {
         KRATOS_TRY
 
+        // allocate auxiliary memory. this is done here instead of Initialize()
+        // in case of restart.
+        for (auto it = rModelPart.NodesBegin(); it != rModelPart.NodesEnd(); ++it)
+            it->GetValue(NODAL_AREA) = 0.0; // todo: define application variable
+
         ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
+        for(auto it = rSurfaceModelPart.ConditionsBegin();
+                it != rSurfaceModelPart.ConditionsEnd();
+                it++)
+            for (unsigned int iNode = 0; iNode < it->GetGeometry().PointsNumber(); ++iNode)
+                it->GetGeometry()[iNode].GetValue(NODAL_AREA) += 1.0;
+        
+        rModelPart.GetCommunicator().AssembleNonHistoricalData(NODAL_AREA);
 
         NormalCalculationUtils normal_calculation_obj = NormalCalculationUtils();
         const unsigned int domain_size = rModelPart.GetProcessInfo().GetValue(DOMAIN_SIZE);
@@ -217,15 +229,16 @@ public:
                     array_1d<double,3> normalized_normal = normal/magnitude;
 
                     const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(VELOCITY, 0);
-                    double directed_velocity = velocity[0]*normalized_normal[0] + 
-                                               velocity[1]*normalized_normal[1] + 
-                                               velocity[2]*normalized_normal[2];
+                    double directed_velocity = velocity[0]*normal[0] + 
+                                               velocity[1]*normal[1] + 
+                                               velocity[2]*normal[2];
                     
+                    directed_velocity /= mAverageArea;
                     directed_velocity -= mAverageVelocity;
-
-                    double coeff = inv_coeff * directed_velocity /
-                                            rElem.GetGeometry()[iNode].GetValue(NODAL_AREA);
                     
+                    double coeff = magnitude*inv_coeff*directed_velocity / 
+                                    (rElem.GetGeometry()[iNode].GetValue(NODAL_AREA) * mAverageArea);
+
                     for (unsigned int d = 0; d < TDim; d++) 
                         rRHSContribution[LocalIndex++] = coeff * normalized_normal[d];
                 }
@@ -238,7 +251,7 @@ public:
                 //Adding pressure DOF                        
                 rRHSContribution[LocalIndex++] = 0.0;
             }
-            // std::cout<<rElem.GetId()<<rRHSContribution<<std::endl;            
+            // std::cout<<rRHSContribution<<std::endl;
         } 
         else if (mMalDistributionDirection == MAL_DISTRIBUTION_DIRECTION_CUSTOM_DIRECTION)
         {
@@ -248,14 +261,17 @@ public:
                 if (rElem.GetGeometry()[iNode].Is(STRUCTURE))
                 {
                     const array_1d<double,3>& velocity = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(VELOCITY, 0);
+                    const array_1d<double,3>& normal = rElem.GetGeometry()[iNode].FastGetSolutionStepValue(NORMAL, 0);
+                    double magnitude = norm_2(normal);
                     double directed_velocity = velocity[0]*mDirection[0] + 
                                                velocity[1]*mDirection[1] + 
                                                velocity[2]*mDirection[2];
                     
+                    directed_velocity *= magnitude/mAverageArea;
                     directed_velocity -= mAverageVelocity;
 
-                    double coeff = inv_coeff * directed_velocity /
-                                            rElem.GetGeometry()[iNode].GetValue(NODAL_AREA);
+                    double coeff = magnitude*inv_coeff*directed_velocity/
+                                    (rElem.GetGeometry()[iNode].GetValue(NODAL_AREA)*mAverageArea);
 
                     for (unsigned int d = 0; d < TDim; d++)
                         rRHSContribution[LocalIndex++] = coeff * mDirection[d];
@@ -271,7 +287,6 @@ public:
             }
         }
 
-        
         KRATOS_CATCH("")
     }
 
@@ -326,17 +341,14 @@ public:
                 for (auto it = NodesBegin; it != NodesEnd; ++it)
                 {
                     const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL, 0);
-                    double magnitude = norm_2(normal);
-                    array_1d<double,3> normalized_normal = normal/magnitude;
-
                     const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY, 0);
 
                     result += pow(
                                     (
-                                        normalized_normal[0]*velocity[0] + 
-                                        normalized_normal[1]*velocity[1] + 
-                                        normalized_normal[2]*velocity[2]
-                                    ) - mAverageVelocity,
+                                        normal[0]*velocity[0] + 
+                                        normal[1]*velocity[1] + 
+                                        normal[2]*velocity[2]
+                                    ) / mAverageArea - mAverageVelocity,
                                     2
                                 );
                 }
@@ -354,13 +366,15 @@ public:
                 for (auto it = NodesBegin; it != NodesEnd; ++it)
                 {
                     const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY, 0);
+                    const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL, 0);
+                    double magnitude = norm_2(normal);
 
                     result += pow(
-                                    (
+                                    magnitude * (
                                         mDirection[0]*velocity[0] + 
                                         mDirection[1]*velocity[1] + 
                                         mDirection[2]*velocity[2]
-                                    ) - mAverageVelocity,
+                                    ) / mAverageArea - mAverageVelocity,
                                     2
                                 );
                 }
@@ -412,6 +426,7 @@ private:
 
     double mObjectiveValue;
     double mAverageVelocity;
+    double mAverageArea;
     int mN;
 
     const int MAL_DISTRIBUTION_DIRECTION_SURFACE_NORMAL = 1;
@@ -429,6 +444,7 @@ private:
         ModelPart& rSurfaceModelPart = rModelPart.GetSubModelPart(mSurfaceModelPartName);
 
         mAverageVelocity = 0.0;
+        mAverageArea = 0.0;
         mN = 0;
 
         if (mMalDistributionDirection == MAL_DISTRIBUTION_DIRECTION_SURFACE_NORMAL)
@@ -439,13 +455,12 @@ private:
             {
                 const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
                 double magnitude = norm_2(normal);
-                array_1d<double,3> normalized_normal = normal/magnitude;
                 const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY, 0);
-
+                mAverageArea += magnitude;
                 mAverageVelocity += (
-                                        normalized_normal[0]*velocity[0] + 
-                                        normalized_normal[1]*velocity[1] + 
-                                        normalized_normal[2]*velocity[2]
+                                        normal[0]*velocity[0] + 
+                                        normal[1]*velocity[1] + 
+                                        normal[2]*velocity[2]
                                     );
                 mN++;
             }
@@ -457,9 +472,10 @@ private:
                 ++it)
             {
                 const array_1d<double,3>& velocity = it->FastGetSolutionStepValue(VELOCITY, 0);
-
-
-                mAverageVelocity += (
+                const array_1d<double,3>& normal = it->FastGetSolutionStepValue(NORMAL);
+                double magnitude = norm_2(normal);
+                mAverageArea += magnitude;
+                mAverageVelocity += magnitude * (
                                         mDirection[0]*velocity[0] + 
                                         mDirection[1]*velocity[1] + 
                                         mDirection[2]*velocity[2]
@@ -469,7 +485,8 @@ private:
         }
 
         //Getting the average velocity by dividing flow rate by total objective surface area
-        mAverageVelocity /= mN;
+        mAverageVelocity /= mAverageArea;
+        mAverageArea /= mN;
     }
 
     ///@}
