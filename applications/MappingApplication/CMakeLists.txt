@@ -17,7 +17,7 @@ set( KRATOS_MAPPING_APPLICATION_SOURCES
 set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS "")
 ## If we have mpi support, use it
 if(${MPI_NEEDED} MATCHES ON )
-    # @ Jordi is this the correct way of including trilinos?
+    # Jordi is this the correct way of including trilinos?
     include_directories( ${CMAKE_SOURCE_DIR}/applications/trilinos_application )
     find_package(TRILINOS REQUIRED)
     include_directories(${TRILINOS_INCLUDE_DIR}) # seems to work without this, too
