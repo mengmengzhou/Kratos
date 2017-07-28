@@ -1,0 +1,124 @@
+{
+    "test_settings" : {
+        "execute_solve" : true
+    },
+    "problem_data"                     : {
+        "problem_name"    : "test_fmd_cylinder_adjoint",
+        "model_part_name" : "MainModelPart",
+        "domain_size"     : 3,
+        "start_step"      : 0.011,
+        "nsteps"          : 10,
+        "time_step"       :-0.001
+    },
+    "output_configuration"             : {
+        "result_file_configuration" : {
+            "gidpost_flags"       : {
+                "GiDPostMode"           : "GiD_PostBinary",
+                "WriteDeformedMeshFlag" : "WriteUndeformed",
+                "WriteConditionsFlag"   : "WriteElementsOnly",
+                "MultiFileFlag"         : "SingleFile"
+            },
+            "file_label"          : "time",
+            "output_control_type" : "step",
+            "output_frequency"    : 1.0,
+            "body_output"         : true,
+            "node_output"         : false,
+            "skin_output"         : false,
+            "plane_output"        : [],
+            "nodal_results"       : ["VELOCITY","PRESSURE","ADJOINT_VELOCITY","ADJOINT_PRESSURE","SHAPE_SENSITIVITY"],
+            "gauss_point_results" : []
+        },
+        "point_data_configuration"  : []
+    },
+    "solver_settings"                  : {
+        "solver_type"                   : "adjoint_vmsmonolithic_solver",
+        "scheme_settings" : {
+            "scheme_type" : "bossak",
+            "boundary_model_part_name" : "Outlet3D_outlet",
+            "alpha_bossak"             :-0.3,
+            "adjoint_start_time"       : 0.0,
+            "adjoint_end_time"         : 0.0100000001
+        },
+        "objective_settings" : {
+            "objective_type"                 : "flow_mal_distribution",
+            "surface_model_part_name"        : "Outlet3D_outlet",
+            "flow_mal_distribution_direction": "surface_normal",
+            "output_file"                    : ""
+        },
+        "model_import_settings"         : {
+            "input_type"     : "mdpa",
+            "input_filename" : "test_fmd_cylinder/test_fmd_cylinder_adjoint"
+        },
+        "dynamic_tau"                   : 1,
+        "oss_switch"                    : 0,
+        "echo_level"                    : 0,
+        "linear_solver_settings"        : {
+            "solver_type"         : "AMGCL",
+            "verbosity"           : 0,
+            "coarse_enough"       : 500
+        },
+        "volume_model_part_name"        : "Parts_fluid",
+        "skin_parts"                    : ["Inlet3D_inlet","Outlet3D_outlet","NoSlip3D_walls"]
+    },
+    "initial_conditions_process_list"  : [],
+    "boundary_conditions_process_list" : [{
+        "python_module"         : "impose_vector_value_by_components_process",
+        "kratos_module"         : "KratosMultiphysics",
+        "process_name"          : "ImposeVectorValueByComponentsProcess",
+        "Parameters"            : {
+            "mesh_id"         : 0,
+            "model_part_name" : "Inlet3D_inlet",
+	    "variable_name"   : "ADJOINT_VELOCITY",
+	    "is_fixed_x"      : true,
+	    "is_fixed_y"      : true,
+	    "is_fixed_z"      : true,
+	    "value"           : [0.0, 0.0, 0.0]
+        }
+    },{
+        "python_module"         : "impose_scalar_value_process",
+        "kratos_module"         : "KratosMultiphysics",
+        "process_name"          : "ImposeScalarValueProcess",
+        "Parameters"            : {
+            "mesh_id"         : 0,
+            "model_part_name" : "Outlet3D_outlet",
+            "variable_name"   : "ADJOINT_PRESSURE",
+            "value"           : 0.0
+        }
+    },{
+        "python_module"         : "impose_vector_value_by_components_process",
+        "kratos_module"         : "KratosMultiphysics",
+        "process_name"          : "ImposeVectorValueByComponentsProcess",
+        "Parameters"            : {
+            "mesh_id"         : 0,
+            "model_part_name" : "NoSlip3D_walls",
+	    "variable_name"   : "ADJOINT_VELOCITY",
+	    "is_fixed_x"      : true,
+	    "is_fixed_y"      : true,
+	    "is_fixed_z"      : true,
+	    "value"           : [0.0, 0.0, 0.0]
+        }
+    }],
+    "gravity"                          : [{
+        "python_module"         : "process_factory",
+        "kratos_module"         : "KratosMultiphysics",
+        "process_name"          : "ApplyConstantVectorValueProcess",
+        "Parameters"            : {
+            "mesh_id"         : 0,
+            "model_part_name" : "Parts_fluid",
+            "variable_name"   : "BODY_FORCE",
+            "modulus"         : 0,
+            "direction"       : [0.0,-1.0,0.0]
+        }
+    }],
+    "list_other_processes" :[{
+	"kratos_module"    : "KratosMultiphysics.AdjointFluidApplication",
+	"python_module"    : "input_primal_solution_process",
+	"help"             : "",
+	"process_name"     : "InputPrimalSolutionProcess",
+	"Parameters"          : {
+	    "model_part_name" : "Parts_fluid",
+	    "file_name"       : "test_fmd_cylinder/test_fmd_cylinder",
+	    "variable_list"   : ["VELOCITY", "ACCELERATION", "PRESSURE"]
+	}
+    }]
+}
