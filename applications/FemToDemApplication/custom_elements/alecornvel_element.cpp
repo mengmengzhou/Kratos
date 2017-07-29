@@ -948,7 +948,6 @@ namespace Kratos
 		else if (yield_surface == "SimoJu") { this->SimoJuCriterion(rIntegratedStress, damage, StrainVector, StressVector, cont, l_char); }
 		else if (yield_surface == "Rankine") { this->RankineCriterion(rIntegratedStress, damage, StressVector, cont, l_char); }
 		else if (yield_surface == "DruckerPrager") { this->DruckerPragerCriterion(rIntegratedStress, damage, StressVector, cont, l_char); }
-
 		else { KRATOS_ERROR << "Yield Surface not defined"; }
 	}
 
