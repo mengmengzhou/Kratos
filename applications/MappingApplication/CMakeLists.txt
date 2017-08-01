@@ -17,12 +17,23 @@ set( KRATOS_MAPPING_APPLICATION_SOURCES
 set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS "")
 ## If we have mpi support, use it
 if(${MPI_NEEDED} MATCHES ON )
+    # This is only true if Metis and Trilinos are compiled, right?
     # Jordi is this the correct way of including trilinos?
-    include_directories( ${CMAKE_SOURCE_DIR}/applications/trilinos_application )
+
+    # With this line I include the trilinos app. Or do I even need that? 
+    # Since I don't use features of the TrilinosApplication but only the matrix, which comes directly from Trilinos
+    include_directories( ${CMAKE_SOURCE_DIR}/applications/trilinos_application ) 
+
+    # These three lines I copied from the CMakeLists.txt of the TrilinosApplication
+    # Do we need all of them?
     find_package(TRILINOS REQUIRED)
     include_directories(${TRILINOS_INCLUDE_DIR}) # seems to work without this, too
     link_directories(${TRILINOS_LIBRARIES})
+
+    # This line was there orignally:
 	set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS ${KRATOS_MAPPING_APPLICATION_EXTRA_LIBS} ${MPI_LIBRARIES}) # also is this needed? I seem to be the only one doing it...
+
+    # How abt this line, do be need to link explicitly?
 	# set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS ${KRATOS_MAPPING_APPLICATION_EXTRA_LIBS} ${TRILINOS_LIBRARIES}) @ Jordi why does it work without linking?
 endif(${MPI_NEEDED} MATCHES ON )
 

@@ -105,13 +105,23 @@ void  AddCustomMappersToPython()
 {
     // Jordi, is this correct?
     // Does this stuff have to be inside the boost::python namespace?
-#ifdef KRATOS_USING_MPI // mpi-parallel compilation
-    typedef TrilinosSpace<Epetra_FECrsMatrix, Epetra_FEVector> SparseSpaceType;
-    typedef UblasSpace<double, Matrix, Vector> LocalSpaceType;
-#else // serial compilation
+    // Question: You mean that if mpi is executed  should "overwrite" the space?
     typedef UblasSpace<double, CompressedMatrix, Vector> SparseSpaceType;
     typedef UblasSpace<double, Matrix, Vector> LocalSpaceType;
+    // Overwrite the SparseSpaceType in case of mpi-parallel execution
+#ifdef KRATOS_USING_MPI // mpi-parallel compilation
+    int mpi_initialized;
+    MPI_Initialized(&mpi_initialized);
+    if (mpi_initialized) // parallel execution, i.e. mpi imported in python
+    {
+        int comm_size;
+        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+        if (comm_size > 1)
+        {
+            typedef TrilinosSpace<Epetra_FECrsMatrix, Epetra_FEVector> SparseSpaceType;
+        }
 #endif
+
     typedef LinearSolver<SparseSpaceType, LocalSpaceType > LinearSolverType; // for Mortar
     typedef BuilderAndSolver< SparseSpaceType, LocalSpaceType, LinearSolverType > BuilderAndSolverType; // for Mortar
     
