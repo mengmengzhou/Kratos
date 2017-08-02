@@ -146,7 +146,7 @@ namespace Kratos {
 			Vector localAxis1 = ZeroVector(3);
 			Vector localAxis2 = ZeroVector(3);
 			Vector localAxis3 = ZeroVector(3);
-			double cosTheta, theta, rotation_angle;
+			double cosTheta, theta, rotation_angle, dotCheck;
 			Properties::Pointer pElementProps;
 
 			// Optional printout of details
@@ -200,10 +200,18 @@ namespace Kratos {
 				// Make deep copy of local fiber direction (global cartesian)
 				localGlobalFiberDirection = Vector3(GlobalFiberDirection);
 
+				// Flip projection vector such that is it in same dir as LC3
+				dotCheck = inner_prod(normalVector, localAxis3);
+				Vector tempNormalVector = Vector(normalVector);
+				if (dotCheck < 0.0)
+				{
+					tempNormalVector *= -1.0;
+				}
+
 				// get rotation matrix to align element normal with projection vec (global cartesian)
 				//rotation_axis = MathUtils<double>::CrossProduct(localAxis3, normalVector); // original
-				rotation_axis = MathUtils<double>::CrossProduct(normalVector, localAxis3);
-				rotation_angle = inner_prod(normalVector, localAxis3);
+				rotation_axis = MathUtils<double>::CrossProduct(tempNormalVector, localAxis3);
+				rotation_angle = inner_prod(tempNormalVector, localAxis3);
 				if (abs(rotation_angle) < (1.0 - 1E-6)) // skip if already co-linear
 				{
 					rotation_angle = std::acos(rotation_angle);
@@ -212,31 +220,60 @@ namespace Kratos {
 				}
 
 
-				Vector mytemp = prod((R), normalVector);
+				Vector mytemp = prod((R), tempNormalVector);
+
+
+				bool debugPrint = false;
+				if (element.Id() == 99)
+				{
+					std::cout << element.Info() << std::endl;
+					debugPrint = true;
+				}
+				
+				if (debugPrint)
+				{
+					std::cout << "\nrotated normalVector dot localAxis3 = " << inner_prod(mytemp, localAxis3) << std::endl;
+					std::cout << "unrotated normalVector dot localAxis3 = " << inner_prod(tempNormalVector, localAxis3) << std::endl;
+					std::cout << "rotated localGlobalFiberDirection dot localAxis3 = " << inner_prod(localGlobalFiberDirection, localAxis3) << std::endl;
+					std::cout << "rotated normalVector  = " << mytemp << std::endl;
+					std::cout << "localAxis3  = " << localAxis3 << std::endl;
+					std::cout << "rotated localGlobalFiberDirection  = " << localGlobalFiberDirection << std::endl;
+					std::cout << "rotation angle = " << rotation_angle / KRATOS_M_PI *180.0 << std::endl;
+				}
+				
+
+
+				
 
 
 
-				std::cout << "\nrotated normalVector dot localAxis3 = " << inner_prod(mytemp, localAxis3) << std::endl;
-				std::cout << "rotated localGlobalFiberDirection dot localAxis3 = " << inner_prod(localGlobalFiberDirection, localAxis3) << std::endl;
-				std::cout << "rotated normalVector  = " << mytemp << std::endl;
-				std::cout << "localAxis3  = " << localAxis3 << std::endl;
-				std::cout << "rotated localGlobalFiberDirection  = " << localGlobalFiberDirection << std::endl;
-				std::cout << "rotation angle = " << rotation_angle / KRATOS_M_PI *180.0 << std::endl;
-
-
-				bool global_approach = false;
+				bool global_approach = true;
 				if (global_approach)
 				{
 					// get rotation matrix to align element normal with projection vec (global cartesian)
 					//rotation_axis = MathUtils<double>::CrossProduct(localAxis3, normalVector); // original
-					rotation_axis = localAxis3;
+					rotation_axis = MathUtils<double>::CrossProduct(localGlobalFiberDirection, localAxis1);
+					rotation_axis /= std::sqrt(inner_prod(rotation_axis, rotation_axis));
 					rotation_angle = inner_prod(localGlobalFiberDirection, localAxis1);
 					if (abs(rotation_angle) < (1.0 - 1E-6)) // skip if already co-linear
 					{
 						rotation_angle = std::acos(rotation_angle);
 						//R = setUpRotationMatrix(rotation_angle, rotation_axis);
 						//localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
-						theta = rotation_angle;
+						theta = rotation_angle*-1.0;
+					}
+
+					if (debugPrint)
+					{
+						std::cout << "inner_prod(rotation_axis,localAxis3) = " << inner_prod(rotation_axis, localAxis3) << std::endl;
+						std::cout << "rotation axis = " << rotation_axis << std::endl;
+						std::cout << "localAxis3 = " << localAxis3 << std::endl;
+					}
+					
+					double dotProd = inner_prod(rotation_axis, localAxis3);
+					if (dotProd < (1.0 - 1E-6))
+					{
+						theta *= -1.0;
 					}
 				}
 				else
@@ -251,7 +288,7 @@ namespace Kratos {
 					theta = std::acos(cosTheta);
 
 					// dot between lc2 and localFiberDir (local cartesian)
-					double dotCheck = inner_prod(localAxis2, localGlobalFiberDirection);
+					dotCheck = inner_prod(localAxis2, localGlobalFiberDirection);
 					if (dotCheck < 0.0)
 					{
 						// theta is currently negative, flip to positive definition

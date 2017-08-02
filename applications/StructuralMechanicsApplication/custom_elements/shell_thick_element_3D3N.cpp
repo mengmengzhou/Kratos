@@ -939,7 +939,15 @@ namespace Kratos
 			ShellT3_LocalCoordinateSystem localCoordinateSystem(mpCoordinateTransformation->CreateReferenceCoordinateSystem());
 
 			// Get local axis 1 in flattened LCS space
-			Vector3 localAxis1 = localCoordinateSystem.P2() - localCoordinateSystem.P1();
+			//Vector3 localAxis1 = localCoordinateSystem.P2() - localCoordinateSystem.P1();
+			Matrix LCSOrientation = localCoordinateSystem.Orientation();
+			Vector localAxis1 = ZeroVector(3);
+			for (size_t i = 0; i < 3; i++)
+			{
+				localAxis1[i] = LCSOrientation(0, i);
+			}
+			localAxis1 = prod(LCSOrientation, localAxis1);
+
 
 			// Perform rotation of local axis 1 to fiber1 in flattened LCS space
 			Matrix localToFiberRotation = Matrix(3, 3, 0.0);
