@@ -57,6 +57,7 @@ namespace Kratos
 /// Short class definition.
 /** Detail class definition.
 */
+template <class TSparseSpace>
 class MapperFactory
 {
 public:
@@ -77,7 +78,6 @@ public:
         mrModelPartDestination(rModelPartDestination),
         mrJsonParameters(rJsonParameters)
     {
-
         CheckAndValidateJson();
         ReadAndCheckInterfaceModelParts();
         ConstructMapper();
@@ -498,22 +498,22 @@ private:
 
 
 /// input stream function
-inline std::istream& operator >> (std::istream& rIStream,
-                                  MapperFactory& rThis)
-{
-    return rIStream;
-}
+// inline std::istream& operator >> (std::istream& rIStream,
+//                                   MapperFactory& rThis)
+// {
+//     return rIStream;
+// }
 
-/// output stream function
-inline std::ostream& operator << (std::ostream& rOStream,
-                                  const MapperFactory& rThis)
-{
-    rThis.PrintInfo(rOStream);
-    rOStream << std::endl;
-    rThis.PrintData(rOStream);
+// /// output stream function
+// inline std::ostream& operator << (std::ostream& rOStream,
+//                                   const MapperFactory& rThis)
+// {
+//     rThis.PrintInfo(rOStream);
+//     rOStream << std::endl;
+//     rThis.PrintData(rOStream);
 
-    return rOStream;
-}
+//     return rOStream;
+// }
 ///@}
 
 ///@} addtogroup block

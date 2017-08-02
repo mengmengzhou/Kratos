@@ -26,15 +26,15 @@ if(${MPI_NEEDED} MATCHES ON )
 
     # These three lines I copied from the CMakeLists.txt of the TrilinosApplication
     # Do we need all of them?
-    find_package(TRILINOS REQUIRED)
+    find_package(TRILINOS REQUIRED) # move to core CMakeLists
     include_directories(${TRILINOS_INCLUDE_DIR}) # seems to work without this, too
-    link_directories(${TRILINOS_LIBRARIES})
+    #link_directories(${TRILINOS_LIBRARIES})
 
     # This line was there orignally:
 	set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS ${KRATOS_MAPPING_APPLICATION_EXTRA_LIBS} ${MPI_LIBRARIES}) # also is this needed? I seem to be the only one doing it...
 
     # How abt this line, do be need to link explicitly?
-	# set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS ${KRATOS_MAPPING_APPLICATION_EXTRA_LIBS} ${TRILINOS_LIBRARIES}) @ Jordi why does it work without linking?
+	set(KRATOS_MAPPING_APPLICATION_EXTRA_LIBS ${KRATOS_MAPPING_APPLICATION_EXTRA_LIBS} ${TRILINOS_LIBRARIES}) # Jordi why does it work without linking?
 endif(${MPI_NEEDED} MATCHES ON )
 
 # define library Kratos which defines the basic python interface

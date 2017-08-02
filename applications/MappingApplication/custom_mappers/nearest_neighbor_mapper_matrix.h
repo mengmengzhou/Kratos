@@ -71,9 +71,7 @@ public:
         mpMapperCommunicator->InitializeDestination(MapperUtilities::Node_Coords);
         mpMapperCommunicator->Initialize();
 
-        mpMapperCommunicator->InitilizeMappingMatrixUtility(mpMappingMatrixUtility);
-
-        FillMappingMatrix(); // Fill the local part of Mdd
+        FillMappingMatrix(); // Fill the local part of Mdd // can this be done here? I mean is the function of this class already initialized or will the base class funciton be called?
 
         //mpMapperCommunicator->GetBuilderAndMultiplier()->BuildLHS(scheme, modelpart, Mdo); // could be moved to baseclass...?
     }

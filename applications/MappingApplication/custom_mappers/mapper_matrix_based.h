@@ -74,6 +74,8 @@ public:
         // If we don't use a BuilderAndSolver for Mdo then the above is obsolete.
         // In any case, if the BuilderAndSolver is member of the Mapper, how can we destinguish btw serial and parallel?
         // mpCommunicator->InitializeBuilderAndSolverForMdo();
+
+        mpMapperCommunicator->InitilizeMappingMatrixUtility(mpMappingMatrixUtility);
     }
 
     /// Destructor.

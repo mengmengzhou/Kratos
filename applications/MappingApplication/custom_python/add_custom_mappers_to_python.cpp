@@ -35,6 +35,9 @@
 #include "Epetra_FEVector.h"
 #endif
 
+#include "solving_strategies/builder_and_solvers/builder_and_solver.h"
+#include "linear_solvers/linear_solver.h"
+
 #include "custom_python/add_custom_mappers_to_python.h"
 
 #include "custom_utilities/mapper_flags.h"
@@ -108,22 +111,17 @@ void  AddCustomMappersToPython()
     // Question: You mean that if mpi is executed  should "overwrite" the space?
     typedef UblasSpace<double, CompressedMatrix, Vector> SparseSpaceType;
     typedef UblasSpace<double, Matrix, Vector> LocalSpaceType;
+    typedef LinearSolver<SparseSpaceType, LocalSpaceType> LinearSolverType;                           // for Mortar
+    typedef BuilderAndSolver<SparseSpaceType, LocalSpaceType, LinearSolverType> BuilderAndSolverType; // for Mortar
+
     // Overwrite the SparseSpaceType in case of mpi-parallel execution
 #ifdef KRATOS_USING_MPI // mpi-parallel compilation
-    int mpi_initialized;
-    MPI_Initialized(&mpi_initialized);
-    if (mpi_initialized) // parallel execution, i.e. mpi imported in python
-    {
-        int comm_size;
-        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-        if (comm_size > 1)
-        {
-            typedef TrilinosSpace<Epetra_FECrsMatrix, Epetra_FEVector> SparseSpaceType;
-        }
+    typedef TrilinosSpace<Epetra_FECrsMatrix, Epetra_FEVector> TrilinosSparseSpaceType;
+    typedef LinearSolver<TrilinosSparseSpaceType, LocalSpaceType> TrilinosLinearSolverType;                   // for Mortar
+    typedef BuilderAndSolver<TrilinosSparseSpaceType, LocalSpaceType, LinearSolverType> TrilinosBuilderAndSolverType; // for Mortar
 #endif
 
-    typedef LinearSolver<SparseSpaceType, LocalSpaceType > LinearSolverType; // for Mortar
-    typedef BuilderAndSolver< SparseSpaceType, LocalSpaceType, LinearSolverType > BuilderAndSolverType; // for Mortar
+
     
     using namespace boost::python;
 
