@@ -186,7 +186,7 @@ void  AddCustomMappersToPython()
     // Also how can we initialize a BuilderAndSolver? Directly in the MortarMapper?
     // Mike said that it should also be possible to pass a BuilderAndSolver into the MortarMapper
 
-    class_< MapperFactory > mapper_factory = class_<MapperFactory>("MapperFactory", init<ModelPart&, ModelPart&, Parameters&>())
+    class_< MapperFactory > mapper_factory = class_<MapperFactory>("MapperFactory", init<ModelPart&, ModelPart&, Parameters>())
             .def("UpdateInterface",  pUpdateInterface)
             .def("UpdateInterface",  pUpdateInterfaceOptions)
             .def("UpdateInterface",  pUpdateInterfaceSearchRadius)
