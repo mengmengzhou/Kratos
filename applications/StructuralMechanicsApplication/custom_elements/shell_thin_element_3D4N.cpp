@@ -1159,10 +1159,10 @@ namespace Kratos
 			Vector3 fiberAxis1 = prod(trans(localToGlobalSmall), temp);
 			fiberAxis1 /= std::sqrt(inner_prod(fiberAxis1, fiberAxis1));
 
-			if (this->Id() == 807)// TODO delete
+			if (this->Id() == 427)// TODO delete
 			{
 				//Matrix LCSOrientation = localCoordinateSystem.Orientation();
-				std::cout << "\n\n Element 807 gauss output = " << fiberAxis1 << std::endl;
+				std::cout << "\n\n Element 427 gauss output = " << fiberAxis1 << std::endl;
 				std::cout << "rotation angle = " << fiberSectionRotation / KRATOS_M_PI *180.0 << std::endl;
 				Vector localAxis2 = ZeroVector(3);
 				Vector localAxis3 = ZeroVector(3);

@@ -224,7 +224,7 @@ namespace Kratos {
 
 
 				bool debugPrint = false;
-				if (element.Id() == 401)
+				if (element.Id() == 137)
 				{
 					std::cout << element.Info() << std::endl;
 					debugPrint = true;
@@ -242,8 +242,73 @@ namespace Kratos {
 					
 				}
 				
+				// Correct in-plane transformed global cartesian fiber orientation so that
+				// it maximises it's direction in accord with the pure
+				// global fiber direction.
+				bool rotated_fiber_correction = true;
+				if (rotated_fiber_correction)
+				{
+					// Currently this is only setup to align with +Z by rotating 
+					// the in-plane transformed global cartesian fiber orientation
+					// such that the X component = 0.
 
+					// This needs to be extended in to general coords.
 
+					std::cout << "Element " << element.Id() << std::endl;
+					double tolerance = 1E-6;
+					double steps = 16.0;
+					double step_size = 2.0*KRATOS_M_PI / steps; // initially 45 degrees
+					double central_angle = 0.0; // from current alignment
+					double max_dot_prod = -10.0;
+					double best_angle = 0.0;
+					bool converged = false;
+					int iteration_limit = 20;
+					int iteration = 0;
+
+					while (converged == false)
+					{
+						for (size_t angle_step = 0; angle_step < steps; angle_step++)
+						{
+							double current_angle = best_angle + (angle_step - steps / 2.0)*step_size;
+							R = setUpRotationMatrix(current_angle, localAxis3);
+							Vector tempFiber = prod(R, localGlobalFiberDirection);
+							double current_dot_prod = inner_prod(tempFiber, GlobalFiberDirection);
+							current_dot_prod = tempFiber[0];
+							if (debugPrint)
+							{
+
+								std::cout << current_dot_prod << std::endl;
+							}
+							if (abs(current_dot_prod) < abs(max_dot_prod))
+							{
+								max_dot_prod = current_dot_prod;
+								best_angle = current_angle;
+							}
+						}
+						step_size /= steps;
+						iteration++;
+						if (abs(max_dot_prod) < tolerance)
+						{
+							converged = true;
+						}
+						if (iteration > iteration_limit)
+						{
+							converged = true;
+						}
+					}
+
+					// With the best angle determined, rotate the optimised
+					// in-plane transformed global cartesian fiber orientation
+					R = setUpRotationMatrix(best_angle, localAxis3);
+					localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
+
+					// Make sure it points in the right direction.
+					if (inner_prod(localGlobalFiberDirection, GlobalFiberDirection) < 0)
+					{
+						R = setUpRotationMatrix(KRATOS_M_PI, localAxis3);
+						localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
+					}
+				}
 				
 
 

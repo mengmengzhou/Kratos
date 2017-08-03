@@ -968,9 +968,9 @@ namespace Kratos
 			fiberAxis1 /= std::sqrt(inner_prod(fiberAxis1, fiberAxis1));
 
 
-			if (this->Id() == 401)// TODO delete
+			if (this->Id() == 137)// TODO delete
 			{
-				std::cout << "\n\n Element 401 gauss output = " << fiberAxis1 << std::endl;
+				std::cout << "\n\n Element 137 gauss output = " << fiberAxis1 << std::endl;
 				std::cout << "rotation angle = " << fiberSectionRotation / KRATOS_M_PI *180.0 << std::endl;
 				Vector localAxis2 = ZeroVector(3);
 				Vector localAxis3 = ZeroVector(3);
