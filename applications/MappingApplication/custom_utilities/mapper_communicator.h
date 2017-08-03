@@ -26,7 +26,7 @@
 #include "interface_object_manager_serial.h"
 #include "interface_search_structure.h"
 #include "mapper_utilities.h"
-#include "mapping_matrix_utility.h"
+// #include "mapping_matrix_utility.h"
 
 
 namespace Kratos
@@ -171,10 +171,10 @@ public:
         InvokeSearch(mInitialSearchRadius, mMaxSearchIterations);
     }
 
-    void InitilizeMappingMatrixUtility(MappingMatrixUtility::Pointer pMappingMatrixUtility)
-    {
-        pMappingMatrixUtility = MappingMatrixUtility::Pointer ( new MappingMatrixUtility() );
-    }
+    // void InitilizeMappingMatrixUtility(MappingMatrixUtility::Pointer pMappingMatrixUtility)
+    // {
+    //     pMappingMatrixUtility = MappingMatrixUtility::Pointer ( new MappingMatrixUtility() );
+    // }
 
 
 

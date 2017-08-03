@@ -61,7 +61,7 @@ namespace Kratos
 * For information abt the available echo_levels and the JSON default-parameters
 * look into the class description of the MapperCommunicator
 */
-template <class TSparseSpace>
+template <class TMappingMatrixUtility>
 class MapperFactory
 {
 public:
@@ -354,7 +354,7 @@ private:
         {
             mpMapper = Mapper::Pointer(new NearestNeighborMapperMatrix(*mpInterfaceModelPartOrigin,
                                                                        *mpInterfaceModelPartDestination,
-                                                                        mrJsonParameters));
+                                                                        mJsonParameters));
 
         }
         else if (mMapperType == "NearestElement")

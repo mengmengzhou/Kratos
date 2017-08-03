@@ -13,17 +13,17 @@
 // "Development and Implementation of a Parallel
 //  Framework for Non-Matching Grid Mapping"
 
-#if !defined(KRATOS_MAPPING_MATRIX_UTILITY_H_INCLUDED )
-#define  KRATOS_MAPPING_MATRIX_UTILITY_H_INCLUDED
+#if !defined(KRATOS_MAPPING_MATRIX_UTILITY_MPI_H_INCLUDED )
+#define  KRATOS_MAPPING_MATRIX_UTILITY_MPI_H_INCLUDED
 
 // System includes
-#include <unordered_map> 
+
 // External includes
 
 
 // Project includes
 #include "includes/define.h"
-#include "includes/model_part.h"
+
 
 namespace Kratos
 {
@@ -53,51 +53,49 @@ namespace Kratos
 /** Detail class definition.
 */
 template <class TSparseSpace,
-          class TBuilderAndSolver
-          >
-class MappingMatrixUtility
+          class TBuilderAndSolver>
+class MappingMatrixUtilityMPI : public MappingMatrixUtility<TSparseSpace, TBuilderAndSolver>
 {
 public:
     ///@name Type Definitions
     ///@{
 
-  typedef typename TSparseSpace::MatrixType TSystemMatrixType;
-  typedef typename TSparseSpace::VectorType TSystemVectorType;
+    /// Pointer definition of MappingMatrixUtilityMPI
+    KRATOS_CLASS_POINTER_DEFINITION(MappingMatrixUtilityMPI);
 
-  /// Pointer definition of MappingMatrixUtility
-  KRATOS_CLASS_POINTER_DEFINITION(MappingMatrixUtility);
+    ///@}
+    ///@name  Enum's
+    ///@{
 
-  ///@}
-  ///@name  Enum's
-  ///@{
+    ///@}
+    ///@name Life Cycle
+    ///@{
 
-  ///@}
-  ///@name Life Cycle
-  ///@{
+    /// Default constructor.
+    MappingMatrixUtilityMPI() { }
 
-  /// Default constructor.
-  MappingMatrixUtility() {}
+    /// Destructor.
+    virtual ~MappingMatrixUtilityMPI() { }
 
-  /// Destructor.
-  virtual ~MappingMatrixUtility() {}
 
-  ///@}
-  ///@name Operators
-  ///@{
+    ///@}
+    ///@name Operators
+    ///@{
 
-  ///@}
-  ///@name Operations
-  ///@{
 
-  virtual void AssembleRHSOrigin(const Variable<double> &rVariable,
-                                 Kratos::Flags MappingOptions,
-                                 std::unordered_map<int, Node<3> *> &rGlobalVectorIndices)
-  {
-      for (auto const &entry : rGlobalVectorIndices)
-      {
-          // mQ_o[entry.first] = entry.second.FastGetCurrentSolutionStepValue(rVaiable);
-      }
-      // Do Global Assembly
+    ///@}
+    ///@name Operations
+    ///@{
+
+    virtual void AssembleRHSOrigin(const Variable<double>& rVariable,
+                                   Kratos::Flags MappingOptions,
+                                   std::unordered_map<int, Node<3>*>& rGlobalVectorIndices)
+    {
+        for (auto const &entry : rGlobalVectorIndices)
+        {
+            // mQ_o[entry.first] = entry.second.FastGetCurrentSolutionStepValue(rVaiable);
+        }
+        // Do Global Assembly
     }
 
     virtual void AssembleRHSDestination() // Needed for Conservative Mapping
@@ -189,14 +187,14 @@ public:
     virtual std::string Info() const
     {
         std::stringstream buffer;
-        buffer << "MappingMatrixUtility" ;
+        buffer << "MappingMatrixUtilityMPI" ;
         return buffer.str();
     }
 
     /// Print information about this object.
     virtual void PrintInfo(std::ostream& rOStream) const
     {
-        rOStream << "MappingMatrixUtility";
+        rOStream << "MappingMatrixUtilityMPI";
     }
 
     /// Print object's data.
@@ -219,9 +217,9 @@ protected:
     ///@name Protected member Variables
     ///@{
 
-    TSystemMatrixType mM_do;
-    TSystemVectorType mQ_o;
-    TSystemVectorType mQ_d;
+    // TSystemMatrixType mM_do;
+    // TSystemVectorType mQ_o;
+    // TSystemVectorType mQ_d;
 
 
     ///@}
@@ -285,15 +283,15 @@ private:
     ///@{
 
     /// Assignment operator.
-    MappingMatrixUtility& operator=(MappingMatrixUtility const& rOther);
+    MappingMatrixUtilityMPI& operator=(MappingMatrixUtilityMPI const& rOther);
 
     //   /// Copy constructor.
-    //   MappingMatrixUtility(MappingMatrixUtility const& rOther){}
+    //   MappingMatrixUtilityMPI(MappingMatrixUtilityMPI const& rOther){}
 
 
     ///@}
 
-}; // Class MappingMatrixUtility
+}; // Class MappingMatrixUtilityMPI
 
 ///@}
 
@@ -307,17 +305,15 @@ private:
 
 
 /// input stream function
-// template <typename TSparseSpace, TBuilderAndSolver>
-// inline std::istream &operator>>(std::istream &rIStream,
-//                                 MappingMatrixUtility<TSparseSpace, TBuilderAndSolver> &rThis)
+// inline std::istream& operator >> (std::istream& rIStream,
+//                                   MappingMatrixUtilityMPI& rThis)
 // {
 //     return rIStream;
 // }
 
 // /// output stream function
-// template <typename TSparseSpace, TBuilderAndSolver>
-// inline std::ostream &operator<<(std::ostream &rOStream,
-//                                 const MappingMatrixUtility<TSparseSpace, TBuilderAndSolver> &rThis)
+// inline std::ostream& operator << (std::ostream& rOStream,
+//                                   const MappingMatrixUtilityMPI& rThis)
 // {
 //     rThis.PrintInfo(rOStream);
 //     rOStream << std::endl;
@@ -331,4 +327,4 @@ private:
 
 }  // namespace Kratos.
 
-#endif // KRATOS_MAPPING_MATRIX_UTILITY_H_INCLUDED  defined
+#endif // KRATOS_MAPPING_MATRIX_UTILITY_MPI_H_INCLUDED  defined

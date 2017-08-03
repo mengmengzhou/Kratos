@@ -97,15 +97,15 @@ public:
              const Variable<double>& rDestinationVariable,
              Kratos::Flags MappingOptions) override
     {   
-        mpMappingMatrixUtility->AssembleRHSOrigin(rOriginVariable, 
-                                                  MappingOptions, 
-                                                  mpIndexNodeMapOrigin); // Assemble m_Qo
+        // mpMappingMatrixUtility->AssembleRHSOrigin(rOriginVariable, 
+        //                                           MappingOptions, 
+        //                                           mpIndexNodeMapOrigin); // Assemble m_Qo
 
-        mpMappingMatrixUtility->Multiply(); // here the Multiplication is done; m_Mdo * m_Qo
+        // mpMappingMatrixUtility->Multiply(); // here the Multiplication is done; m_Mdo * m_Qo
 
-        mpMappingMatrixUtility->UpdateDestination(rDestinationVariable, 
-                                                  MappingOptions, 
-                                                  mpIndexNodeMapDestination); // Set nodal Values from m_Qd
+        // mpMappingMatrixUtility->UpdateDestination(rDestinationVariable, 
+        //                                           MappingOptions, 
+        //                                           mpIndexNodeMapDestination); // Set nodal Values from m_Qd
     }
 
     /* This function maps from Origin to Destination */
@@ -200,7 +200,7 @@ protected:
         for (auto &node : mModelPartDestination.GetCommunicator().LocalMesh().Nodes())
         {
             // Fill the local part of the matrix
-            mpMappingMatrixUtility->SetEntry(id_index_map_destination[node.Id()], neighbor_indices[i], 1.0f); 
+            // mpMappingMatrixUtility->SetEntry(id_index_map_destination[node.Id()], neighbor_indices[i], 1.0f); 
             ++i;
         }
     }

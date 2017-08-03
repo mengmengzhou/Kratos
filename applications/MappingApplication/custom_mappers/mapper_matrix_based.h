@@ -75,7 +75,7 @@ public:
         // In any case, if the BuilderAndSolver is member of the Mapper, how can we destinguish btw serial and parallel?
         // mpCommunicator->InitializeBuilderAndSolverForMdo();
 
-        mpMapperCommunicator->InitilizeMappingMatrixUtility(mpMappingMatrixUtility);
+        // mpMapperCommunicator->InitilizeMappingMatrixUtility(mpMappingMatrixUtility);
     }
 
     /// Destructor.
@@ -170,7 +170,7 @@ protected:
     ///@name Protected member Variables
     ///@{
 
-    MappingMatrixUtility::Pointer mpMappingMatrixUtility;
+    // MappingMatrixUtility::Pointer mpMappingMatrixUtility;
     std::unordered_map<int, Node<3>*> mpIndexNodeMapOrigin;
     std::unordered_map<int, Node<3>*> mpIndexNodeMapDestination;
     
