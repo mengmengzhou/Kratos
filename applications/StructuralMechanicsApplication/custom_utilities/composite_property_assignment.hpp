@@ -215,7 +215,7 @@ namespace Kratos {
 				if (abs(rotation_angle) < (1.0 - 1E-6)) // skip if already co-linear
 				{
 					rotation_angle = std::acos(rotation_angle);
-					R = setUpRotationMatrix(-rotation_angle, rotation_axis);
+					R = setUpRotationMatrix(rotation_angle, rotation_axis);
 					localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
 				}
 
@@ -224,7 +224,7 @@ namespace Kratos {
 
 
 				bool debugPrint = false;
-				if (element.Id() == 99)
+				if (element.Id() == 401)
 				{
 					std::cout << element.Info() << std::endl;
 					debugPrint = true;
@@ -232,13 +232,14 @@ namespace Kratos {
 				
 				if (debugPrint)
 				{
-					std::cout << "\nrotated normalVector dot localAxis3 = " << inner_prod(mytemp, localAxis3) << std::endl;
-					std::cout << "unrotated normalVector dot localAxis3 = " << inner_prod(tempNormalVector, localAxis3) << std::endl;
+					std::cout << "\nunrotated normalVector dot localAxis3 = " << inner_prod(tempNormalVector, localAxis3) << std::endl;
+					std::cout << "rotated normalVector dot localAxis3 = " << inner_prod(mytemp, localAxis3) << std::endl;
+					
 					std::cout << "rotated localGlobalFiberDirection dot localAxis3 = " << inner_prod(localGlobalFiberDirection, localAxis3) << std::endl;
 					std::cout << "rotated normalVector  = " << mytemp << std::endl;
 					std::cout << "localAxis3  = " << localAxis3 << std::endl;
 					std::cout << "rotated localGlobalFiberDirection  = " << localGlobalFiberDirection << std::endl;
-					std::cout << "rotation angle = " << rotation_angle / KRATOS_M_PI *180.0 << std::endl;
+					
 				}
 				
 
@@ -247,7 +248,7 @@ namespace Kratos {
 
 
 
-				bool global_approach = true;
+				bool global_approach = false;
 				if (global_approach)
 				{
 					// get rotation matrix to align element normal with projection vec (global cartesian)
@@ -275,6 +276,8 @@ namespace Kratos {
 					{
 						theta *= -1.0;
 					}
+
+					
 				}
 				else
 				{
@@ -294,8 +297,17 @@ namespace Kratos {
 						// theta is currently negative, flip to positive definition
 						theta *= -1.0;
 					}
-				}
 
+					if (debugPrint)
+					{
+						std::cout << "rotation angle = " << theta / KRATOS_M_PI *180.0 << std::endl;
+						std::cout << "localAxis1 = " << localAxis1 << std::endl;
+						std::cout << "localAxis2 = " << localAxis2 << std::endl;
+						std::cout << "localGlobalFiberDirection = " << localGlobalFiberDirection << std::endl;
+					}
+					
+				}
+				
 				
 
 				// set required rotation in element
