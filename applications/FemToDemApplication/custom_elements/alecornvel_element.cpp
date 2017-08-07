@@ -99,6 +99,14 @@ namespace Kratos
 
 			damage_element = this->Get_NonConvergeddamage();
 			this->Set_Convergeddamage(damage_element);
+
+			if (damage_element > 0.0) 
+			{
+				this->SetValue(IS_DAMAGED, 1);
+				KRATOS_WATCH(this->GetValue(IS_DAMAGED))
+				KRATOS_WATCH(this->Id())
+				std::cout << "  " << std::endl;
+			}
 		
 			if (damage_element >= 0.98)
 			{
@@ -553,6 +561,13 @@ namespace Kratos
 			rValues.resize(1);
 			for (unsigned int PointNumber = 0; PointNumber < 1; PointNumber++) {
 				rValues[PointNumber] = double(this->Get_Convergeddamage());
+			}
+		}
+
+		if (rVariable == IS_DAMAGED) {
+			rValues.resize(1);
+			for (unsigned int PointNumber = 0; PointNumber < 1; PointNumber++) {
+				rValues[PointNumber] = double(this->GetValue(IS_DAMAGED));
 			}
 		}
 	}
