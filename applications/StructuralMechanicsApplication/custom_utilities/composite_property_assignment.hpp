@@ -227,7 +227,7 @@ namespace Kratos {
 				if (element.Id() == 137)
 				{
 					std::cout << element.Info() << std::endl;
-					debugPrint = true;
+					debugPrint = false;
 				}
 				
 				if (debugPrint)
@@ -248,22 +248,18 @@ namespace Kratos {
 				bool rotated_fiber_correction = true;
 				if (rotated_fiber_correction)
 				{
-					// Currently this is only setup to align with +Z by rotating 
-					// the in-plane transformed global cartesian fiber orientation
-					// such that the X component = 0.
-
-					// This needs to be extended in to general coords.
-
-					std::cout << "Element " << element.Id() << std::endl;
+					//std::cout << "Element " << element.Id() << std::endl;
 					double tolerance = 1E-6;
 					double steps = 16.0;
 					double step_size = 2.0*KRATOS_M_PI / steps; // initially 45 degrees
 					double central_angle = 0.0; // from current alignment
-					double max_dot_prod = -10.0;
+					double min_dot_prod = 10.0;
 					double best_angle = 0.0;
 					bool converged = false;
 					int iteration_limit = 20;
 					int iteration = 0;
+
+					Vector global_fiber_cross_projection = Vector(MathUtils<double>::CrossProduct(GlobalFiberDirection, normalVector));
 
 					while (converged == false)
 					{
@@ -271,23 +267,24 @@ namespace Kratos {
 						{
 							double current_angle = best_angle + (angle_step - steps / 2.0)*step_size;
 							R = setUpRotationMatrix(current_angle, localAxis3);
-							Vector tempFiber = prod(R, localGlobalFiberDirection);
-							double current_dot_prod = inner_prod(tempFiber, GlobalFiberDirection);
-							current_dot_prod = tempFiber[0];
+							//Vector tempFiber = prod(R, localGlobalFiberDirection);
+							Vector tempFiber = prod(R, localAxis1);
+							double current_dot_prod = inner_prod(tempFiber, global_fiber_cross_projection);
+							//current_dot_prod = tempFiber[0];
 							if (debugPrint)
 							{
 
 								std::cout << current_dot_prod << std::endl;
 							}
-							if (abs(current_dot_prod) < abs(max_dot_prod))
+							if (abs(current_dot_prod) < abs(min_dot_prod))
 							{
-								max_dot_prod = current_dot_prod;
+								min_dot_prod = current_dot_prod;
 								best_angle = current_angle;
 							}
 						}
 						step_size /= steps;
 						iteration++;
-						if (abs(max_dot_prod) < tolerance)
+						if (abs(min_dot_prod)  < tolerance)
 						{
 							converged = true;
 						}
@@ -308,7 +305,14 @@ namespace Kratos {
 						R = setUpRotationMatrix(KRATOS_M_PI, localAxis3);
 						localGlobalFiberDirection = prod(R, localGlobalFiberDirection);
 					}
+
+					if (debugPrint)
+					{
+						std::cout << "corrected localGlobalFiberDirection  = " << localGlobalFiberDirection << std::endl;
+					}
 				}
+
+				
 				
 
 
