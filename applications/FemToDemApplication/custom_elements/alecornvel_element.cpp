@@ -7,6 +7,7 @@
 #include "fem_to_dem_application_variables.h"
 #include "includes/kratos_flags.h"
 #include "containers/flags.h"
+#include "solid_mechanics_application_variables.h"
 
 namespace Kratos
 {
@@ -100,20 +101,16 @@ namespace Kratos
 			damage_element = this->Get_NonConvergeddamage();
 			this->Set_Convergeddamage(damage_element);
 
-			//if (damage_element > 0.0) 
-			//{
-			//	this->SetValue(IS_DAMAGED, 1);
-			//	//KRATOS_WATCH(this->GetValue(IS_DAMAGED))
-			//	//KRATOS_WATCH(this->Id())
-			//	//std::cout << "  " << std::endl;
-			//}
-
-			if (this->Id() == 126)
+			if (damage_element > 0.0) 
 			{
-				KRATOS_WATCH(this->GetValue(STRESS_VECTOR))
+				this->SetValue(IS_DAMAGED, 1);
+				KRATOS_WATCH(this->Id())
+				KRATOS_WATCH(this->GetValue(IS_DAMAGED))
+				//KRATOS_WATCH(this->GetValue(IS_DAMAGED))
+				//KRATOS_WATCH(this->Id())
+				//std::cout << "  " << std::endl;
 			}
 			
-
 			if (damage_element >= 0.98)
 			{
 				this->Set(TO_ERASE, true);
@@ -563,39 +560,185 @@ namespace Kratos
 	void AleCornVelElement::GetValueOnIntegrationPoints(const Variable<double>& rVariable, std::vector<double>& rValues,
 		const ProcessInfo& rCurrentProcessInfo)
 	{
-		if (rVariable == DAMAGE_ELEMENT) {
-			rValues.resize(1);
-			for (unsigned int PointNumber = 0; PointNumber < 1; PointNumber++) {
-				rValues[PointNumber] = double(this->Get_Convergeddamage());
-			}
+		if (rVariable == DAMAGE_ELEMENT || rVariable == IS_DAMAGED)
+		{
+			CalculateOnIntegrationPoints(rVariable, rValues, rCurrentProcessInfo);
 		}
 
-		if (rVariable == IS_DAMAGED) {
-			rValues.resize(1);
-			for (unsigned int PointNumber = 0; PointNumber < 1; PointNumber++) {
-				rValues[PointNumber] = double(this->GetValue(IS_DAMAGED));
-			}
-		}
+		
 	}
 
 	void AleCornVelElement::GetValueOnIntegrationPoints(const Variable<Vector>& rVariable,
 		std::vector<Vector>& rValues,
 		const ProcessInfo& rCurrentProcessInfo)
 	{
+
 		if (rVariable == STRESS_VECTOR)
 		{
 			//rValues[0] = this->GetStressVector();
-			rValues[0] = this->GetValue(STRESS_VECTOR);
+			//rValues[0] = this->GetValue(STRESS_VECTOR);
+			CalculateOnIntegrationPoints(rVariable, rValues, rCurrentProcessInfo);
 		}
+
 		if (rVariable == STRESS_VECTOR_INTEGRATED)
 		{
-			rValues[0] = this->GetIntegratedStressVector();
+			//rValues[0] = this->GetIntegratedStressVector();
+			CalculateOnIntegrationPoints(rVariable, rValues, rCurrentProcessInfo);
 		}
+
+		const unsigned int& integration_points_number = mConstitutiveLawVector.size();
+
+		if (rValues.size() != integration_points_number)
+			rValues.resize(integration_points_number);
+
+
+		if (rVariable == PK2_STRESS_TENSOR || rVariable == CAUCHY_STRESS_TENSOR)
+		{
+
+			CalculateOnIntegrationPoints(rVariable, rValues, rCurrentProcessInfo);
+
+		}
+		else if (rVariable == PK2_STRESS_VECTOR || rVariable == CAUCHY_STRESS_VECTOR)
+		{
+
+			CalculateOnIntegrationPoints(rVariable, rValues, rCurrentProcessInfo);
+
+		}
+		else if (rVariable == GREEN_LAGRANGE_STRAIN_TENSOR || rVariable == ALMANSI_STRAIN_TENSOR)
+		{
+
+			CalculateOnIntegrationPoints(rVariable, rValues, rCurrentProcessInfo);
+
+		}
+		else
+		{
+
+			for (unsigned int PointNumber = 0; PointNumber < integration_points_number; PointNumber++)
+			{
+				rValues[PointNumber] = mConstitutiveLawVector[PointNumber]->GetValue(rVariable, rValues[PointNumber]);
+			}
+
+		}
+
+
+
+
 
 		/*if (rVariable == SMOOTHED_STRESS_VECTOR)
 		{
 			rValues[0] = this->GetValue(SMOOTHED_STRESS_VECTOR);
 		}*/
+	}
+
+	// DOUBLE VARIABLES
+	void AleCornVelElement::CalculateOnIntegrationPoints(const Variable<double>& rVariable, std::vector<double>& rOutput, const ProcessInfo& rCurrentProcessInfo)
+	{
+		if (rVariable == DAMAGE_ELEMENT)
+		{
+			rOutput.resize(1);
+			for (unsigned int PointNumber = 0; PointNumber < 1; PointNumber++) {
+				rOutput[PointNumber] = double(this->Get_Convergeddamage());
+			}
+		}
+
+		if (rVariable == IS_DAMAGED)
+		{
+			rOutput.resize(1);
+			for (unsigned int PointNumber = 0; PointNumber < 1; PointNumber++) {
+				rOutput[PointNumber] = double(this->GetValue(IS_DAMAGED));
+			}
+		}
+	}
+
+	// VECTOR VARIABLES
+	void AleCornVelElement::CalculateOnIntegrationPoints(const Variable<Vector>& rVariable, std::vector<Vector>& rOutput, const ProcessInfo& rCurrentProcessInfo)
+	{
+
+		KRATOS_TRY
+
+		if (rVariable == STRESS_VECTOR)
+		{
+			rOutput[0] = this->GetValue(STRESS_VECTOR);
+		}
+
+		if (rVariable == STRESS_VECTOR_INTEGRATED)
+		{
+			rOutput[0] = this->GetIntegratedStressVector();
+		}
+
+		const unsigned int& integration_points_number = GetGeometry().IntegrationPointsNumber(mThisIntegrationMethod);
+
+		if (rOutput.size() != integration_points_number)
+			rOutput.resize(integration_points_number);
+
+		if (rVariable == CAUCHY_STRESS_VECTOR || rVariable == PK2_STRESS_VECTOR)
+		{
+			//create and initialize element variables:
+			GeneralVariables Variables;
+			this->InitializeGeneralVariables(Variables, rCurrentProcessInfo);
+
+			//create constitutive law parameters:
+			ConstitutiveLaw::Parameters Values(GetGeometry(), GetProperties(), rCurrentProcessInfo);
+
+			//set constitutive law flags:
+			Flags &ConstitutiveLawOptions = Values.GetOptions();
+
+			ConstitutiveLawOptions.Set(ConstitutiveLaw::COMPUTE_STRESS);
+
+
+			//reading integration points
+			for (unsigned int PointNumber = 0; PointNumber < mConstitutiveLawVector.size(); PointNumber++)
+			{
+				//compute element kinematics B, F, DN_DX ...
+				this->CalculateKinematics(Variables, PointNumber);
+
+				//set general variables to constitutivelaw parameters
+				this->SetGeneralVariables(Variables, Values, PointNumber);
+
+				//call the constitutive law to update material variables
+				if (rVariable == CAUCHY_STRESS_VECTOR)
+					mConstitutiveLawVector[PointNumber]->CalculateMaterialResponseCauchy(Values);
+				else
+					mConstitutiveLawVector[PointNumber]->CalculateMaterialResponsePK2(Values);
+
+				if (rOutput[PointNumber].size() != Variables.StressVector.size())
+					rOutput[PointNumber].resize(Variables.StressVector.size(), false);
+
+				rOutput[PointNumber] = Variables.StressVector;
+
+			}
+
+		}
+		else if (rVariable == GREEN_LAGRANGE_STRAIN_VECTOR || rVariable == ALMANSI_STRAIN_VECTOR)
+		{
+			//create and initialize element variables:
+			GeneralVariables Variables;
+			this->InitializeGeneralVariables(Variables, rCurrentProcessInfo);
+
+			//reading integration points
+			for (unsigned int PointNumber = 0; PointNumber < mConstitutiveLawVector.size(); PointNumber++)
+			{
+				//compute element kinematics B, F, DN_DX ...
+				this->CalculateKinematics(Variables, PointNumber);
+
+				if (rOutput[PointNumber].size() != Variables.StrainVector.size())
+					rOutput[PointNumber].resize(Variables.StrainVector.size(), false);
+
+				rOutput[PointNumber] = Variables.StrainVector;
+
+			}
+
+		}
+		else
+		{
+			for (unsigned int ii = 0; ii < mConstitutiveLawVector.size(); ii++)
+			{
+				rOutput[ii] = mConstitutiveLawVector[ii]->GetValue(rVariable, rOutput[ii]);
+			}
+		}
+
+		KRATOS_CATCH("")
+		
 	}
 
 	void AleCornVelElement::Get2MaxValues(Vector& MaxValues, double a, double b, double c)
@@ -620,7 +763,6 @@ namespace Kratos
 		MaxValues[0] = V[2];
 		MaxValues[1] = V[1];
 	}
-
 	double AleCornVelElement::Calculate_I1_Invariant(double sigma1, double sigma2) { return sigma1 + sigma2; }
 	double AleCornVelElement::Calculate_J2_Invariant(double sigma1, double sigma2)
 	{
@@ -805,8 +947,6 @@ namespace Kratos
 
 		return V[0];
 	}
-
-
 
 
 	// ****** Tangent Constitutive Tensor by Numerical Derivation ******

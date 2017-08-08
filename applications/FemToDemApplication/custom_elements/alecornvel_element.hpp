@@ -68,6 +68,8 @@ namespace Kratos
 
 		void FinalizeNonLinearIteration(ProcessInfo& CurrentProcessInfo);
 
+		void CalculateOnIntegrationPoints(const Variable<Vector>& rVariable, std::vector<Vector>& rOutput, const ProcessInfo& rCurrentProcessInfo);
+		void CalculateOnIntegrationPoints(const Variable<double>& rVariable, std::vector<double>& rOutput, const ProcessInfo& rCurrentProcessInfo);
 		void CalculateLocalSystem
 			(MatrixType& rLeftHandSideMatrix, VectorType& rRightHandSideVector,
 				ProcessInfo& rCurrentProcessInfo);
