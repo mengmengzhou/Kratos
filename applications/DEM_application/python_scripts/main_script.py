@@ -345,6 +345,7 @@ class Solution(object):
 
     def BeforeSolveOperations(self):
         pass
+        
 
     def AfterSolveOperations(self):
         if (hasattr(DEM_parameters, "AnalyticParticle")):

@@ -100,14 +100,20 @@ namespace Kratos
 			damage_element = this->Get_NonConvergeddamage();
 			this->Set_Convergeddamage(damage_element);
 
-			if (damage_element > 0.0) 
+			//if (damage_element > 0.0) 
+			//{
+			//	this->SetValue(IS_DAMAGED, 1);
+			//	//KRATOS_WATCH(this->GetValue(IS_DAMAGED))
+			//	//KRATOS_WATCH(this->Id())
+			//	//std::cout << "  " << std::endl;
+			//}
+
+			if (this->Id() == 126)
 			{
-				this->SetValue(IS_DAMAGED, 1);
-				KRATOS_WATCH(this->GetValue(IS_DAMAGED))
-				KRATOS_WATCH(this->Id())
-				std::cout << "  " << std::endl;
+				KRATOS_WATCH(this->GetValue(STRESS_VECTOR))
 			}
-		
+			
+
 			if (damage_element >= 0.98)
 			{
 				this->Set(TO_ERASE, true);
