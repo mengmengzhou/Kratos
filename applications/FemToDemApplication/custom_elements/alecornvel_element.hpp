@@ -193,20 +193,20 @@ namespace Kratos
 		int iteration = 0;
 
 		// Each component == Each edge
-		double f_sigmas[4] = { 0, 0, 0,0 };     // Mohr-Coulomb equivalent stress
-		double thresholds[4] = { 0, 0, 0,0 };   // Stress Threshold on edge
+		double f_sigmas[4] = { 0.0, 0.0, 0.0,0.0 };   // Mohr-Coulomb equivalent stress
+		double thresholds[4] = { 0.0, 0.0, 0.0,0 };   // Stress Threshold on edge
 
 		double threshold = 0.0;
 		double f_sigma   = 0.0;
 
 		double damages[4] = { 0.0, 0.0, 0.0, 0.0 };     // Converged damage on each edge
-		double damage = 0.0;                       // Converged damage
+		double damage = 0.0;                            // Converged damage
 
 		double NonConvergeddamages[4] = { 0.0, 0.0, 0.0,0.0 };    // Damages on edges of "i" iteration
 		double NonConverged_f_sigma[4] = { 0.0, 0.0, 0.0,0.0 };   // Equivalent stress of "i" iteration
 
 		double NonConvergedf_sigma = 0.0;
-		double NonConvergeddamage = 0.0;                  // Damage of the element of "i" iteration
+		double NonConvergeddamage = 0.0;       // Damage of the element of "i" iteration
 
 		double l_char[3] = { 0.0, 0.0, 0.0 };  // Characteristic length on each edge
 

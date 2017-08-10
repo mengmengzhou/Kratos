@@ -104,8 +104,8 @@ namespace Kratos
 			if (damage_element > 0.0) 
 			{
 				this->SetValue(IS_DAMAGED, 1);
-				KRATOS_WATCH(this->Id())
-				KRATOS_WATCH(this->GetValue(IS_DAMAGED))
+				//KRATOS_WATCH(this->Id())
+				//KRATOS_WATCH(this->GetValue(IS_DAMAGED))
 				//KRATOS_WATCH(this->GetValue(IS_DAMAGED))
 				//KRATOS_WATCH(this->Id())
 				//std::cout << "  " << std::endl;
@@ -355,7 +355,7 @@ namespace Kratos
 			if (this->GetProperties()[TANGENT_CONSTITUTIVE_TENSOR] == 0 || damage_element == 0.0)
 			{
 				Matrix ConstitutiveMatrix = ZeroMatrix(voigt_size, voigt_size);
-				double E = this->GetProperties()[YOUNG_MODULUS];
+				double E  = this->GetProperties()[YOUNG_MODULUS];
 				double nu = this->GetProperties()[POISSON_RATIO];
 				this->CalculateConstitutiveMatrix(ConstitutiveMatrix, E, nu);
 
@@ -1098,7 +1098,6 @@ namespace Kratos
 	}
 
 
-
 	// ******* DAMAGE MECHANICS YIELD SURFACES AND EXPONENTIAL SOFTENING ********
 	void AleCornVelElement::IntegrateStressDamageMechanics(Vector& rIntegratedStress, double& damage,
 		const Vector StrainVector, const Vector StressVector, int cont, double l_char)
@@ -1182,7 +1181,7 @@ namespace Kratos
 		rIntegratedStress *= (1 - damage);
 	}
 
-	void AleCornVelElement::RankineCriterion(Vector& rIntegratedStress, double& damage, const Vector& StressVector, int cont, double l_char)
+	void AleCornVelElement::RankineCriterion(Vector& rIntegratedStress, double& damage, const Vector& StressVector, int cont, double l_char) 
 	{
 		Vector PrincipalStressVector = ZeroVector(3);
 		this->CalculatePrincipalStress(PrincipalStressVector, StressVector);
@@ -1203,9 +1202,9 @@ namespace Kratos
 		double f, F; /// F = f-c = 0 classical definition of yield surface
 		f = GetMaxValue(PrincipalStressVector);
 
-		if (this->Get_threshold() == 0) { this->Set_threshold(c_max); }   // 1st iteration sets threshold as c_max
-		c_threshold = this->Get_threshold();
-		this->Set_NonConvergedf_sigma(f);
+		if (this->Get_threshold(cont) == 0) { this->Set_threshold(c_max, cont); }   // 1st iteration sets threshold as c_max
+		c_threshold = this->Get_threshold(cont);
+		this->Set_NonConvergedf_sigma(f, cont);
 
 		F = f - c_threshold;
 
@@ -1216,7 +1215,7 @@ namespace Kratos
 		}
 		else
 		{
-			damage = 1 - (c_max / f)*exp(A*(1 - f / c_max));            // Exponential softening law
+			damage = 1 - (c_max / f)*exp(A*(1 - f / c_max));  // Exponential softening law
 			if (damage > 0.99) { damage = 0.99; }
 			//this->Set_NonConvergeddamage(damage);
 		}
@@ -1267,9 +1266,9 @@ namespace Kratos
 			f = abs(CFL*TEN0);
 		}
 
-		if (this->Get_threshold() == 0) { this->Set_threshold(c_max); }   // 1st iteration sets threshold as c_max
-		c_threshold = this->Get_threshold();
-		this->Set_NonConvergedf_sigma(f);
+		if (this->Get_threshold(cont) == 0) { this->Set_threshold(c_max, cont); }   // 1st iteration sets threshold as c_max
+		c_threshold = this->Get_threshold(cont);
+		this->Set_NonConvergedf_sigma(f, cont);
 		F = f - c_threshold;
 
 		if (F <= 0)  // Elastic region --> Damage is constant 
@@ -1327,9 +1326,9 @@ namespace Kratos
 			f *= (ere0*n + ere1);
 		}
 
-		if (this->Get_threshold() == 0.0) { this->Set_threshold(c_max); }   // 1st iteration sets threshold as c_max
-		c_threshold = this->Get_threshold();
-		this->Set_NonConvergedf_sigma(f);
+		if (this->Get_threshold(cont) == 0) { this->Set_threshold(c_max, cont); }   // 1st iteration sets threshold as c_max
+		c_threshold = this->Get_threshold(cont);
+		this->Set_NonConvergedf_sigma(f, cont);
 		F = f - c_threshold;
 
 		double ElementArea = this->GetGeometry().Area();
