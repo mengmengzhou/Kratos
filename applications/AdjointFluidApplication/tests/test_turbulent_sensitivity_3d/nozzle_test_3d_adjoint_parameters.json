@@ -42,7 +42,7 @@
         "objective_settings" : {
             "objective_type"                 : "flow_mal_distribution",
             "surface_model_part_name"        : "Outlet3D_outlet",
-            "flow_mal_distribution_direction": "surface_normal",
+            "flow_mal_distribution_direction": [1.0, 0.0, 0.0],
             "output_file"                    : ""
         },
         "model_import_settings"         : {
