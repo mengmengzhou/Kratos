@@ -518,8 +518,19 @@ protected:
 
 
     template<class TContainerType, class TKeyType>
-    typename TContainerType::iterator FindKey(TContainerType& ThisContainer , TKeyType ThisKey, std::string ComponentName);
+    typename TContainerType::iterator FindKey(TContainerType& ThisContainer , TKeyType ThisKey, std::string ComponentName)
+    {
+        typename TContainerType::iterator i_result;
+        if((i_result = ThisContainer.find(ThisKey)) == ThisContainer.end())
+        {
+            std::stringstream buffer;
+            buffer << ComponentName << " #" << ThisKey << " is not found.";
+            buffer << " [Line " << mNumberOfLines << " ]";
+            KRATOS_THROW_ERROR(std::invalid_argument, buffer.str(), "");
+        }
 
+        return i_result;
+    }
 
 
 
@@ -530,11 +541,42 @@ protected:
     // format for a vector: [size] ( value1, value2,...., valueN )
     // format for a matrix: [size1,size2] ( )( )...( ) //look props read
     template<class TValueType>
-    TValueType& ReadVectorialValue(TValueType& rValue);
+    TValueType& ReadVectorialValue(TValueType& rValue)
+    {
+        std::stringstream value;
+
+        char c = SkipWhiteSpaces();
+        while((c != '(') && !mpStream->eof())
+        {
+            value << c;
+            c = GetCharacter();
+        }
+        int open_parantesis = 1;
+        while((open_parantesis != 0) && !mpStream->eof())
+        {
+            value << c;
+            c = GetCharacter();
+            if(c == '(')
+                open_parantesis++;
+            if(c == ')')
+                open_parantesis--;
+        }
+        value << c; // adding the final parantesis
+
+        value >>  rValue;
+
+        return rValue;
+    }
 
     template<class TValueType>
-    TValueType& ExtractValue(std::string rWord, TValueType & rValue);
+    TValueType& ExtractValue(std::string rWord, TValueType & rValue)
+    {
+        std::stringstream value(rWord);
 
+        value >> rValue;
+
+        return rValue;
+    }
 
     ModelPartIO& ReadWord(std::string& Word);
 
