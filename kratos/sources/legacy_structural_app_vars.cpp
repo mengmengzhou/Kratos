@@ -125,6 +125,8 @@ namespace Kratos
 //    KRATOS_CREATE_VARIABLE( double, IS_BOUNDARY )
 //    KRATOS_CREATE_VARIABLE( double, IS_VISITED )
 
+    KRATOS_CREATE_VARIABLE( bool, IS_INACTIVE )
+
     void KratosApplication::RegisterLegacyStructuralAppVariables()
     {
         KRATOS_REGISTER_VARIABLE( LAMBDAS_T )
@@ -217,6 +219,7 @@ namespace Kratos
 //        KRATOS_REGISTER_VARIABLE( IS_BOUNDARY )
 //        KRATOS_REGISTER_VARIABLE( IS_VISITED )
 
+        KRATOS_REGISTER_VARIABLE( IS_INACTIVE )
     }
 
 }  // namespace Kratos.
