@@ -66,6 +66,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "includes/condition.h"
 #include "custom_conditions/faceforce3D.h"
 #include "custom_conditions/point_point_joint_condition.h"
+#include "custom_conditions/point_point_lagrange_condition.h"
+#include "custom_conditions/elastic_constraint.h"
 #include "includes/node.h"
 #include "includes/variables.h"
 #include "includes/mesh.h"
@@ -94,11 +96,22 @@ void  AddCustomConditionsToPython()
     ("FaceForce3D",
      init<int, GeometryType::Pointer, Properties::Pointer>() )
     ;
-    
+
     class_< PointPointJointCondition, PointPointJointCondition::Pointer, bases< ConditionBaseType > >
     ("PointPointJointCondition",
-     init<int, Node<3>::Pointer, Node<3>::Pointer>() )
+     init<int, Node<3>::Pointer, Node<3>::Pointer, Properties::Pointer>() )
     ;
+
+    class_< PointPointLagrangeCondition, PointPointLagrangeCondition::Pointer, bases< ConditionBaseType > >
+    ("PointPointLagrangeCondition",
+     init<int, Node<3>::Pointer, Node<3>::Pointer, Properties::Pointer>() )
+    ;
+
+    class_< ElasticConstraint, ElasticConstraint::Pointer, bases< ConditionBaseType > >
+    ("ElasticConstraint",
+     init<int, Node<3>::Pointer, Properties::Pointer>() )
+    ;
+
 }
 
 }  // namespace Python.

@@ -134,13 +134,17 @@ public:
     ///@{
     IntegrationMethod GetIntegrationMethod() const;
 
-    Element::Pointer Create( IndexType NewId, NodesArrayType const& ThisNodes,  PropertiesType::Pointer pProperties ) const;
+    virtual Element::Pointer Create( IndexType NewId, NodesArrayType const& ThisNodes,  PropertiesType::Pointer pProperties ) const;
+
+    virtual Element::Pointer Create( IndexType NewId, GeometryType::Pointer pGeom, PropertiesType::Pointer pProperties ) const;
 
     void Initialize();
 
     void ResetConstitutiveLaw();
 
     void InitializeSolutionStep( ProcessInfo& CurrentProcessInfo );
+
+    void InitializeNonLinearIteration( ProcessInfo& CurrentProcessInfo );
 
     void CalculateLocalSystem( MatrixType& rLeftHandSideMatrix, VectorType& rRightHandSideVector, ProcessInfo& rCurrentProcessInfo );
 
@@ -152,14 +156,14 @@ public:
 
     void GetDofList( DofsVectorType& ElementalDofList, ProcessInfo& CurrentProcessInfo );
 
+    void FinalizeNonLinearIteration( ProcessInfo& CurrentProcessInfo );
+
     void FinalizeSolutionStep( ProcessInfo& CurrentProcessInfo );
 
     //************************************************************************************
     void CalculateOnIntegrationPoints( const Variable<double>& rVariable, std::vector<double>& Output, const ProcessInfo& rCurrentProcessInfo );
 
-    void CalculateOnIntegrationPoints( const Variable<Vector>& rVariable,
-                                       std::vector<Vector>& Output, const ProcessInfo& rCurrentProcessInfo );
-
+    void CalculateOnIntegrationPoints( const Variable<Vector>& rVariable, std::vector<Vector>& Output, const ProcessInfo& rCurrentProcessInfo );
 
     void GetValuesVector( Vector& values, int Step );
 
@@ -169,6 +173,8 @@ public:
 
     virtual void GetValueOnIntegrationPoints( const Variable<double>& rVariable, std::vector<double>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
+    virtual void GetValueOnIntegrationPoints( const Variable<std::string>& rVariable, std::vector<std::string>& rValues, const ProcessInfo& rCurrentProcessInfo );
+
     virtual void SetValueOnIntegrationPoints( const Variable<Matrix>& rVariable, std::vector<Matrix>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
     virtual void SetValueOnIntegrationPoints( const Variable<Vector>& rVariable, std::vector<Vector>& rValues, const ProcessInfo& rCurrentProcessInfo );
@@ -177,13 +183,23 @@ public:
 
     virtual void SetValueOnIntegrationPoints( const Variable<double>& rVariable, std::vector<double>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
+    virtual void SetValueOnIntegrationPoints( const Variable<int>& rVariable, std::vector<int>& rValues, const ProcessInfo& rCurrentProcessInfo );
+
+    virtual void SetValueOnIntegrationPoints( const Variable<std::string>& rVariable, std::vector<std::string>& rValues, const ProcessInfo& rCurrentProcessInfo );
+
 //                void SetValueOnIntegrationPoints(const Variable<Matrix>& rVariable, std::vector<Matrix>& rValues, const ProcessInfo& rCurrentProcessInfo);
 //
 //                void GetValueOnIntegrationPoints(const Variable<Matrix>& rVariable, std::vector<Matrix>& rValues, const ProcessInfo& rCurrentProcessInfo);
 
+    virtual void MassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCurrentProcessInfo);
+
     virtual void CalculateMassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCurrentProcessInfo);
 
+    virtual void DampMatrix(MatrixType& rDampMatrix, ProcessInfo& rCurrentProcessInfo);
+
     virtual void CalculateDampingMatrix(MatrixType& rDampMatrix, ProcessInfo& rCurrentProcessInfo);
+
+    virtual int Check(const ProcessInfo& rCurrentProcessInfo);
 
     ///@}
     ///@name Access
@@ -276,9 +292,6 @@ private:
     std::vector<double> mReferencePressures;
     bool mIsStabilised;
     bool mIsInitialized;
-
-    std::vector< Matrix > mInvJ0;
-    Vector mDetJ0;
 
     ///@}
     ///@name Private Operators
@@ -525,11 +538,13 @@ private:
     virtual void save(Serializer& rSerializer) const
     {
         KRATOS_SERIALIZE_SAVE_BASE_CLASS(rSerializer,  Element );
+        rSerializer.save( "mConstitutiveLawVector", mConstitutiveLawVector );
     }
 
     virtual void load(Serializer& rSerializer)
     {
         KRATOS_SERIALIZE_LOAD_BASE_CLASS(rSerializer,  Element );
+        rSerializer.load( "mConstitutiveLawVector", mConstitutiveLawVector );
     }
 
     ///@}

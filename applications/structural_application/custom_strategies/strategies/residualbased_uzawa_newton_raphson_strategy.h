@@ -1517,7 +1517,7 @@ private:
 //                 ProcessInfo& pCurrentProcessInfo = GetModelPart().GetProcessInfo();
 
         //setting up the Vectors involved to the correct size
-//                 pBuilderAndSolver->ResizeAndInitializeVectors(pScheme,  mA, mDx, mb,
+//                 pBuilderAndSolver->ResizeAndInitializeVectors( mA, mDx, mb,
 //                         GetModelPart().Elements(), GetModelPart().Conditions(),
 //                         GetModelPart().GetProcessInfo());
 

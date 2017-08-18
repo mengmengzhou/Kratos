@@ -175,7 +175,7 @@ public:
         const TSystemVectorType& b
     )
     {
-        return false;
+        return true;
     }
 
     /*Criterias that need to be called after getting the solution */
@@ -321,17 +321,106 @@ public:
             }
             std::cout << "************************************************************************************************************************************" << std::endl;
 
-            if ((EnergyNorm <= mRatioTolerance || mFinalCorrectionNorm <= mAlwaysConvergedNorm)
-                    && (EnergyNorm_WATER <= mRatioTolerance || mFinalCorrectionNorm_WATER <= mAlwaysConvergedNorm)
-                    && (EnergyNorm_AIR <= mRatioTolerance || mFinalCorrectionNorm_AIR <= mAlwaysConvergedNorm))
+//            if ((EnergyNorm <= mRatioTolerance || mFinalCorrectionNorm <= mAlwaysConvergedNorm)
+//                    && (EnergyNorm_WATER <= mRatioTolerance || mFinalCorrectionNorm_WATER <= mAlwaysConvergedNorm)
+//                    && (EnergyNorm_AIR <= mRatioTolerance || mFinalCorrectionNorm_AIR <= mAlwaysConvergedNorm))
+//            if (EnergyNorm <= mRatioTolerance || mFinalCorrectionNorm <= mAlwaysConvergedNorm)
+//            {
+//                if (EnergyNorm <= mRatioTolerance)
+//                    std::cout << "Congratulations the time step solution is converged..."
+//                          << "reason: (energy = " << EnergyNorm << ") <= (expected energy = " << mRatioTolerance << ")"
+//                          << std::endl;
+//                else if (mFinalCorrectionNorm <= mAlwaysConvergedNorm)
+//                    std::cout << "Congratulations the time step solution is converged..."
+//                          << "reason: (change = " << mFinalCorrectionNorm << ") <= (expected change = " << mAlwaysConvergedNorm << ")"
+//                          << std::endl;
+//                return true;
+//            }
+//            else if (HasWaterPres && (EnergyNorm_WATER <= mRatioTolerance || mFinalCorrectionNorm_WATER <= mAlwaysConvergedNorm))
+//            {
+//                if (EnergyNorm_WATER <= mRatioTolerance)
+//                    std::cout << "Congratulations the time step solution is converged..."
+//                          << "reason: (energy (water) = " << EnergyNorm_WATER << ") <= (expected energy = " << mRatioTolerance << ")"
+//                          << std::endl;
+//                else if (mFinalCorrectionNorm_WATER <= mAlwaysConvergedNorm)
+//                    std::cout << "Congratulations the time step solution is converged..."
+//                          << "reason: (change (water) = " << mFinalCorrectionNorm_WATER << ") <= (expected change = " << mAlwaysConvergedNorm << ")"
+//                          << std::endl;
+//                return true;
+//            }
+//            else if (HasAirPres && (EnergyNorm_AIR <= mRatioTolerance || mFinalCorrectionNorm_AIR <= mAlwaysConvergedNorm))
+//            {
+//                if (EnergyNorm_AIR <= mRatioTolerance)
+//                    std::cout << "Congratulations the time step solution is converged..."
+//                          << "reason: (energy (air) = " << EnergyNorm_AIR << ") <= (expected energy = " << mRatioTolerance << ")"
+//                          << std::endl;
+//                else if (mFinalCorrectionNorm_AIR <= mAlwaysConvergedNorm)
+//                    std::cout << "Congratulations the time step solution is converged..."
+//                          << "reason: (change (air) = " << mFinalCorrectionNorm_AIR << ") <= (expected change = " << mAlwaysConvergedNorm << ")"
+//                          << std::endl;
+//                return true;
+//            }
+//            else
+//            {
+//                return false;
+//            }
+
+            bool disp_reason_1 = (EnergyNorm <= mRatioTolerance);
+            bool disp_reason_2 = (mFinalCorrectionNorm <= mAlwaysConvergedNorm);
+            bool disp_converged = disp_reason_1 || disp_reason_2;
+
+            bool water_converged;
+            bool water_reason_1;
+            bool water_reason_2;
+            if(HasWaterPres)
             {
-                std::cout << "Congratulations the time step solution is converged..." << std::endl;
+                water_reason_1 = (EnergyNorm_WATER <= mRatioTolerance);
+                water_reason_2 = (mFinalCorrectionNorm_WATER <= mAlwaysConvergedNorm);
+                water_converged = water_reason_1 || water_reason_2;
+            }
+            else
+                water_converged = true;
+
+            bool air_converged;
+            bool air_reason_1;
+            bool air_reason_2;
+            if(HasAirPres)
+            {
+                air_reason_1 = (EnergyNorm_AIR <= mRatioTolerance);
+                air_reason_2 = (mFinalCorrectionNorm_AIR <= mAlwaysConvergedNorm);
+                air_converged = air_reason_1 || air_reason_2;
+            }
+            else
+                air_converged = true;
+
+            if(disp_converged && water_converged && air_converged)
+            {
+                std::cout << "Congratulations the time step solution is converged." << std::endl;
+                std::cout << "Reason for converged displacement:";
+                if(disp_reason_1) std::cout << " {(energy = " << EnergyNorm << ") <= (expected energy = " << mRatioTolerance << ")}";
+                if(disp_reason_2) std::cout << " {(change = " << mFinalCorrectionNorm << ") <= (expected change = " << mAlwaysConvergedNorm << ")}";
+                std::cout << std::endl;
+
+                if(HasWaterPres)
+                {
+                    std::cout << "Reason for converged water pressure:";
+                    if(water_reason_1) std::cout << " {(energy (water) = " << EnergyNorm_WATER << ") <= (expected energy = " << mRatioTolerance << ")}";
+                    if(water_reason_2) std::cout << " {(change (water) = " << mFinalCorrectionNorm_WATER << ") <= (expected change = " << mAlwaysConvergedNorm << ")}";
+                    std::cout << std::endl;
+                }
+
+                if(HasAirPres)
+                {
+                    std::cout << "Reason for converged air pressure:";
+                    if(air_reason_1) std::cout << " {(energy (air) = " << EnergyNorm_AIR << ") <= (expected energy = " << mRatioTolerance << ")}";
+                    if(air_reason_2) std::cout << " {(change (air) = " << mFinalCorrectionNorm_AIR << ") <= (expected change = " << mAlwaysConvergedNorm << ")}";
+                    std::cout << std::endl;
+                }
+
                 return true;
             }
             else
-            {
                 return false;
-            }
         }
         else   //in this case all the displacements are imposed!
         {

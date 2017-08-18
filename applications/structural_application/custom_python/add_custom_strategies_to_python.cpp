@@ -78,8 +78,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //strategies
 #include "solving_strategies/strategies/solving_strategy.h"
-#include "custom_strategies/strategies/residualbased_arc_length_strategy.h"
-#include "custom_strategies/strategies/residualbased_newton_raphson_line_search_strategy.h"
+//#include "custom_strategies/strategies/residualbased_arc_length_strategy.h"
+//#include "custom_strategies/strategies/residualbased_newton_raphson_line_search_strategy.h"
 // #include "solving_strategies/strategies/residualbased_linear_strategy.h"
 // #include "solving_strategies/strategies/residualbased_newton_raphson_strategy.h"
 // #include "custom_strategies/strategies/residualbased_newton_raphson_strategy_newmark.h"
@@ -109,8 +109,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "solving_strategies/builder_and_solvers/builder_and_solver.h"
 #include "solving_strategies/builder_and_solvers/residualbased_elimination_builder_and_solver.h"
 // #include "custom_strategies/builder_and_solvers/multiphase_builder_and_solver.h"
-// #include "custom_strategies/builder_and_solvers/modal_analysis_builder_and_solver.h"
-//#include "custom_strategies/builder_and_solvers/modal_analysis_builder_and_solver.h"
+#include "custom_strategies/builder_and_solvers/modal_analysis_builder_and_solver.h"
 
 //linear solvers
 #include "linear_solvers/linear_solver.h"
@@ -162,18 +161,17 @@ void  AddCustomStrategiesToPython()
 
 //	typedef ResidualBasedPredictorCorrectorVelocityBossakScheme< SparseSpaceType, LocalSpaceType > //ResidualBasedPredictorCorrectorVelocityBossakSchemeType;
 
-//             typedef ModalAnalysisBuilderAndSolver<SparseSpaceType, LocalSpaceType,
-//                     LinearSolverType> ModalAnalysisBuilderAndSolverType;
+    typedef ModalAnalysisBuilderAndSolver<SparseSpaceType, LocalSpaceType, LinearSolverType> ModalAnalysisBuilderAndSolverType;
     typedef CompositScheme< SparseSpaceType, LocalSpaceType > CompositSchemeType;
 
     typedef VolumetricScheme< 2, SparseSpaceType, LocalSpaceType > VolumetricSchemeType2D;
-    //typedef VolumetricScheme< 3, SparseSpaceType, LocalSpaceType > VolumetricSchemeType3D;
+    typedef VolumetricScheme< 3, SparseSpaceType, LocalSpaceType > VolumetricSchemeType3D;
 
     typedef InnerVolumetricScheme< 2, SparseSpaceType, LocalSpaceType > InnerVolumetricSchemeType2D;
-    //typedef InnerVolumetricScheme< 3, SparseSpaceType, LocalSpaceType > InnerVolumetricSchemeType3D;
+    typedef InnerVolumetricScheme< 3, SparseSpaceType, LocalSpaceType > InnerVolumetricSchemeType3D;
 
     typedef InnerVolumetricDynamicScheme< 2, SparseSpaceType, LocalSpaceType > InnerVolumetricDynamicSchemeType2D;
-    //typedef InnerVolumetricDynamicScheme< 3, SparseSpaceType, LocalSpaceType > InnerVolumetricDynamicSchemeType3D;
+    typedef InnerVolumetricDynamicScheme< 3, SparseSpaceType, LocalSpaceType > InnerVolumetricDynamicSchemeType3D;
 
 
     typedef ConvergenceCriteria< SparseSpaceType, LocalSpaceType > TConvergenceCriteriaType;
@@ -252,10 +250,14 @@ void  AddCustomStrategiesToPython()
 
 
 
-//            class_< ModalAnalysisBuilderAndSolverType, bases<BuilderAndSolverType>, boost::noncopyable >
-//                    (
-//                     "ModalAnalysisBuilderAndSolver", init<LinearSolverType::Pointer>()
-//                    );
+    class_< ModalAnalysisBuilderAndSolverType, bases<BuilderAndSolverType>, boost::noncopyable>
+    ("ModalAnalysisBuilderAndSolver", init<LinearSolverType::Pointer>())
+    .def("SetMaxEigenSolutions", &ModalAnalysisBuilderAndSolverType::SetMaxEigenSolutions)
+    .def("SetMaxIterations", &ModalAnalysisBuilderAndSolverType::SetMaxIterations)
+    .def("SetTolerance", &ModalAnalysisBuilderAndSolverType::SetTolerance)
+    .def("ResizeAndInitializeEigenSystem", &ModalAnalysisBuilderAndSolverType::ResizeAndInitializeEigenSystem)
+    .def("BuildEigenSystem", &ModalAnalysisBuilderAndSolverType::BuildEigenSystem)
+    ;
 
 
 
@@ -291,20 +293,20 @@ void  AddCustomStrategiesToPython()
                 "CompositScheme", init< BaseSchemeType&, BaseSchemeType& >()
             );
 
-    class_< ResidualBasedArcLengthStrategy< SparseSpaceType, LocalSpaceType, LinearSolverType >,bases< BaseSolvingStrategyType >,  boost::noncopyable >
-    ("ResidualBasedArcLenghtStrategy",
-     init<ModelPart&, BaseSchemeType::Pointer, LinearSolverType::Pointer, TConvergenceCriteriaType::Pointer,
-     unsigned int, unsigned int,double,bool, bool, bool,bool
-     >() )
-    ;
+//    class_< ResidualBasedArcLengthStrategy< SparseSpaceType, LocalSpaceType, LinearSolverType >,bases< BaseSolvingStrategyType >,  boost::noncopyable >
+//    ("ResidualBasedArcLenghtStrategy",
+//     init<ModelPart&, BaseSchemeType::Pointer, LinearSolverType::Pointer, TConvergenceCriteriaType::Pointer,
+//     unsigned int, unsigned int,double,bool, bool, bool,bool
+//     >() )
+//    ;
 
 
 
-    class_< ResidualBasedNewtonRaphsonLineSearchesStrategy< SparseSpaceType, LocalSpaceType, LinearSolverType >,bases< BaseSolvingStrategyType >,  boost::noncopyable >
-    ("ResidualBasedNewtonRaphsonLineSearchesStrategy",
-     init<ModelPart&, BaseSchemeType::Pointer, LinearSolverType::Pointer, TConvergenceCriteriaType::Pointer, unsigned int, unsigned int, double, double, double, double, bool, bool, bool, bool
-     >() )
-    ;
+//    class_< ResidualBasedNewtonRaphsonLineSearchesStrategy< SparseSpaceType, LocalSpaceType, LinearSolverType >,bases< BaseSolvingStrategyType >,  boost::noncopyable >
+//    ("ResidualBasedNewtonRaphsonLineSearchesStrategy",
+//     init<ModelPart&, BaseSchemeType::Pointer, LinearSolverType::Pointer, TConvergenceCriteriaType::Pointer, unsigned int, unsigned int, double, double, double, double, bool, bool, bool, bool
+//     >() )
+//    ;
 
 
 

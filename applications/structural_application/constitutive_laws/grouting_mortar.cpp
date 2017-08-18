@@ -68,6 +68,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ekate_auxiliary_application.h"
 #include "includes/properties.h"
 
+//TODO: check the time conversion with Jelena
+
 namespace Kratos
 {
 //*********************************************************************

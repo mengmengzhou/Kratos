@@ -66,6 +66,7 @@ def AddVariables(model_part):
     model_part.AddNodalSolutionStepVariable(LAGRANGE_WATER_PRESSURE)
     #model_part.AddNodalSolutionStepVariable(INTERNAL_VARIABLES)
     model_part.AddNodalSolutionStepVariable(MOMENTUM)
+    model_part.AddNodalSolutionStepVariable(MOMENT)
     model_part.AddNodalSolutionStepVariable(ROTATION)
     model_part.AddNodalSolutionStepVariable(PRESSURE)        
     model_part.AddNodalSolutionStepVariable(ERROR_RATIO)

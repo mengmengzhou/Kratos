@@ -62,251 +62,258 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "includes/serializer.h"
 #include "includes/variables.h"
 #include "includes/constitutive_law.h"
+//#include "custom_utilities/yield_plot_utility.h"
 
+//#define ENABLE_YIELD_PLOT
 
 namespace Kratos
 {
 
+/**
+ * Defines a cam-clay constitutive law in 3D space.
+ * REF: + Msc thesis, Enes Siljak, Bochum, 2010
+ *      + Borja et al, Cam-Clay plasticity, Part 1: Implicit integration of elasto-plastic constitutive relations
+ */
+
+class CamClay3D : public ConstitutiveLaw
+{
+public:
     /**
-     * Defines a cam-clay constitutive law in 3D space.
-     * REF: Msc thesis, Enes Siljak, Bochum, 2010
+     * Type Definitions
      */
+    typedef ConstitutiveLaw BaseType;
 
-    class CamClay3D : public ConstitutiveLaw
+    #ifdef BOOST_NO_CXX11_CONSTEXPR
+    const static double TOL;
+    #else
+//    constexpr static double TOL = 1.0e-5;
+    constexpr static double TOL = 1.0e-8;
+    #endif
+
+    const static double unit4thSym3D[][6];
+
+    static const double unit2nd3D[6];
+
+    /**
+     * Counted pointer of CamClay3D
+     */
+    KRATOS_CLASS_POINTER_DEFINITION(CamClay3D);
+
+    /**
+     * Life Cycle
+     */
+    /**
+     * Default constructor.
+     */
+    CamClay3D();
+
+    virtual  ConstitutiveLaw::Pointer Clone() const
     {
-        public:
-            /**
-             * Type Definitions
-             */
-            typedef ConstitutiveLaw BaseType;
+        ConstitutiveLaw::Pointer p_clone( new CamClay3D() );
+        return p_clone;
+    }
 
-            #ifdef BOOST_NO_CXX11_CONSTEXPR
-            const static double TOL;
-            #else
-            constexpr static double TOL = 1.0e-5;
-            #endif
+    /**
+     * Destructor.
+     */
+    virtual ~CamClay3D();
 
-            const static double unit4thSym3D[][6];
+    /**
+     * Operators
+     */
+    /**
+     * Operations
+     */
+    bool Has( const Variable<int>& rThisVariable );
+    bool Has( const Variable<double>& rThisVariable );
+    bool Has( const Variable<Vector>& rThisVariable );
+    bool Has( const Variable<Matrix>& rThisVariable );
 
-            static const double unit2nd3D[6];
+    int& GetValue( const Variable<int>& rThisVariable, int& rValue );
+    double& GetValue( const Variable<double>& rThisVariable, double& rValue );
+    Vector& GetValue( const Variable<Vector>& rThisVariable, Vector& rValue );
+    Matrix& GetValue( const Variable<Matrix>& rThisVariable, Matrix& rValue );
 
-            /**
-             * Counted pointer of CamClay3D
-             */
-            KRATOS_CLASS_POINTER_DEFINITION(CamClay3D);
+    void SetValue( const Variable<int>& rThisVariable, const int& rValue,
+                   const ProcessInfo& rCurrentProcessInfo );
+    void SetValue( const Variable<double>& rThisVariable, const double& rValue,
+                   const ProcessInfo& rCurrentProcessInfo );
+    void SetValue( const Variable<Vector>& rThisVariable, const Vector& rValue,
+                   const ProcessInfo& rCurrentProcessInfo );
+    void SetValue( const Variable<Matrix>& rThisVariable, const Matrix& rValue,
+                   const ProcessInfo& rCurrentProcessInfo );
 
-            /**
-             * Life Cycle
-             */
-            /**
-             * Default constructor.
-             */
-            CamClay3D();
+    /**
+     * Material parameters are inizialized
+     */
+    void InitializeMaterial( const Properties& props,
+                             const GeometryType& geom,
+                             const Vector& ShapeFunctionsValues );
 
-            virtual  ConstitutiveLaw::Pointer Clone() const
-            {
-                ConstitutiveLaw::Pointer p_clone( new CamClay3D() );
-                return p_clone;
-            }
+    /**
+     * As this constitutive law describes only linear elastic material properties
+     * this function is rather useless and in fact does nothing
+     */
+    void InitializeSolutionStep( const Properties& props,
+                                 const GeometryType& geom, //this is just to give the array of nodes
+                                 const Vector& ShapeFunctionsValues,
+                                 const ProcessInfo& CurrentProcessInfo );
 
-            /**
-             * Destructor.
-             */
-            virtual ~CamClay3D();
-
-            /**
-             * Operators
-             */
-            /**
-             * Operations
-             */
-            bool Has( const Variable<int>& rThisVariable );
-            bool Has( const Variable<double>& rThisVariable );
-            bool Has( const Variable<Vector>& rThisVariable );
-            bool Has( const Variable<Matrix>& rThisVariable );
-
-            int& GetValue( const Variable<int>& rThisVariable, int& rValue );
-            double& GetValue( const Variable<double>& rThisVariable, double& rValue );
-            Vector& GetValue( const Variable<Vector>& rThisVariable, Vector& rValue );
-            Matrix& GetValue( const Variable<Matrix>& rThisVariable, Matrix& rValue );
-
-            void SetValue( const Variable<int>& rThisVariable, const int& rValue,
-                           const ProcessInfo& rCurrentProcessInfo );
-            void SetValue( const Variable<double>& rThisVariable, const double& rValue,
-                           const ProcessInfo& rCurrentProcessInfo );
-            void SetValue( const Variable<Vector>& rThisVariable, const Vector& rValue,
-                           const ProcessInfo& rCurrentProcessInfo );
-            void SetValue( const Variable<Matrix>& rThisVariable, const Matrix& rValue,
-                           const ProcessInfo& rCurrentProcessInfo );
-
-            /**
-             * Material parameters are inizialized
-             */
-            void InitializeMaterial( const Properties& props,
-                                     const GeometryType& geom,
-                                     const Vector& ShapeFunctionsValues );
-
-            /**
-             * As this constitutive law describes only linear elastic material properties
-             * this function is rather useless and in fact does nothing
-             */
-            void InitializeSolutionStep( const Properties& props,
-                                         const GeometryType& geom, //this is just to give the array of nodes
-                                         const Vector& ShapeFunctionsValues,
-                                         const ProcessInfo& CurrentProcessInfo );
-
-            void InitializeNonLinearIteration( const Properties& props,
-                                               const GeometryType& geom, //this is just to give the array of nodes
-                                               const Vector& ShapeFunctionsValues,
-                                               const ProcessInfo& CurrentProcessInfo );
-
-            void ResetMaterial( const Properties& props,
-                                const GeometryType& geom,
-                                const Vector& ShapeFunctionsValues );
-
-            void FinalizeNonLinearIteration( const Properties& props,
-                                             const GeometryType& geom, //this is just to give the array of nodes
-                                             const Vector& ShapeFunctionsValues,
-                                             const ProcessInfo& CurrentProcessInfo );
-
-            void FinalizeSolutionStep( const Properties& props,
+    void InitializeNonLinearIteration( const Properties& props,
                                        const GeometryType& geom, //this is just to give the array of nodes
                                        const Vector& ShapeFunctionsValues,
                                        const ProcessInfo& CurrentProcessInfo );
 
-            /**
-             * This function is designed to be called once to perform all the checks needed
-             * on the input provided. Checks can be "expensive" as the function is designed
-             * to catch user's errors.
-             * @param props
-             * @param geom
-             * @param CurrentProcessInfo
-             * @return
-             */
-            virtual int Check( const Properties& props,
-                               const GeometryType& geom,
+    void ResetMaterial( const Properties& props,
+                        const GeometryType& geom,
+                        const Vector& ShapeFunctionsValues );
+
+    void FinalizeNonLinearIteration( const Properties& props,
+                                     const GeometryType& geom, //this is just to give the array of nodes
+                                     const Vector& ShapeFunctionsValues,
+                                     const ProcessInfo& CurrentProcessInfo );
+
+    void FinalizeSolutionStep( const Properties& props,
+                               const GeometryType& geom, //this is just to give the array of nodes
+                               const Vector& ShapeFunctionsValues,
                                const ProcessInfo& CurrentProcessInfo );
 
-            void CalculateMaterialResponse( const Vector& StrainVector,
-                                            const Matrix& DeformationGradient,
-                                            Vector& StressVector,
-                                            Matrix& AlgorithmicTangent,
-                                            const ProcessInfo& CurrentProcessInfo,
-                                            const Properties& props,
-                                            const GeometryType& geom,
-                                            const Vector& ShapeFunctionsValues,
-                                            bool CalculateStresses = true,
-                                            int CalculateTangent = true,
-                                            bool SaveInternalVariables = true
-                                          );
+    /**
+     * This function is designed to be called once to perform all the checks needed
+     * on the input provided. Checks can be "expensive" as the function is designed
+     * to catch user's errors.
+     * @param props
+     * @param geom
+     * @param CurrentProcessInfo
+     * @return
+     */
+    virtual int Check( const Properties& props,
+                       const GeometryType& geom,
+                       const ProcessInfo& CurrentProcessInfo );
 
-            /**
-             * returns the size of the strain vector of the current constitutive law
-             * NOTE: this function HAS TO BE IMPLEMENTED by any derived class
-             */
-            virtual SizeType GetStrainSize()
-            {
-                return 6;
-            }
+    void CalculateMaterialResponse( const Vector& StrainVector,
+                                    const Matrix& DeformationGradient,
+                                    Vector& StressVector,
+                                    Matrix& AlgorithmicTangent,
+                                    const ProcessInfo& CurrentProcessInfo,
+                                    const Properties& props,
+                                    const GeometryType& geom,
+                                    const Vector& ShapeFunctionsValues,
+                                    bool CalculateStresses = true,
+                                    int CalculateTangent = true,
+                                    bool SaveInternalVariables = true
+                                  );
 
-            /**
-             * converts a strain vector styled variable into its form, which the
-             * deviatoric parts are no longer multiplied by 2
-             */
-            //             void Calculate(const Variable<Matrix >& rVariable, Matrix& rResult, const ProcessInfo& rCurrentProcessInfo);
+    /**
+     * returns the size of the strain vector of the current constitutive law
+     * NOTE: this function HAS TO BE IMPLEMENTED by any derived class
+     */
+    virtual SizeType GetStrainSize()
+    {
+        return 6;
+    }
 
-            /**
-             * Input and output
-             */
-            /**
-             * Turn back information as a string.
-             */
-            //virtual String Info() const;
-            /**
-             * Print information about this object.
-             */
-            //virtual void PrintInfo(std::ostream& rOStream) const;
-            /**
-             * Print object's data.
-             */
-            //virtual void PrintData(std::ostream& rOStream) const;
+    /**
+     * converts a strain vector styled variable into its form, which the
+     * deviatoric parts are no longer multiplied by 2
+     */
+    //             void Calculate(const Variable<Matrix >& rVariable, Matrix& rResult, const ProcessInfo& rCurrentProcessInfo);
 
-        protected:
-            /**
-             * there are no protected class members
-             */
-        private:
+    /**
+     * Input and output
+     */
+    /**
+     * Turn back information as a string.
+     */
+    //virtual String Info() const;
+    /**
+     * Print information about this object.
+     */
+    //virtual void PrintInfo(std::ostream& rOStream) const;
+    /**
+     * Print object's data.
+     */
+    //virtual void PrintData(std::ostream& rOStream) const;
 
-            ///@}
-            ///@name Serialization
-            ///@{
+protected:
+    /**
+     * there are no protected class members
+     */
+private:
 
-            friend class Serializer;
+    ///@}
+    ///@name Serialization
+    ///@{
 
-            virtual void save( Serializer& rSerializer ) const
-            {
-                KRATOS_SERIALIZE_SAVE_BASE_CLASS( rSerializer, ConstitutiveLaw );
-                rSerializer.save( "Prestress", mPrestress );
-                rSerializer.save( "PrestressFactor", mPrestressFactor );
-                rSerializer.save( "CurrentStress", mCurrentStress );
-                rSerializer.save( "mE", mE );
-                rSerializer.save( "mNU", mNU );
-		        rSerializer.save( "mDE", mDE );
-            }
+    friend class Serializer;
 
-            virtual void load( Serializer& rSerializer )
-            {
-                KRATOS_SERIALIZE_LOAD_BASE_CLASS( rSerializer, ConstitutiveLaw );
-                rSerializer.load( "Prestress", mPrestress );
-                rSerializer.load( "PrestressFactor", mPrestressFactor );
-                rSerializer.load( "CurrentStress", mCurrentStress );
-                rSerializer.load( "mE", mE );
-                rSerializer.load( "mNU", mNU );
-		        rSerializer.load( "mDE", mDE );
-            }
+    virtual void save( Serializer& rSerializer ) const
+    {
+        KRATOS_SERIALIZE_SAVE_BASE_CLASS( rSerializer, ConstitutiveLaw );
+        rSerializer.save( "CurrentStress", mCurrentStress );
+        rSerializer.save( "LastStress", mLastStress );
+        rSerializer.save( "NU", mNU );
+    }
 
-            /**
-             * Member Variables
-             */
+    virtual void load( Serializer& rSerializer )
+    {
+        KRATOS_SERIALIZE_LOAD_BASE_CLASS( rSerializer, ConstitutiveLaw );
+        rSerializer.load( "CurrentStress", mCurrentStress );
+        rSerializer.load( "LastStress", mLastStress );
+        rSerializer.load( "NU", mNU );
+    }
 
-            Vector mPrestress;
-            double mPrestressFactor;
-            Vector mCurrentStress;
-            Vector mLastStress;
-            Vector mCurrentStrain;
-            Vector mLastStrain;
-            Vector mLastStrainIncr;
-            double mKm, mGm, mE, mNU, mDE;
-            double mM, mLambda, mKappa, mVoidRatio, mPc, mTheta, mPk, mQk, mPck, mDGamma;
+    /**
+     * Member Variables
+     */
 
-            std::size_t mParentElementId;
-            std::size_t mIntegrationPointIndex;
+    Vector mPrestress;
+    Vector mCurrentStress;
+    Vector mLastStress;
+    Vector mCurrentStrain;
+    Vector mLastStrain;
+    Vector mLastStrainIncr;
+    double mKm, mGm, mNU;
+    double mM, mLambda, mKappa, mVoidRatio, mPc, mTheta, mPk, mQk, mPck, mDGamma;
 
-            bool mIsYielded;
+    std::size_t mParentElementId;
+    std::size_t mIntegrationPointIndex;
 
-            /**
-             * Un accessible methods
-             */
-            void returnMapping(double pTr, double qTr);
-            void calculateF(std::vector<double>& rResults, double pTr, double qTr);
-            void getFactors(Vector& rResults, double devS);
-            double solveG(double pTr);
-            double getP();
+    bool mIsYielded;
 
-            void CalculateElasticTangent(Matrix& C, double K, double G);
-            Vector& getDeviatoricComp(Vector& devStress, const Vector& stress);
-            double getJ2(const Vector& devStress);
+    #ifdef ENABLE_YIELD_PLOT
+    YieldPlotUtility::Pointer mPlotUtil;
+    #endif
 
-            /**
-             * Assignment operator.
-             */
-            //CamClay3D& operator=(const IsotropicPlaneStressWrinklingNew& rOther);
-            /**
-             * Copy constructor.
-             */
-            //CamClay3D(const IsotropicPlaneStressWrinklingNew& rOther);
-    }; // Class CamClay3D
+    /**
+     * Un accessible methods
+     */
+    int returnMapping(double pTr, double qTr);
+    int calculateF(std::vector<double>& rResults, double pTr, double qTr);
+    void getFactors(Vector& rResults, double devS);
+    int solveG(double& Pc, double pTr);
+    double getP();
+
+    void CalculateElasticTangent(Matrix& C, double K, double G);
+    Vector& getDeviatoricComp(Vector& devStress, const Vector& stress);
+    double getJ2(const Vector& devStress);
+
+    void StressIntegration(const Vector& StrainVector, Vector& StressVector);
+    void ComputeTangent(Matrix& AlgorithmicTangent);
+
+    /**
+     * Assignment operator.
+     */
+    //CamClay3D& operator=(const IsotropicPlaneStressWrinklingNew& rOther);
+    /**
+     * Copy constructor.
+     */
+    //CamClay3D(const IsotropicPlaneStressWrinklingNew& rOther);
+}; // Class CamClay3D
 
 
 } // namespace Kratos.
+
+#undef ENABLE_YIELD_PLOT
+
 #endif // KRATOS_CAM_CLAY_3D_H_INCLUDED defined

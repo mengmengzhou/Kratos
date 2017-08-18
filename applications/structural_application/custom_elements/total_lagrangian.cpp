@@ -72,6 +72,7 @@ namespace Kratos
             : Element( NewId, pGeometry )
     {
         //DO NOT ADD DOFS HERE!!!
+        mIsInitialized = false;
     }
 
 //************************************************************************************
@@ -83,7 +84,7 @@ namespace Kratos
         //         const unsigned int dim = GetGeometry().WorkingSpaceDimension();
         mThisIntegrationMethod = GetGeometry().GetDefaultIntegrationMethod();
 
-
+        mIsInitialized = false;
     }
 
     Element::Pointer TotalLagrangian::Create( IndexType NewId, NodesArrayType const& ThisNodes, PropertiesType::Pointer pProperties ) const
@@ -102,19 +103,20 @@ namespace Kratos
     {
         KRATOS_TRY
 
+        if(mIsInitialized)
+            return;
+
         const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
 
         //resizing jacobian inverses containers
         mInvJ0.resize( integration_points.size() );
         mDetJ0.resize( integration_points.size(), false );
 
-
         GeometryType::JacobiansType J0;
         J0 = GetGeometry().Jacobian( J0, mThisIntegrationMethod );
         mTotalDomainInitialSize = 0.00;
 
         //Constitutive Law initialisation
-
         if ( mConstitutiveLawVector.size() != integration_points.size() )
         {
             mConstitutiveLawVector.resize( integration_points.size() );
@@ -124,7 +126,6 @@ namespace Kratos
         InitializeMaterial();
 
         //calculating the inverse J0
-
         for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++ )
         {
             //getting informations for integration
@@ -137,6 +138,7 @@ namespace Kratos
             mTotalDomainInitialSize += mDetJ0[PointNumber] * IntegrationWeight;
         }
 
+        mIsInitialized = true;
 
         KRATOS_CATCH( "" )
     }
@@ -212,7 +214,7 @@ namespace Kratos
         GetGeometry().Jacobian( J );
 
 
-        //KRATOS_WATCH(J)
+//        KRATOS_WATCH(J)
 
         //auxiliary terms
         Vector BodyForce;
@@ -232,9 +234,9 @@ namespace Kratos
 
 
             CalculateStrain( C, StrainVector );
+//            Comprobate_State_Vector( StrainVector ); // I don't understand why we need this
 
 
-            Comprobate_State_Vector( StrainVector );
             mConstitutiveLawVector[PointNumber]->CalculateMaterialResponse(
                 StrainVector,
                 F,
@@ -748,7 +750,7 @@ namespace Kratos
             noalias( C ) = prod( trans( F ), F );
 
             CalculateStrain( C, StrainVector );
-            Comprobate_State_Vector( StrainVector );
+//            Comprobate_State_Vector( StrainVector ); // I don't understand why we need this
 
             if ( rVariable == GREEN_LAGRANGE_STRAIN_TENSOR )
             {

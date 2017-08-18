@@ -140,6 +140,10 @@ public:
                                      const GeometryType& geom,
                                      const Vector& ShapeFunctionsValues );
 
+    virtual void ResetMaterial( const Properties& props,
+                                const GeometryType& geom,
+                                const Vector& ShapeFunctionsValues );
+
     virtual void InitializeNonLinearIteration( const Properties& rMaterialProperties,
                                                const GeometryType& rElementGeometry,
                                                const Vector& rShapeFunctionsValues,

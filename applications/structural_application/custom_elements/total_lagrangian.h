@@ -293,8 +293,11 @@ private:
     std::vector<ConstitutiveLaw::Pointer> mConstitutiveLawVector;
 
     double mTotalDomainInitialSize;
+    bool mIsInitialized;
+
     std::vector< Matrix > mInvJ0;
     Vector mDetJ0;
+
     ///@}
     ///@name Private Operators
     ///@{

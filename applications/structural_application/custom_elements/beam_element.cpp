@@ -87,7 +87,6 @@ void BeamElement::Initialize()
     KRATOS_TRY
     CalculateSectionProperties();
     KRATOS_CATCH("")
-
 }
 
 //************************************************************************************
@@ -341,17 +340,17 @@ void BeamElement::CalculateSectionProperties()
         mArea = GetValue(AREA);
     
     Matrix* inertia;
-    if( GetProperties().Has(LOCAL_INERTIA_TENSOR) )
+    if( GetProperties().Has(LOCAL_INERTIA) )
     {
-        inertia = &(GetProperties()[LOCAL_INERTIA_TENSOR]);
+        inertia = &(GetProperties()[LOCAL_INERTIA]);
     }
     else if( GetProperties().Has(INERTIA) )
     {
         inertia = &(GetProperties()[INERTIA]);
     }
-    else if( Has(LOCAL_INERTIA_TENSOR) )
+    else if( Has(LOCAL_INERTIA) )
     {
-        inertia = &(GetValue(LOCAL_INERTIA_TENSOR));
+        inertia = &(GetValue(LOCAL_INERTIA));
     }
     else if( Has(INERTIA) )
     {
@@ -1167,7 +1166,6 @@ int  BeamElement::Check(const ProcessInfo& rCurrentProcessInfo)
 {
     KRATOS_TRY
 
-
     //verify that the variables are correctly initialized
     if(VELOCITY.Key() == 0)
         KRATOS_THROW_ERROR(std::invalid_argument,"VELOCITY has Key zero! (check if the application is correctly registered","");
@@ -1181,8 +1179,8 @@ int  BeamElement::Check(const ProcessInfo& rCurrentProcessInfo)
         KRATOS_THROW_ERROR(std::invalid_argument,"BODY_FORCE has Key zero! (check if the application is correctly registered","");
     if(CROSS_AREA.Key() == 0)
         KRATOS_THROW_ERROR(std::invalid_argument,"CROSS_AREA has Key zero! (check if the application is correctly registered","");
-    if(LOCAL_INERTIA_TENSOR.Key() == 0)
-        KRATOS_THROW_ERROR(std::invalid_argument,"LOCAL_INERTIA_TENSOR has Key zero! (check if the application is correctly registered","");
+    if(LOCAL_INERTIA.Key() == 0)
+        KRATOS_THROW_ERROR(std::invalid_argument,"LOCAL_INERTIA has Key zero! (check if the application is correctly registered","");
     if(ROTATION.Key() == 0)
         KRATOS_THROW_ERROR(std::invalid_argument,"ROTATION has Key zero! (check if the application is correctly registered","");
 
@@ -1195,25 +1193,37 @@ int  BeamElement::Check(const ProcessInfo& rCurrentProcessInfo)
             KRATOS_THROW_ERROR(std::invalid_argument,"missing one of the dofs for the variable DISPLACEMENT on node ",GetGeometry()[i].Id());
     }
 
-    //verify that the area is given by properties
-    if (this->GetProperties().Has(CROSS_AREA)==false)
-    {
-        if( GetValue(AREA) == 0.0 )
-            KRATOS_THROW_ERROR(std::logic_error,"CROSS_AREA not provided for this element",this->Id());
-    }
+    //verify that the area and inertia is given by properties
+    if( GetProperties().Has(CROSS_AREA) || Has(AREA) )
+    {}
+    else
+        KRATOS_THROW_ERROR(std::logic_error, "The Area is not fully defined for the beam element", Id())
 
-    //verify that the inertia is given by properties
-//    if (this->GetProperties().Has(LOCAL_INERTIA_TENSOR)==false)
-//    {
-//        if( GetValue(INERTIA)(0,0) == 0.0 )
-//            KRATOS_THROW_ERROR(std::logic_error,"INERTIA not provided for this element ",this->Id());
-//    }
-    if (this->GetProperties().Has(LOCAL_INERTIA_TENSOR)==false
-        || this->GetProperties().Has(INERTIA)==false
-        || Has(LOCAL_INERTIA_TENSOR)==false
-        || Has(INERTIA)==false )
+    Matrix* inertia;
+    if( GetProperties().Has(LOCAL_INERTIA) )
     {
-        KRATOS_THROW_ERROR(std::logic_error,"INERTIA|LOCAL_INERTIA_TENSOR not provided for this element ",this->Id());
+        inertia = &(GetProperties()[LOCAL_INERTIA]);
+    }
+    else if( GetProperties().Has(INERTIA) )
+    {
+        inertia = &(GetProperties()[INERTIA]);
+    }
+    else if( Has(LOCAL_INERTIA) )
+    {
+        inertia = &(GetValue(LOCAL_INERTIA));
+    }
+    else if( Has(INERTIA) )
+    {
+        inertia = &(GetValue(INERTIA));
+    }
+    else
+        KRATOS_THROW_ERROR(std::logic_error, "The Inertia is not fully defined for the beam element", Id())
+    if(inertia->size1() < 2 || inertia->size2() < 2)
+    {
+        std::stringstream ss;
+        ss << "Error on BeamElement " << Id() << ", the inertia is not of expected size, true size = ("
+           << inertia->size1() << ", " << inertia->size2() << ")" << std::endl;
+        KRATOS_THROW_ERROR(std::logic_error, ss.str(), "")
     }
 
     //Verify that the body force is defined

@@ -123,7 +123,7 @@ void PointForce2D::CalculateLocalSystem(MatrixType& rLeftHandSideMatrix, VectorT
     array_1d<double,3>& force = GetGeometry()[0].GetSolutionStepValue(FORCE);
     rRightHandSideVector[0] = force[0];
     rRightHandSideVector[1] = force[1];
-
+KRATOS_WATCH(rRightHandSideVector)
     KRATOS_CATCH("")
 }
 

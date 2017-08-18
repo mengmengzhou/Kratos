@@ -71,6 +71,9 @@ public:
     ElasticConstraint(IndexType NewId, GeometryType::Pointer pGeometry,
                  PropertiesType::Pointer pProperties);
 
+    /// Special Constructor for elastic point constraint
+    ElasticConstraint( IndexType NewId, Node<3>::Pointer const& pNode, PropertiesType::Pointer pProperties );
+
     /// Destructor.
     virtual ~ElasticConstraint();
 
@@ -84,8 +87,11 @@ public:
     ///@name Operations
     ///@{
 
-    Condition::Pointer Create(IndexType NewId, NodesArrayType const&
-                              ThisNodes,  PropertiesType::Pointer pProperties) const;
+    Condition::Pointer Create(IndexType NewId, NodesArrayType const& ThisNodes,
+                                PropertiesType::Pointer pProperties) const;
+
+    Condition::Pointer Create(IndexType NewId, GeometryType::Pointer pGeom,
+                                PropertiesType::Pointer pProperties) const;
 
     void CalculateLocalSystem(MatrixType& rLeftHandSideMatrix, VectorType&
                               rRightHandSideVector, ProcessInfo& rCurrentProcessInfo);

@@ -173,11 +173,19 @@ public:
 
     void GetValueOnIntegrationPoints( const Variable<Vector>& rVariable, std::vector<Vector>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
+    void GetValueOnIntegrationPoints(const Variable<array_1d<double, 3> >& rVariable, std::vector<array_1d<double, 3> >& rValues, const ProcessInfo& rCurrentProcessInfo);
+
     void GetValueOnIntegrationPoints( const Variable<double>& rVariable, std::vector<double>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
-    void SetValueOnIntegrationPoints( const Variable<int>& rVariable, std::vector<int>& rValues, const ProcessInfo& rCurrentProcessInfo );
+    void GetValueOnIntegrationPoints( const Variable<int>& rVariable, std::vector<int>& rValues, const ProcessInfo& rCurrentProcessInfo );
+
+    void GetValueOnIntegrationPoints( const Variable<std::string>& rVariable, std::vector<std::string>& rValues, const ProcessInfo& rCurrentProcessInfo );
+
+    void GetValueOnIntegrationPoints( const Variable<ConstitutiveLaw::Pointer>& rVariable, std::vector<ConstitutiveLaw::Pointer>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
     void SetValueOnIntegrationPoints( const Variable<double>& rVariable, std::vector<double>& rValues, const ProcessInfo& rCurrentProcessInfo );
+
+    void SetValueOnIntegrationPoints( const Variable<int>& rVariable, std::vector<int>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
     void SetValueOnIntegrationPoints( const Variable<Matrix>& rVariable, std::vector<Matrix>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
@@ -185,7 +193,9 @@ public:
 
     void SetValueOnIntegrationPoints( const Variable<ConstitutiveLaw::Pointer>& rVariable, std::vector<ConstitutiveLaw::Pointer>& rValues, const ProcessInfo& rCurrentProcessInfo );
 
-    void CalculateOnIntegrationPoints( const Variable<double >& rVariable, std::vector<double>& Output, const ProcessInfo& rCurrentProcessInfo );
+    void CalculateOnIntegrationPoints( const Variable<double>& rVariable, std::vector<double>& Output, const ProcessInfo& rCurrentProcessInfo );
+
+    void CalculateOnIntegrationPoints( const Variable<array_1d<double, 3> >& rVariable, std::vector< array_1d<double, 3> >& rOutput, const ProcessInfo& rCurrentProcessInfo);
 
     void CalculateOnIntegrationPoints( const Variable<Vector>& rVariable, std::vector<Vector>& Output, const ProcessInfo& rCurrentProcessInfo );
 
@@ -242,8 +252,6 @@ protected:
     Matrix mInitialDisp;
     IntegrationMethod mThisIntegrationMethod;
     std::vector<ConstitutiveLaw::Pointer> mConstitutiveLawVector;
-    std::vector< Matrix > mInvJ0;
-    Vector mDetJ0;
     double mTotalDomainInitialSize;
 
     ///@}
@@ -272,8 +280,6 @@ protected:
         rSerializer.save( "mInitialDisp", mInitialDisp );
 //        rSerializer.save( "mThisIntegrationMethod", mThisIntegrationMethod );
         rSerializer.save( "mConstitutiveLawVector", mConstitutiveLawVector );
-        rSerializer.save( "mInvJ0", mInvJ0 );
-        rSerializer.save( "mDetJ0", mDetJ0 );
         rSerializer.save( "mTotalDomainInitialSize", mTotalDomainInitialSize );
     }
 
@@ -284,8 +290,6 @@ protected:
         rSerializer.load( "mInitialDisp", mInitialDisp );
 //        rSerializer.load( "mThisIntegrationMethod", mThisIntegrationMethod );
         rSerializer.load( "mConstitutiveLawVector", mConstitutiveLawVector );
-        rSerializer.load( "mInvJ0", mInvJ0 );
-        rSerializer.load( "mDetJ0", mDetJ0 );
         rSerializer.load( "mTotalDomainInitialSize", mTotalDomainInitialSize );
     }
 
@@ -366,6 +370,7 @@ private:
 
     void CalculateBoperator( Matrix& B_Operator, const Matrix& DN_DX );
 
+    void CalculateBBaroperator( Matrix& B_Operator, const Matrix& DN_DX, const Matrix& Bdil_bar );
 
     ///@}
     ///@name Private Operations

@@ -71,7 +71,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "constitutive_laws/tutorial_damage_model.h"
 #include "constitutive_laws/isotropic_2d.h"
 #include "constitutive_laws/isotropic_3d.h"
-#include "constitutive_laws/neo_hookean_3d.h"
 #include "constitutive_laws/hyperelastic_3d.h"
 #include "constitutive_laws/hyperelastic_2d.h"
 // #include "constitutive_laws/viscoelastic_2d.h" // new VISCOELASTICITY
@@ -107,9 +106,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "python/pointer_vector_set_python_interface.h"
 #include "python/variable_indexing_python.h"
 #include "fluency_criteria/fluency_criteria.h"
-#include "constitutive_laws/mohr_coulomb_plane_strain.h"
-
 #include "constitutive_laws/von_mises_3d.h"
+#include "constitutive_laws/mohr_coulomb_plane_strain.h"
 
 
 namespace Kratos
@@ -289,11 +287,6 @@ void  AddConstitutiveLawsToPython()
 
     class_< CamClay3D, bases< ConstitutiveLawBaseType >, boost::noncopyable >
     ( "CamClay3D",
-      init<>() )
-    ;
-
-    class_< NeoHookean3D, bases< ConstitutiveLawBaseType >, boost::noncopyable >
-    ( "NeoHookean3D",
       init<>() )
     ;
 

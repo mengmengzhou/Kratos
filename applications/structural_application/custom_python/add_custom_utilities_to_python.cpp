@@ -68,10 +68,11 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "includes/define.h"
 #include "custom_utilities/deactivation_utility.h"
 #include "custom_utilities/variable_transfer_utility.h"
+#include "custom_utilities/variable_fast_transfer_utility.h"
 
-#ifdef _OPENMP
-#include "custom_utilities/parallel_variable_transfer_utility.h"
-#endif
+//#ifdef _OPENMP
+//#include "custom_utilities/parallel_variable_transfer_utility.h"
+//#endif
 
 #include "spaces/ublas_space.h"
 #include "linear_solvers/linear_solver.h"
@@ -83,6 +84,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "custom_utilities/output_utility.h"
 #include "custom_utilities/dof_utility.h"
 #include "custom_utilities/smoothing_utility.h"
+//#include "custom_utilities/tip_utility.h"
+#include "custom_utilities/pile_utility.h"
+//#include "custom_utilities/foundation_utility.h"
 
 //#include "custom_utilities/detect_elements_utility.h"
 #include "custom_utilities/intra_fracture_triangle_utility.h"
@@ -90,6 +94,13 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "custom_utilities/inter_fracture_tetrahedra_utility.h"
 //#include "custom_utilities/mark_element_for_refinement.h"
 #include "custom_utilities/disconnect_utility.h"
+
+#include "custom_utilities/embedded_node_tying_utility.h"
+#include "custom_conditions/embedded_node_lagrange_tying_condition.h"
+#include "custom_conditions/embedded_node_penalty_tying_condition.h"
+#include "custom_utilities/embedded_point_tying_utility.h"
+#include "custom_conditions/embedded_point_lagrange_tying_condition.h"
+#include "custom_conditions/embedded_point_penalty_tying_condition.h"
 
 namespace Kratos
 {
@@ -203,6 +214,12 @@ void VectorTransferVariablesToNodes(VariableTransferUtility& dummy,
     dummy.TransferVariablesToNodes(model_part, rThisVariable);
 }
 
+void VectorTransferVariablesToNodesComponents(VariableTransferUtility& dummy,
+        ModelPart& model_part, Variable<Vector>& rThisVariable, const std::size_t& ncomponents)
+{
+    dummy.TransferVariablesToNodes(model_part, rThisVariable, ncomponents);
+}
+
 void DoubleTransferVariablesToGaussPoints(VariableTransferUtility& dummy,
         ModelPart& source_model_part, ModelPart& target_model_part, Variable<double>& rThisVariable)
 {
@@ -214,6 +231,63 @@ void VectorTransferVariablesToGaussPoints(VariableTransferUtility& dummy,
 {
     dummy.TransferVariablesToGaussPoints(source_model_part, target_model_part, rThisVariable);
 }
+
+void DoubleTransferVariablesBetweenMeshes(VariableTransferUtility& dummy,
+        ModelPart& rSource, ModelPart& rTarget, Variable<double>& rThisVariable)
+{
+    dummy.TransferVariablesBetweenMeshes(rSource, rTarget, rThisVariable);
+}
+
+void VectorTransferVariablesBetweenMeshes(VariableTransferUtility& dummy,
+        ModelPart& rSource, ModelPart& rTarget, Variable<Kratos::Vector>& rThisVariable)
+{
+    dummy.TransferVariablesBetweenMeshes(rSource, rTarget, rThisVariable);
+}
+
+void ListDofs(DofUtility& dummy, ModelPart::DofsArrayType& rDofSet, std::size_t EquationSystemSize)
+{
+    dummy.ListDofs(rDofSet, EquationSystemSize);
+}
+
+template<class TVariableType>
+void PrintKey(DofUtility& dummy, const TVariableType& rThisVariable)
+{
+    dummy.PrintKey(rThisVariable);
+}
+
+///////////////////////////////////////////////////////////////////////
+// Auxilliary Utilities for connection of the building to the ground //
+///////////////////////////////////////////////////////////////////////
+void InitializePileUtility( PileUtility& dummy, ModelPart& model_part,
+                            boost::python::list pile_elements, int len_pile_elements,
+                            boost::python::list soil_elements, int len_soil_elements )
+{
+    std::vector<unsigned int> vec_pile_elements;
+    std::vector<unsigned int> vec_soil_elements;
+
+    for ( int it = 0; it < len_pile_elements; it++ )
+    {
+       boost::python::extract<int> x( pile_elements[it] );
+ 
+       if ( x.check() )
+           vec_pile_elements.push_back(( unsigned int )x );
+       else break;
+    }
+ 
+    for ( int it = 0; it < len_soil_elements; it++ )
+    {
+        boost::python::extract<int> x( soil_elements[it] );
+
+        if ( x.check() )
+           vec_soil_elements.push_back(( unsigned int )x );
+        else break;
+    }
+ 
+    dummy.InitializePileUtility( model_part, vec_pile_elements, vec_soil_elements );
+}
+
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 
 void  AddCustomUtilitiesToPython()
 {
@@ -233,29 +307,41 @@ void  AddCustomUtilitiesToPython()
     ( "VariableTransferUtility", init<>() )
     .def(init<VariableTransferUtility::LinearSolverType::Pointer>())
     .def( "TransferNodalVariables", &VariableTransferUtility::TransferNodalVariables )
+    .def( "TransferNodalVariables", &VariableTransferUtility::TransferGeneralNodalVariables<Variable<double> > )
+    .def( "TransferNodalVariables", &VariableTransferUtility::TransferGeneralNodalVariables<Variable<Vector> > )
     .def( "TransferConstitutiveLawVariables", &VariableTransferUtility::TransferConstitutiveLawVariables )
     .def( "TransferInSituStress", &VariableTransferUtility::TransferInSituStress )
     .def( "TransferPrestress", &VariableTransferUtility::TransferPrestress )
     .def( "TransferPrestressIdentically", &VariableTransferUtility::TransferPrestressIdentically )
     .def( "TransferSpecificVariable", &VariableTransferUtility::TransferSpecificVariable )
+    .def( "TransferSpecificVariableWithComponents", &VariableTransferUtility::TransferSpecificVariableWithComponents )
     .def( "InitializeModelPart", &VariableTransferUtility::InitializeModelPart )
     .def("TransferVariablesToNodes", &DoubleTransferVariablesToNodes)
     .def("TransferVariablesToNodes", &VectorTransferVariablesToNodes)
+    .def("TransferVariablesToNodes", &VectorTransferVariablesToNodesComponents)
     .def("TransferVariablesToGaussPoints", &DoubleTransferVariablesToGaussPoints)
     .def("TransferVariablesToGaussPoints", &VectorTransferVariablesToGaussPoints)
+    .def("TransferVariablesFromNodeToNode", &VariableTransferUtility::TransferVariablesFromNodeToNode<Variable<Vector> >)
+    .def("TransferVariablesFromNodeToNode", &VariableTransferUtility::TransferVariablesFromNodeToNode<Variable<array_1d<double, 3> > >)
+    .def("TransferVariablesFromNodeToNode", &VariableTransferUtility::TransferVariablesFromNodeToNode<Variable<double> >)
+    .def("TransferVariablesBetweenMeshes", &DoubleTransferVariablesBetweenMeshes)
+    .def("TransferVariablesBetweenMeshes", &VectorTransferVariablesBetweenMeshes)
     ;
 
-
-#ifdef _OPENMP
-    class_<ParallelVariableTransferUtility, boost::noncopyable >
-    ( "ParallelVariableTransferUtility",
-      init<>() )
-    .def( "TransferNodalVariables", &ParallelVariableTransferUtility::TransferNodalVariables )
-    .def( "TransferConstitutiveLawVariables", &ParallelVariableTransferUtility::TransferConstitutiveLawVariables )
-    .def( "TransferInSituStress", &ParallelVariableTransferUtility::TransferInSituStress )
-    .def( "InitializeModelPart", &ParallelVariableTransferUtility::InitializeModelPart )
+    class_<VariableFastTransferUtility, boost::noncopyable >
+    ( "VariableFastTransferUtility", init<ModelPart::ElementsContainerType&, VariableFastTransferUtility::LinearSolverType::Pointer, const double&, const double&, const double&>() )
     ;
-#endif
+
+//#ifdef _OPENMP
+//    class_<ParallelVariableTransferUtility, boost::noncopyable >
+//    ( "ParallelVariableTransferUtility",
+//      init<>() )
+//    .def( "TransferNodalVariables", &ParallelVariableTransferUtility::TransferNodalVariables )
+//    .def( "TransferConstitutiveLawVariables", &ParallelVariableTransferUtility::TransferConstitutiveLawVariables )
+//    .def( "TransferInSituStress", &ParallelVariableTransferUtility::TransferInSituStress )
+//    .def( "InitializeModelPart", &ParallelVariableTransferUtility::InitializeModelPart )
+//    ;
+//#endif
 
     class_<ContactUtility, boost::noncopyable >
     ( "ContactUtility",
@@ -362,8 +448,52 @@ void  AddCustomUtilitiesToPython()
 
     class_<DofUtility, boost::noncopyable >
     ( "DofUtility", init<>() )
-    .def( "ListDofs", &DofUtility::ListDofs )
+    .def( "ListDofs", &ListDofs )
+    .def( "PrintKey", &PrintKey<Variable<double> > )
+    .def( "PrintKey", &PrintKey<VariableComponent<VectorComponentAdaptor<array_1d<double, 3> > > > )
     ;
+
+    typedef EmbeddedNodeTyingUtility<EmbeddedNodeLagrangeTyingCondition> EmbeddedNodeLagrangeTyingUtilityType;
+    class_<EmbeddedNodeLagrangeTyingUtilityType, EmbeddedNodeLagrangeTyingUtilityType::Pointer, boost::noncopyable >
+    ( "EmbeddedNodeLagrangeTyingUtility", init<>() )
+    .def( "SetUpTyingLinks", &EmbeddedNodeLagrangeTyingUtilityType::SetUpTyingLinks1 )
+    .def( "SetUpTyingLinks", &EmbeddedNodeLagrangeTyingUtilityType::SetUpTyingLinks2 )
+    ;
+
+    typedef EmbeddedNodeTyingUtility<EmbeddedNodePenaltyTyingCondition> EmbeddedNodePenaltyTyingUtilityType;
+    class_<EmbeddedNodePenaltyTyingUtilityType, EmbeddedNodePenaltyTyingUtilityType::Pointer, boost::noncopyable >
+    ( "EmbeddedNodePenaltyTyingUtility", init<>() )
+    .def( "SetUpTyingLinks", &EmbeddedNodePenaltyTyingUtilityType::SetUpTyingLinks1 )
+    .def( "SetUpTyingLinks", &EmbeddedNodePenaltyTyingUtilityType::SetUpTyingLinks2 )
+    .def( "Combine", &EmbeddedNodePenaltyTyingUtilityType::Combine )
+    ;
+
+//    typedef EmbeddedNodeTyingUtility<YourCondition> EmbeddedNodeFrictionalTrussTyingUtilityType;
+//    class_<EmbeddedNodeFrictionalTrussTyingUtilityType, EmbeddedNodeFrictionalTrussTyingUtilityType::Pointer, boost::noncopyable >
+//    ( "EmbeddedNodeFrictionalTrussTyingUtility", init<>() )
+//    .def( "SetUpTyingLinks", &EmbeddedNodeFrictionalTrussTyingUtilityType::SetUpTyingLinks3 )
+//    .def( "SetUpTyingLinks", &EmbeddedNodeFrictionalTrussTyingUtilityType::SetUpTyingLinks4 )
+//    ;
+
+    typedef EmbeddedPointTyingUtility<EmbeddedPointLagrangeTyingCondition> EmbeddedPointLagrangeTyingUtilityType;
+    class_<EmbeddedPointLagrangeTyingUtilityType, EmbeddedPointLagrangeTyingUtilityType::Pointer, boost::noncopyable >
+    ( "EmbeddedPointLagrangeTyingUtility", init<>() )
+    .def( "SetUpTyingLinks", &EmbeddedPointLagrangeTyingUtilityType::SetUpTyingLinks1 )
+    .def( "SetUpTyingLinks", &EmbeddedPointLagrangeTyingUtilityType::SetUpTyingLinks2 )
+    ;
+
+    typedef EmbeddedPointTyingUtility<EmbeddedPointPenaltyTyingCondition> EmbeddedPointPenaltyTyingUtilityType;
+    class_<EmbeddedPointPenaltyTyingUtilityType, EmbeddedPointPenaltyTyingUtilityType::Pointer, boost::noncopyable >
+    ( "EmbeddedPointPenaltyTyingUtility", init<>() )
+    .def( "SetUpTyingLinks", &EmbeddedPointPenaltyTyingUtilityType::SetUpTyingLinks1 )
+    .def( "SetUpTyingLinks", &EmbeddedPointPenaltyTyingUtilityType::SetUpTyingLinks2 )
+    ;
+
+    class_<PileUtility, boost::noncopyable >
+    ( "PileUtility", init<>() )
+    .def( "InitializePileUtility", &InitializePileUtility )
+    ;
+
 }
 }  // namespace Python.
 }  // namespace Kratos.

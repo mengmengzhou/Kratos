@@ -45,8 +45,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
 
-#if !defined(KRATOS_CUSTOM_GID_IO_BASE_H_INCLUDED)
-#define  KRATOS_CUSTOM_GID_IO_BASE_H_INCLUDED
+#if !defined(KRATOS_STRUCTURAL_GID_GAUSS_POINT_CONTAINER_H_INCLUDED)
+#define  KRATOS_STRUCTURAL_GID_GAUSS_POINT_CONTAINER_H_INCLUDED
 
 
 
@@ -61,8 +61,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // External includes
 
 // Project includes
-// #include "includes/datafile_io.h"
-#include "includes/gid_io.h"
 #include "includes/deprecated_variables.h"
 #include "structural_application.h"
 
@@ -85,7 +83,52 @@ public:
         :BaseType( gp_title, geometryFamily, gid_element_type, number_of_integration_points,
                    index_container) {}
 
-    using GidGaussPointsContainer::PrintResults; //to avoid the warning
+    virtual void PrintResults( GiD_FILE ResultFile, Variable<int> rVariable, ModelPart& r_model_part,
+                               double SolutionTag, unsigned int parameter_index )
+    {
+        if( mMeshElements.size() != 0 || mMeshConditions.size() != 0 )
+        {
+            GiD_fBeginResult( ResultFile, (char *)(rVariable.Name()).c_str(), "Kratos", SolutionTag,
+                             GiD_Scalar, GiD_OnGaussPoints, mGPTitle, NULL, 0, NULL );
+            std::vector<int> ValuesOnIntPoint(mSize);
+            if( mMeshElements.size() != 0 )
+            {
+                for( ModelPart::ElementsContainerType::iterator it = mMeshElements.begin();
+                        it != mMeshElements.end(); it++ )
+                {
+                    if( ! it->GetValue( IS_INACTIVE ) )
+                    {
+                        it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
+                                                         r_model_part.GetProcessInfo() );
+                        for(unsigned int i=0; i<mIndexContainer.size(); i++)
+                        {
+                            int index = mIndexContainer[i];
+                            GiD_fWriteScalar( ResultFile, it->Id(), ValuesOnIntPoint[index] );
+                        }
+                    }
+                }
+            }
+            if( mMeshConditions.size() != 0 )
+            {
+                for( ModelPart::ConditionsContainerType::iterator it = mMeshConditions.begin();
+                        it != mMeshConditions.end(); it++ )
+                {
+                    if( ! it->GetValue( IS_INACTIVE ) )
+                    {
+                        it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
+                                                         r_model_part.GetProcessInfo() );
+                        for(unsigned int i=0; i<mIndexContainer.size(); i++)
+                        {
+                            int index = mIndexContainer[i];
+                            GiD_fWriteScalar( ResultFile, it->Id(), ValuesOnIntPoint[index] );
+                        }
+                    }
+                }
+            }
+            GiD_fEndResult(ResultFile);
+        }
+    }
+
     virtual void PrintResults( GiD_FILE ResultFile, Variable<double> rVariable, ModelPart& r_model_part,
                                double SolutionTag, unsigned int parameter_index )
     {
@@ -113,10 +156,7 @@ public:
                 for( ModelPart::ElementsContainerType::iterator it = mMeshElements.begin();
                         it != mMeshElements.end(); it++ )
                 {
-                    bool element_is_active = true;
-                    if( it->IsDefined(ACTIVE) )
-                        element_is_active = it->Is(ACTIVE);
-                    if( element_is_active )
+                    if( ! it->GetValue( IS_INACTIVE ) )
                     {
                         it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
                                                          r_model_part.GetProcessInfo() );
@@ -133,10 +173,7 @@ public:
                 for( ModelPart::ConditionsContainerType::iterator it = mMeshConditions.begin();
                         it != mMeshConditions.end(); it++ )
                 {
-                    bool condition_is_active = true;
-                    if( it->IsDefined(ACTIVE) )
-                        condition_is_active = it->Is(ACTIVE);
-                    if( condition_is_active )
+                    if( ! it->GetValue( IS_INACTIVE ) )
                     {
                         it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
                                                          r_model_part.GetProcessInfo() );
@@ -167,10 +204,7 @@ public:
             for( ModelPart::ConditionsContainerType::iterator it = mMeshConditions.begin();
                     it != mMeshConditions.end(); it++ )
             {
-                bool condition_is_active = true;
-                if( it->IsDefined(ACTIVE) )
-                    condition_is_active = it->Is(ACTIVE);
-                if( condition_is_active )
+                if( ! it->GetValue( IS_INACTIVE ) )
                 {
                     it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
                                                      r_model_part.GetProcessInfo() );
@@ -212,10 +246,7 @@ public:
                 for( ModelPart::ElementsContainerType::iterator it = mMeshElements.begin();
                         it != mMeshElements.end(); ++it )
                 {
-                    bool element_is_active = true;
-                    if( it->IsDefined(ACTIVE) )
-                        element_is_active = it->Is(ACTIVE);
-                    if( element_is_active )
+                    if( ! it->GetValue( IS_INACTIVE ) )
                     {
                         it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
                                                          r_model_part.GetProcessInfo() );
@@ -269,10 +300,7 @@ public:
                 for( ModelPart::ConditionsContainerType::iterator it = mMeshConditions.begin();
                         it != mMeshConditions.end(); it++ )
                 {
-                    bool condition_is_active = true;
-                    if( it->IsDefined(ACTIVE) )
-                        condition_is_active = it->Is(ACTIVE);
-                    if( condition_is_active )
+                    if( ! it->GetValue( IS_INACTIVE ) )
                     {
                         it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
                                                          r_model_part.GetProcessInfo() );
@@ -342,10 +370,7 @@ public:
                 for( ModelPart::ElementsContainerType::iterator it = mMeshElements.begin();
                         it != mMeshElements.end(); ++it )
                 {
-                    bool element_is_active = true;
-                    if( it->IsDefined(ACTIVE) )
-                        element_is_active = it->Is(ACTIVE);
-                    if( element_is_active )
+                    if( ! it->GetValue( IS_INACTIVE ) )
                     {
                         it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
                                                          r_model_part.GetProcessInfo() );
@@ -382,10 +407,7 @@ public:
                 for( ModelPart::ConditionsContainerType::iterator it = mMeshConditions.begin();
                         it != mMeshConditions.end(); it++ )
                 {
-                    bool condition_is_active = true;
-                    if( it->IsDefined(ACTIVE) )
-                        condition_is_active = it->Is(ACTIVE);
-                    if( condition_is_active )
+                    if( ! it->GetValue( IS_INACTIVE ) )
                     {
                         it->GetValueOnIntegrationPoints( rVariable, ValuesOnIntPoint,
                                                          r_model_part.GetProcessInfo() );
@@ -420,4 +442,4 @@ public:
 
 }//namespace Kratos
 
-#endif // KRATOS_CUSTOM_GID_IO_BASE_H_INCLUDED  defined 
+#endif // KRATOS_STRUCTURAL_GID_GAUSS_POINT_CONTAINER_H_INCLUDED  defined 

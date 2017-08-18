@@ -41,6 +41,7 @@
 #include "spaces/ublas_space.h"
 #include "linear_solvers/linear_solver.h"
 #include "custom_processes/topology_update_process.h"
+#include "custom_processes/calculate_reaction_process.h"
 #include "add_custom_processes_to_python.h"
 
 namespace Kratos
@@ -58,6 +59,11 @@ void AddCustomProcessesToPython()
     .def("SetBinSize", &TopologyUpdateProcess::SetBinSize)
     .def("GetTopologyChange", &TopologyUpdateProcess::GetTopologyChange)
     .def("GetObjective", &TopologyUpdateProcess::GetObjective)
+    .def(self_ns::str(self))
+    ;
+
+    class_<CalculateReactionProcess, bases<Process>, boost::noncopyable >
+    ("CalculateReactionProcess", init<ModelPart&, CalculateReactionProcess::SchemeType&>())
     .def(self_ns::str(self))
     ;
 

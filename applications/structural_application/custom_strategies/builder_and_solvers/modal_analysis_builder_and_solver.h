@@ -171,14 +171,9 @@ public:
 
     /** Constructor.
     */
-    ModalAnalysisBuilderAndSolver(
-        typename TLinearSolver::Pointer pNewLinearSystemSolver)
-        : BuilderAndSolver< TSparseSpace,TDenseSpace,TLinearSolver >(pNewLinearSystemSolver)
-    {
-
-        /* 			std::cout << "using the standard builder and solver " << std::endl; */
-
-    }
+    ModalAnalysisBuilderAndSolver(typename TLinearSolver::Pointer pNewLinearSystemSolver)
+    : BaseType(pNewLinearSystemSolver), mMaxEigenSolutions(1), mTolerance(1.0e-8), mMaxIterations(1000)
+    {}
 
 
     /** Destructor.
@@ -191,410 +186,25 @@ public:
     */
     /*@{ */
 
-    //**************************************************************************
-    //**************************************************************************
-    void Build(
-        typename TSchemeType::Pointer pScheme,
-        ModelPart& r_model_part,
-        TSystemMatrixType& A,
-        TSystemVectorType& b)
+    void SetMaxEigenSolutions(std::size_t n) {mMaxEigenSolutions = n;}
+    void SetMaxIterations(std::size_t n) {mMaxIterations = n;}
+    void SetTolerance(double tol) {mTolerance = tol;}
+
+    std::size_t GetNumberOfEigenSolutions() const {return mEigenvalues.size();}
+
+    TSystemVectorType GetEigenVector(std::size_t i) const
     {
-        KRATOS_TRY
-        if(!pScheme)
-            KRATOS_THROW_ERROR(std::runtime_error, "No scheme provided!", "");
+        TSystemVectorType V;
+        V.resize(mEigenvectors.size2(), false);
 
-        //getting the elements from the model
-        ElementsArrayType& pElements = r_model_part.Elements();
+        noalias(V) = row(mEigenvectors, i);
 
-        //getting the array of the conditions
-        ConditionsArrayType& ConditionsArray = r_model_part.Conditions();
-
-        //resetting to zero the vector of reactions
-        TSparseSpace::SetToZero( *(BaseType::mpReactionsVector) );
-
-        //create a partition of the element array
-        int number_of_threads = omp_get_max_threads();
-        std::vector<unsigned int> element_partition;
-        CreatePartition(number_of_threads, pElements.size(), element_partition);
-
-        double start_prod = omp_get_wtime();
-
-        #pragma omp parallel for
-        for(int k=0; k<number_of_threads; k++)
-        {
-            //contributions to the system
-            LocalSystemMatrixType LHS_Contribution = LocalSystemMatrixType(0,0);
-            LocalSystemVectorType RHS_Contribution = LocalSystemVectorType(0);
-
-            //vector containing the localization in the system of the different
-            //terms
-            Element::EquationIdVectorType EquationId;
-            ProcessInfo& CurrentProcessInfo = r_model_part.GetProcessInfo();
-            typename ElementsArrayType::ptr_iterator it_begin=pElements.ptr_begin()+element_partition[k];
-            typename ElementsArrayType::ptr_iterator it_end=pElements.ptr_begin()+element_partition[k+1];
-
-            // assemble all elements
-            for (typename ElementsArrayType::ptr_iterator it=it_begin; it!=it_end; ++it)
-            {
-
-                //calculate elemental contribution
-                pScheme->CalculateSystemContributions(*it,LHS_Contribution,RHS_Contribution,EquationId,CurrentProcessInfo);
-
-                #pragma omp critical
-                {
-                    //assemble the elemental contribution
-                    AssembleLHS(A,LHS_Contribution,EquationId);
-                    AssembleRHS(b,RHS_Contribution,EquationId);
-
-                    // clean local elemental memory
-                    pScheme->CleanMemory(*it);
-                }
-            }
-        }
-
-        std::vector<unsigned int> condition_partition;
-        CreatePartition(number_of_threads, ConditionsArray.size(), condition_partition);
-
-        #pragma omp parallel for
-        for(int k=0; k<number_of_threads; k++)
-        {
-            //contributions to the system
-            LocalSystemMatrixType LHS_Contribution = LocalSystemMatrixType(0,0);
-            LocalSystemVectorType RHS_Contribution = LocalSystemVectorType(0);
-
-            Condition::EquationIdVectorType EquationId;
-
-            ProcessInfo& CurrentProcessInfo = r_model_part.GetProcessInfo();
-
-            typename ConditionsArrayType::ptr_iterator it_begin=ConditionsArray.ptr_begin()+condition_partition[k];
-            typename ConditionsArrayType::ptr_iterator it_end=ConditionsArray.ptr_begin()+condition_partition[k+1];
-
-            // assemble all elements
-            for (typename ConditionsArrayType::ptr_iterator it=it_begin; it!=it_end; ++it)
-            {
-                //calculate elemental contribution
-                pScheme->Condition_CalculateSystemContributions(*it,LHS_Contribution,RHS_Contribution,EquationId,CurrentProcessInfo);
-
-                #pragma omp critical
-                {
-                    //assemble the elemental contribution
-                    AssembleLHS(A,LHS_Contribution,EquationId);
-                    AssembleRHS(b,RHS_Contribution,EquationId);
-                }
-            }
-        }
-        double stop_prod = omp_get_wtime();
-        std::cout << "time: " << stop_prod - start_prod << std::endl;
-        KRATOS_WATCH("finished parallel building");
-
-
-        /*			LHS_Contribution.resize(0,0,false);
-        			RHS_Contribution.resize(0,false);
-
-        			// assemble all conditions
-        			for (typename ConditionsArrayType::ptr_iterator it=ConditionsArray.ptr_begin(); it!=ConditionsArray.ptr_end(); ++it)
-        			{
-        				//calculate elemental contribution
-        				pScheme->Condition_CalculateSystemContributions(*it,LHS_Contribution,RHS_Contribution,EquationId,CurrentProcessInfo);
-
-        				//assemble the elemental contribution
-        				AssembleLHS(A,LHS_Contribution,EquationId);
-        				AssembleRHS(b,RHS_Contribution,EquationId);
-        			}
-        */
-        //for( int i=0; i<A.size1(); i++ )
-        //{
-        //	for( int j=0; j<A.size2(); j++ )
-        //	{
-        //		std::cout << A(i,j);
-        //	}
-        //	std::cout << std::endl;
-        //}
-        KRATOS_CATCH("")
-
+        return V;
     }
 
     //**************************************************************************
     //**************************************************************************
-    void BuildLHS(
-        typename TSchemeType::Pointer pScheme,
-        ModelPart& r_model_part,
-        TSystemMatrixType& A)
-    {
-        KRATOS_TRY
-
-        //getting the elements from the model
-        ElementsArrayType& pElements = r_model_part.Elements();
-
-        //getting the array of the conditions
-        ConditionsArrayType& ConditionsArray = r_model_part.Conditions();
-
-        //resetting to zero the vector of reactions
-        TSparseSpace::SetToZero( *(BaseType::mpReactionsVector) );
-
-        //contributions to the system
-        LocalSystemMatrixType LHS_Contribution = LocalSystemMatrixType(0,0);
-
-        //vector containing the localization in the system of the different
-        //terms
-        Element::EquationIdVectorType EquationId;
-
-        ProcessInfo& CurrentProcessInfo = r_model_part.GetProcessInfo();
-
-        // assemble all elements
-        for (typename ElementsArrayType::ptr_iterator it=pElements.ptr_begin(); it!=pElements.ptr_end(); ++it)
-        {
-            //calculate elemental contribution
-            pScheme->Calculate_LHS_Contribution(*it,LHS_Contribution,EquationId,CurrentProcessInfo);
-
-            //assemble the elemental contribution
-            AssembleLHS(A,LHS_Contribution,EquationId);
-
-            // clean local elemental memory
-            pScheme->CleanMemory(*it);
-        }
-
-        LHS_Contribution.resize(0,0,false);
-
-        // assemble all conditions
-        for (typename ConditionsArrayType::ptr_iterator it=ConditionsArray.ptr_begin(); it!=ConditionsArray.ptr_end(); ++it)
-        {
-            //calculate elemental contribution
-            pScheme->Condition_Calculate_LHS_Contribution(*it,LHS_Contribution,EquationId,CurrentProcessInfo);
-
-            //assemble the elemental contribution
-            AssembleLHS(A,LHS_Contribution,EquationId);
-        }
-
-        KRATOS_CATCH("")
-
-    }
-
-    //**************************************************************************
-    //**************************************************************************
-    void BuildLHS_CompleteOnFreeRows(
-        typename TSchemeType::Pointer pScheme,
-        ModelPart& r_model_part,
-        TSystemMatrixType& A)
-    {
-        KRATOS_TRY
-
-        //getting the elements from the model
-        ElementsArrayType& pElements = r_model_part.Elements();
-
-        //getting the array of the conditions
-        ConditionsArrayType& ConditionsArray = r_model_part.Conditions();
-
-        ProcessInfo& CurrentProcessInfo = r_model_part.GetProcessInfo();
-
-        //resetting to zero the vector of reactions
-        TSparseSpace::SetToZero( *(BaseType::mpReactionsVector) );
-
-        //contributions to the system
-        LocalSystemMatrixType LHS_Contribution = LocalSystemMatrixType(0,0);
-
-        //vector containing the localization in the system of the different
-        //terms
-        Element::EquationIdVectorType EquationId;
-
-        // assemble all elements
-        for (typename ElementsArrayType::ptr_iterator it=pElements.ptr_begin(); it!=pElements.ptr_end(); ++it)
-        {
-            //calculate elemental contribution
-            pScheme->Calculate_LHS_Contribution(*it,LHS_Contribution,EquationId,CurrentProcessInfo);
-
-            //assemble the elemental contribution
-            AssembleLHS_CompleteOnFreeRows(A,LHS_Contribution,EquationId);
-
-            // clean local elemental memory
-            pScheme->CleanMemory(*it);
-        }
-
-        LHS_Contribution.resize(0,0,false);
-        // assemble all conditions
-        for (typename ConditionsArrayType::ptr_iterator it=ConditionsArray.ptr_begin(); it!=ConditionsArray.ptr_end(); ++it)
-        {
-            //calculate elemental contribution
-            pScheme->Condition_Calculate_LHS_Contribution(*it,LHS_Contribution,EquationId,CurrentProcessInfo);
-
-            //assemble the elemental contribution
-            AssembleLHS_CompleteOnFreeRows(A,LHS_Contribution,EquationId);
-        }
-
-
-        KRATOS_CATCH("")
-
-    }
-
-    //**************************************************************************
-    //**************************************************************************
-    void SystemSolve(
-        TSystemMatrixType& A,
-        TSystemVectorType& Dx,
-        TSystemVectorType& b
-    )
-    {
-        KRATOS_TRY
-
-        double start_solve = omp_get_wtime();
-
-        double norm_b;
-        if(b.size() != 0)
-            norm_b = TSparseSpace::TwoNorm(b);
-        else
-            norm_b = 0.00;
-
-        if(norm_b != 0.00)
-            BaseType::mpLinearSystemSolver->Solve(A,Dx,b);
-        else
-            TSparseSpace::SetToZero(Dx);
-
-        //prints informations about the current time
-        if (BaseType::GetEchoLevel()>1)
-        {
-            std::cout << *(BaseType::mpLinearSystemSolver) << std::endl;
-        }
-
-        double stop_solve= omp_get_wtime();
-        std::cout << "time: " << stop_solve - start_solve << std::endl;
-
-
-        KRATOS_CATCH("")
-
-    }
-
-    //**************************************************************************
-    //**************************************************************************
-    void BuildAndSolve( typename TSchemeType::Pointer pScheme,
-                        ModelPart& r_model_part,
-                        TSystemMatrixType& A,
-                        TSystemVectorType& Dx,
-                        TSystemVectorType& b )
-    {
-        KRATOS_TRY
-
-        boost::timer building_time;
-
-        //construct mass matrix structure
-        TSystemMatrixType M = TSystemMatrixType( A.size1(), A.size2() );
-        //build matrices
-        BuildSystemMatrices( pScheme, r_model_part, A, M );
-
-        //elapsed time
-        if(BaseType::GetEchoLevel()>0)
-        {
-            std::cout << "Building Time : " << building_time.elapsed() << std::endl;
-        }
-
-        if (BaseType::GetEchoLevel()== 3)
-        {
-            std::cout << "before the solution of the system" << std::endl;
-            std::cout << "stiffness Matrix = " << A << std::endl;
-            std::cout << "mass Matrix = " << M << std::endl;
-            std::cout << "unknowns vector = " << Dx << std::endl;
-            std::cout << "RHS vector = " << b << std::endl;
-        }
-
-        boost::timer solve_time;
-
-//             SystemSolve(A,Dx,b);
-        PowerIterationEigenvalueSolver<TSparseSpace, TDenseSpace, TLinearSolver>
-        eigenvalue_solver( 1.0e-8, 1000, 1, BaseType::mpLinearSystemSolver );
-
-        LocalSystemVectorType Eigenvalues(1);
-        LocalSystemMatrixType Eigenvectors(1,1);
-
-        eigenvalue_solver.Solve( A, M, Eigenvalues, Eigenvectors);
-
-        if(BaseType::GetEchoLevel()>0)
-        {
-            std::cout << "System Solve Time : " << solve_time.elapsed() << std::endl;
-        }
-        if (BaseType::GetEchoLevel()== 3)
-        {
-            std::cout << "after the solution of the system" << std::endl;
-            std::cout << "Eigenvalues = " << Eigenvalues << std::endl;
-            std::cout << "Eigenvectors = " << Eigenvectors << std::endl;
-        }
-
-        KRATOS_CATCH("")
-    }
-
-    //**************************************************************************
-    //**************************************************************************
-    void BuildRHSAndSolve(
-        typename TSchemeType::Pointer pScheme,
-        ModelPart& r_model_part,
-        TSystemMatrixType& A,
-        TSystemVectorType& Dx,
-        TSystemVectorType& b)
-    {
-        KRATOS_TRY
-
-        BuildRHS(pScheme,r_model_part,b);
-        SystemSolve(A,Dx,b);
-
-        KRATOS_CATCH("")
-    }
-
-    //**************************************************************************
-    //**************************************************************************
-    void BuildRHS(
-        typename TSchemeType::Pointer pScheme,
-        ModelPart& r_model_part,
-        TSystemVectorType& b)
-    {
-        KRATOS_TRY
-
-        //Getting the Elements
-        ElementsArrayType& pElements = r_model_part.Elements();
-
-        //getting the array of the conditions
-        ConditionsArrayType& ConditionsArray = r_model_part.Conditions();
-
-        ProcessInfo& CurrentProcessInfo = r_model_part.GetProcessInfo();
-
-        //resetting to zero the vector of reactions
-        TSparseSpace::SetToZero( *(BaseType::mpReactionsVector) );
-
-        //contributions to the system
-        LocalSystemMatrixType LHS_Contribution = LocalSystemMatrixType(0,0);
-        LocalSystemVectorType RHS_Contribution = LocalSystemVectorType(0);
-
-        //vector containing the localization in the system of the different
-        //terms
-        Element::EquationIdVectorType EquationId;
-
-        // assemble all elements
-        for (typename ElementsArrayType::ptr_iterator it=pElements.ptr_begin(); it!=pElements.ptr_end(); ++it)
-        {
-            //calculate elemental Right Hand Side Contribution
-            pScheme->Calculate_RHS_Contribution(*it,RHS_Contribution,EquationId,CurrentProcessInfo);
-
-            //assemble the elemental contribution
-            AssembleRHS(b,RHS_Contribution,EquationId);
-        }
-
-        LHS_Contribution.resize(0,0,false);
-        RHS_Contribution.resize(0,false);
-
-        // assemble all conditions
-        for (typename ConditionsArrayType::ptr_iterator it=ConditionsArray.ptr_begin(); it!=ConditionsArray.ptr_end(); ++it)
-        {
-            //calculate elemental contribution
-            pScheme->Condition_Calculate_RHS_Contribution(*it,RHS_Contribution,EquationId,CurrentProcessInfo);
-
-            //assemble the elemental contribution
-            AssembleRHS(b,RHS_Contribution,EquationId);
-        }
-
-        KRATOS_CATCH("")
-
-    }
-
-    //**************************************************************************
-    //**************************************************************************
-    void SetUpDofSet( typename TSchemeType::Pointer pScheme, ModelPart& r_model_part )
+    virtual void SetUpDofSet( typename TSchemeType::Pointer pScheme, ModelPart& r_model_part )
     {
         KRATOS_TRY
 
@@ -619,7 +229,7 @@ public:
             for(typename Element::DofsVectorType::iterator i = ElementalDofList.begin() ;
                     i != ElementalDofList.end() ; ++i)
             {
-                Doftemp.push_back(*i);
+                Doftemp.push_back((*i).get());
                 //mDofSet.push_back(*i);
             }
         }
@@ -635,7 +245,7 @@ public:
                     i != ElementalDofList.end() ; ++i)
             {
                 //mDofSet.push_back(*i);
-                Doftemp.push_back(*i);
+                Doftemp.push_back((*i).get());
             }
         }
         Doftemp.Unique();
@@ -650,7 +260,7 @@ public:
 
     //**************************************************************************
     //**************************************************************************
-    void SetUpSystem(
+    virtual void SetUpSystem(
         ModelPart& r_model_part
     )
     {
@@ -671,157 +281,144 @@ public:
                 dof_iterator->SetEquationId(free_id++);
 
         BaseType::mEquationSystemSize = fix_id;
-
     }
 
     //**************************************************************************
     //**************************************************************************
-    void ResizeAndInitializeVectors( typename TSchemeType::Pointer pScheme,
-        TSystemMatrixPointerType& pA,
-        TSystemVectorPointerType& pDx,
-        TSystemVectorPointerType& pb,
+    virtual void ResizeAndInitializeEigenSystem(
+        TSystemMatrixPointerType& pK,
+        TSystemMatrixPointerType& pM,
         ElementsArrayType& rElements,
         ConditionsArrayType& rConditions,
         ProcessInfo& CurrentProcessInfo
     )
     {
         KRATOS_TRY
-		if(pA == NULL) //if the pointer is not initialized initialize it to an empty matrix
+		if(pK == NULL) //if the pointer is not initialized initialize it to an empty matrix
         {
             TSystemMatrixPointerType pNewA = TSystemMatrixPointerType(new TSystemMatrixType(0,0) );
-            pA.swap(pNewA);
+            pK.swap(pNewA);
         }
-        if(pDx == NULL) //if the pointer is not initialized initialize it to an empty matrix
+		if(pM == NULL) //if the pointer is not initialized initialize it to an empty matrix
         {
-            TSystemVectorPointerType pNewDx = TSystemVectorPointerType(new TSystemVectorType(0) );
-            pDx.swap(pNewDx);
+            TSystemMatrixPointerType pNewM = TSystemMatrixPointerType(new TSystemMatrixType(0,0) );
+            pM.swap(pNewM);
         }
-        if(pb == NULL) //if the pointer is not initialized initialize it to an empty matrix
-        {
-            TSystemVectorPointerType pNewb = TSystemVectorPointerType(new TSystemVectorType(0) );
-            pb.swap(pNewb);
-        }
-        if(BaseType::mpReactionsVector == NULL) //if the pointer is not initialized initialize it to an empty matrix
-        {
-            TSystemVectorPointerType pNewReactionsVector = TSystemVectorPointerType(new TSystemVectorType(0) );
-            BaseType::mpReactionsVector.swap(pNewReactionsVector);
-        }
-        TSystemMatrixType& A  = *pA;
-        TSystemVectorType& Dx = *pDx;
-        TSystemVectorType& b  = *pb;
+        TSystemMatrixType& K = *pK;
+        TSystemMatrixType& M = *pM;
 
         //resizing the system vectors and matrix
-        if (A.size1() == 0 || BaseType::GetReshapeMatrixFlag() == true) //if the matrix is not initialized
+        if (K.size1() == 0 || BaseType::GetReshapeMatrixFlag() == true) //if the matrix is not initialized
         {
-            A.resize(BaseType::mEquationSystemSize,BaseType::mEquationSystemSize,false);
-            ConstructMatrixStructure(pScheme, A,rElements,rConditions,CurrentProcessInfo);
+            K.resize(BaseType::mEquationSystemSize,BaseType::mEquationSystemSize,false);
+            ConstructMatrixStructure(K,rElements,rConditions,CurrentProcessInfo);
         }
         else
         {
-            if(A.size1() != BaseType::mEquationSystemSize || A.size2() != BaseType::mEquationSystemSize)
+            if(K.size1() != BaseType::mEquationSystemSize || K.size2() != BaseType::mEquationSystemSize)
             {
                 KRATOS_WATCH("it should not come here!!!!!!!! ... this is SLOW");
-                A.resize(BaseType::mEquationSystemSize,BaseType::mEquationSystemSize,true);
-                ConstructMatrixStructure(pScheme, A,rElements,rConditions,CurrentProcessInfo);
+                K.resize(BaseType::mEquationSystemSize,BaseType::mEquationSystemSize,true);
+                ConstructMatrixStructure(K,rElements,rConditions,CurrentProcessInfo);
             }
         }
-        if(Dx.size() != BaseType::mEquationSystemSize)
-            Dx.resize(BaseType::mEquationSystemSize,false);
-        if(b.size() != BaseType::mEquationSystemSize)
-            b.resize(BaseType::mEquationSystemSize,false);
 
-        //
-
-
-        //if needed resize the vector for the calculation of reactions
-        if(BaseType::mCalculateReactionsFlag == true)
-        {
-            unsigned int ReactionsVectorSize = BaseType::mDofSet.size()-BaseType::mEquationSystemSize;
-            if(BaseType::mpReactionsVector->size() != ReactionsVectorSize)
-                BaseType::mpReactionsVector->resize(ReactionsVectorSize,false);
-        }
-
+        // here we enforce K and M has the same matrix structure
+        M = K;
 
         KRATOS_CATCH("")
-
     }
 
-
-
     //**************************************************************************
     //**************************************************************************
-    void InitializeSolutionStep(
-        ModelPart& r_model_part,
-        TSystemMatrixType& A,
-        TSystemVectorType& Dx,
-        TSystemVectorType& b)
+    virtual void BuildEigenSystem( typename TSchemeType::Pointer pScheme,
+                        ModelPart& r_model_part,
+                        TSystemMatrixType& K,
+                        TSystemMatrixType& M)
     {
         KRATOS_TRY
+
+        boost::timer building_time;
+
+        //build matrices
+        BuildSystemMatrices( pScheme, r_model_part, K, M );
+
+        //elapsed time
+        if(BaseType::GetEchoLevel() > 0)
+        {
+            std::cout << "Building Time : " << building_time.elapsed() << std::endl;
+        }
+
+        if (BaseType::GetEchoLevel() == 3)
+        {
+            std::cout << "before the solution of the system" << std::endl;
+            std::cout << "stiffness Matrix = " << K << std::endl;
+            std::cout << "mass Matrix = " << M << std::endl;
+        }
+
         KRATOS_CATCH("")
     }
 
     //**************************************************************************
     //**************************************************************************
-    void FinalizeSolutionStep(
-        ModelPart& r_model_part,
-        TSystemMatrixType& A,
-        TSystemVectorType& Dx,
-        TSystemVectorType& b)
+    virtual void BuildAndSolve( typename TSchemeType::Pointer pScheme,
+                        ModelPart& r_model_part,
+                        TSystemMatrixType& A,
+                        TSystemVectorType& Dx,
+                        TSystemVectorType& b )
     {
-    }
+        KRATOS_TRY
 
+        boost::timer building_time;
 
-    //**************************************************************************
-    //**************************************************************************
-    void CalculateReactions(
-        typename TSchemeType::Pointer pScheme,
-        ModelPart& r_model_part,
-        TSystemMatrixType& A,
-        TSystemVectorType& Dx,
-        TSystemVectorType& b)
-    {
-        //refresh RHS to have the correct reactions
-        BuildRHS(pScheme,r_model_part,b);
+        //getting the elements from the model
+        ElementsArrayType& pElements = r_model_part.Elements();
 
-        int i;
-        int systemsize = BaseType::mDofSet.size() - BaseType::mpReactionsVector->size();
+        //getting the array of the conditions
+        ConditionsArrayType& pConditions = r_model_part.Conditions();
 
-        typename DofsArrayType::ptr_iterator it2;
-        //std::set<Dof::Pointer,ComparePDof>::iterator it2;
+        //construct mass matrix structure
+        TSystemMatrixType M = TSystemMatrixType( A.size1(), A.size2() );
+        ConstructMatrixStructure( M, pElements, pConditions, r_model_part.GetProcessInfo() );
 
-        //updating variables
+        //build matrices
+        BuildSystemMatrices( pScheme, r_model_part, A, M );
 
-        TSystemVectorType& ReactionsVector = *(BaseType::mpReactionsVector);
-
-        for (it2=BaseType::mDofSet.ptr_begin(); it2 != BaseType::mDofSet.ptr_end(); ++it2)
+        //elapsed time
+        if(BaseType::GetEchoLevel() > 0)
         {
-            if ( (*it2)->IsFixed()  )
-            {
-                i=(*it2)->EquationId();
-                i-=systemsize;
-
-                (*it2)->GetSolutionStepReactionValue() = ReactionsVector[i];
-            }
+            std::cout << "Building Time : " << building_time.elapsed() << std::endl;
         }
+
+        if (BaseType::GetEchoLevel() == 3)
+        {
+            std::cout << "before the solution of the system" << std::endl;
+            std::cout << "stiffness Matrix = " << A << std::endl;
+            std::cout << "mass Matrix = " << M << std::endl;
+            std::cout << "unknowns vector = " << Dx << std::endl;
+            std::cout << "RHS vector = " << b << std::endl;
+        }
+
+        boost::timer solve_time;
+
+        typedef PowerIterationEigenvalueSolver<TSparseSpace, TDenseSpace, TLinearSolver> EigenvalueSolverType;
+        EigenvalueSolverType eigenvalue_solver( mTolerance, mMaxIterations, mMaxEigenSolutions, BaseType::mpLinearSystemSolver );
+
+        eigenvalue_solver.Solve( A, M, mEigenvalues, mEigenvectors);
+
+        if(BaseType::GetEchoLevel() > 0)
+        {
+            std::cout << "System Solve Time : " << solve_time.elapsed() << std::endl;
+        }
+        if (BaseType::GetEchoLevel() == 3)
+        {
+            std::cout << "after the solution of the system" << std::endl;
+            std::cout << "Eigenvalues = " << mEigenvalues << std::endl;
+            std::cout << "Eigenvectors = " << mEigenvectors << std::endl;
+        }
+
+        KRATOS_CATCH("")
     }
-
-    //**************************************************************************
-    //**************************************************************************
-    void ApplyDirichletConditions(
-        typename TSchemeType::Pointer pScheme,
-        ModelPart& r_model_part,
-        TSystemMatrixType& A,
-        TSystemVectorType& Dx,
-        TSystemVectorType& b)
-    {}
-
-    //**************************************************************************
-    //**************************************************************************
-    void ApplyPointLoads(
-        typename TSchemeType::Pointer pScheme,
-        ModelPart& r_model_part,
-        TSystemVectorType& b)
-    {}
 
     /**
     this function is intended to be called at the end of the solution step to clean up memory
@@ -838,13 +435,9 @@ public:
 
         if (this->GetEchoLevel()>0)
         {
-
-            KRATOS_WATCH("ModalAnalysisBuilderAndSolver Clear Function called");
+            std::cout << "ModalAnalysisBuilderAndSolver Clear Function called" << std::endl;
         }
     }
-
-
-
 
     /*@} */
     /**@name Operations */
@@ -882,7 +475,7 @@ protected:
     /**@name Protected Operators*/
     /*@{ */
     //**************************************************************************
-    virtual void ConstructMatrixStructure( typename TSchemeType::Pointer pScheme,
+    virtual void ConstructMatrixStructure(
         TSystemMatrixType& A,
         ElementsContainerType& rElements,
         ConditionsArrayType& rConditions,
@@ -896,7 +489,7 @@ protected:
         Element::EquationIdVectorType ids(3,0);
         for(typename ElementsContainerType::iterator i_element = rElements.begin() ; i_element != rElements.end() ; i_element++)
         {
-            pScheme->EquationId( *(i_element.base()) , ids, CurrentProcessInfo);
+            (i_element)->EquationIdVector(ids, CurrentProcessInfo);
 
             for(std::size_t i = 0 ; i < ids.size() ; i++)
                 if(ids[i] < equation_size)
@@ -909,12 +502,11 @@ protected:
                             //indices[ids[i]].push_back(ids[j]);
                         }
                 }
-
         }
 
         for(typename ConditionsArrayType::iterator i_condition = rConditions.begin() ; i_condition != rConditions.end() ; i_condition++)
         {
-            pScheme->Condition_EquationId( *(i_condition.base()), ids, CurrentProcessInfo);
+            (i_condition)->EquationIdVector(ids, CurrentProcessInfo);
             for(std::size_t i = 0 ; i < ids.size() ; i++)
                 if(ids[i] < equation_size)
                 {
@@ -980,49 +572,6 @@ protected:
 
 
 
-    //**************************************************************************
-    void AssembleRHS(
-        TSystemVectorType& b,
-        LocalSystemVectorType& RHS_Contribution,
-        Element::EquationIdVectorType& EquationId
-    )
-    {
-        unsigned int local_size = RHS_Contribution.size();
-
-        if (BaseType::mCalculateReactionsFlag==false) //if we don't need to calculate reactions
-        {
-            for (unsigned int i_local=0; i_local<local_size; i_local++)
-            {
-                unsigned int i_global=EquationId[i_local];
-                if ( i_global < BaseType::mEquationSystemSize ) //on "free" DOFs
-                {
-                    // ASSEMBLING THE SYSTEM VECTOR
-                    b[i_global] += RHS_Contribution[i_local];
-                }
-            }
-        }
-        else //when the calculation of reactions is needed
-        {
-			TSystemVectorType& ReactionsVector = *BaseType::mpReactionsVector;
-            for (unsigned int i_local=0; i_local<local_size; i_local++)
-            {
-                unsigned int i_global=EquationId[i_local];
-                if ( i_global < BaseType::mEquationSystemSize ) //on "free" DOFs
-                {
-                    // ASSEMBLING THE SYSTEM VECTOR
-                    b[i_global] += RHS_Contribution[i_local];
-                }
-                else //on "fixed" DOFs
-                {
-                    // Assembling the Vector of REACTIONS
-                    ReactionsVector[i_global-BaseType::mEquationSystemSize] -= RHS_Contribution[i_local];
-                }
-            }
-        }
-    }
-
-
-
     /*@} */
     /**@name Protected Operations*/
     /*@{ */
@@ -1055,6 +604,13 @@ private:
     /**@name Member Variables */
     /*@{ */
 
+    std::size_t mMaxEigenSolutions;
+    std::size_t mMaxIterations;
+    double mTolerance;
+
+    LocalSystemVectorType mEigenvalues;
+    LocalSystemMatrixType mEigenvectors;
+
     /*@} */
     /**@name Private Operators*/
     /*@{ */
@@ -1081,9 +637,6 @@ private:
 
         //getting the array of the conditions
         ConditionsArrayType& ConditionsArray = r_model_part.Conditions();
-
-        //resetting to zero the vector of reactions
-        TSparseSpace::SetToZero( *(BaseType::mpReactionsVector) );
 
         //create a partition of the element array
         int number_of_threads = omp_get_max_threads();
@@ -1170,31 +723,6 @@ private:
 
         KRATOS_CATCH("")
     }
-
-
-    //**************************************************************************
-    void AssembleLHS_CompleteOnFreeRows(
-        TSystemMatrixType& A,
-        LocalSystemMatrixType& LHS_Contribution,
-        Element::EquationIdVectorType& EquationId
-    )
-    {
-        unsigned int local_size = LHS_Contribution.size1();
-        for (unsigned int i_local=0; i_local<local_size; i_local++)
-        {
-            unsigned int i_global=EquationId[i_local];
-            if ( i_global < BaseType::mEquationSystemSize )
-            {
-                for (unsigned int j_local=0; j_local<local_size; j_local++)
-                {
-                    int j_global=EquationId[j_local];
-
-                    A(i_global,j_global) += LHS_Contribution(i_local,j_local);
-                }
-            }
-        }
-    }
-
 
     //******************************************************************************************
     //******************************************************************************************

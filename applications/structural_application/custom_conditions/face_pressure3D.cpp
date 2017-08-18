@@ -509,10 +509,15 @@ void FacePressure3D::CalculateAll(
 
     const Matrix& Ncontainer = GetGeometry().ShapeFunctionsValues();
 
-    //calculating actual jacobian
-    GeometryType::JacobiansType J;
+    //calculate the jacobian in reference configuration
+    Matrix DeltaPosition(GetGeometry().size(), 3);
+    for ( unsigned int i = 0; i < GetGeometry().size(); ++i )
+    {
+        noalias( row( DeltaPosition, i ) ) = GetGeometry()[i].Coordinates() - GetGeometry()[i].GetInitialPosition();
+    }
 
-    J = GetGeometry().Jacobian( J );
+    GeometryType::JacobiansType J;
+    J = GetGeometry().Jacobian( J, GetGeometry().GetDefaultIntegrationMethod(), DeltaPosition );
 
     //auxiliary terms
     array_1d<double, 3> BodyForce;
@@ -530,7 +535,6 @@ void FacePressure3D::CalculateAll(
     }
 
     array_1d<double, 3> ge;
-
     array_1d<double, 3> gn;
     array_1d<double, 3> v3;
 
@@ -545,7 +549,7 @@ void FacePressure3D::CalculateAll(
         ge[2] = J[PointNumber]( 2, 0 );
         gn[2] = J[PointNumber]( 2, 1 );
 
-        CrossProduct( v3, ge, gn );
+        CrossProduct( v3, ge, gn ); // v3 contains the Jacobian of the mapping, do not normalize it
 
         // calculating the pressure on the gauss point
         double pressure = 0.00;
@@ -553,16 +557,8 @@ void FacePressure3D::CalculateAll(
         for ( unsigned int ii = 0; ii < number_of_nodes; ii++ )
             pressure += Ncontainer( PointNumber, ii ) * PressureOnNodes[ii];
 
-
-        // LEFT HAND SIDE MATRIX
-        if ( CalculateStiffnessMatrixFlag == true )
-        {
-            if ( pressure != 0.00 )
-                CalculateAndSubKp( rLeftHandSideMatrix, ge, gn, DN_DeContainer[PointNumber], row( Ncontainer, PointNumber ), pressure, IntegrationWeight );
-        }
-
         // RIGHT HAND SIDE VECTOR
-        if ( CalculateResidualVectorFlag == true ) //calculation of the matrix is required
+        if ( CalculateResidualVectorFlag == true )
         {
             if ( pressure != 0.00 )
                 CalculateAndAdd_PressureForce( rRightHandSideVector, row( Ncontainer, PointNumber ),

@@ -123,6 +123,13 @@ public:
      * @param rThisVariable the variable to be checked for
      * @return true if the variable is defined in the constitutive law
      */
+    bool Has( const Variable<int>& rThisVariable );
+
+    /**
+     * returns whether this constitutive Law has specified variable
+     * @param rThisVariable the variable to be checked for
+     * @return true if the variable is defined in the constitutive law
+     */
     bool Has( const Variable<double>& rThisVariable );
 
     /**
@@ -154,6 +161,14 @@ public:
      * NOTE: fixed size array of 6 doubles (e.g. for stresses, plastic strains, ...)
      */
     bool Has( const Variable<array_1d<double, 6 > >& rThisVariable );
+
+    /**
+     * returns the value of a specified variable
+     * @param rThisVariable the variable to be returned
+     * @param rValue a reference to the returned value
+     * @param rValue output: the value of the specified variable
+     */
+    virtual int& GetValue( const Variable<int>& rThisVariable, int& rValue );
 
     /**
      * returns the value of a specified variable
@@ -195,6 +210,16 @@ public:
      */
     virtual array_1d<double, 6 > & GetValue( const Variable<array_1d<double, 6 > >& rVariable,
             array_1d<double, 6 > & rValue );
+
+    /**
+     * sets the value of a specified variable
+     * @param rVariable the variable to be returned
+     * @param Value new value of the specified variable
+     * @param rCurrentProcessInfo the process info
+     */
+    virtual void SetValue( const Variable<int>& rVariable,
+                           const int& Value,
+                           const ProcessInfo& rCurrentProcessInfo );
 
     /**
      * sets the value of a specified variable
@@ -322,6 +347,11 @@ public:
 
     virtual void InitializeNonLinearIteration( const Properties& props,
             const GeometryType& geom,
+            const Vector& ShapeFunctionsValues,
+            const ProcessInfo& CurrentProcessInfo );
+
+    virtual void FinalizeNonLinearIteration( const Properties& props,
+            const GeometryType& geom, //this is just to give the array of nodes
             const Vector& ShapeFunctionsValues,
             const ProcessInfo& CurrentProcessInfo );
 
@@ -485,11 +515,53 @@ private:
     virtual void save( Serializer& rSerializer ) const
     {
         KRATOS_SERIALIZE_SAVE_BASE_CLASS( rSerializer, ConstitutiveLaw );
+        rSerializer.save( "Density", mDensity );
+        rSerializer.save( "E", mE );
+        rSerializer.save( "NU", mNU );
+        rSerializer.save( "G", mG );
+        rSerializer.save( "K", mK );
+        rSerializer.save( "Eta", mEta );
+        rSerializer.save( "Xi", mXi );
+        rSerializer.save( "Cohesion", mCohesion );
+        rSerializer.save( "Hardening", mHardening );
+        rSerializer.save( "PrestressFactor", mPrestressFactor );
+        rSerializer.save( "Alpha", mAlpha );
+        rSerializer.save( "OldAlpha", mOldAlpha );
+        rSerializer.save( "OldStrain", mOldStrain);
+        rSerializer.save( "CurrentStrain", mCurrentStrain);
+        rSerializer.save( "OldSElasticStrain", mOldSElasticStrain);
+        rSerializer.save( "CurrentElasticStrain", mCurrentElasticStrain);
+        rSerializer.save( "OldStress", mOldStress);
+        rSerializer.save( "CurrentStress", mCurrentStress);
+        rSerializer.save( "OldPlasticStrains", mOldPlasticStrains);
+        rSerializer.save( "CurrentPlasticStrains", mCurrentPlasticStrains);
+        rSerializer.save( "Prestress", mPrestress);
     }
 
     virtual void load( Serializer& rSerializer )
     {
         KRATOS_SERIALIZE_LOAD_BASE_CLASS( rSerializer, ConstitutiveLaw );
+        rSerializer.load( "Density", mDensity );
+        rSerializer.load( "E", mE );
+        rSerializer.load( "NU", mNU );
+        rSerializer.load( "G", mG );
+        rSerializer.load( "K", mK );
+        rSerializer.load( "Eta", mEta );
+        rSerializer.load( "Xi", mXi );
+        rSerializer.load( "Cohesion", mCohesion );
+        rSerializer.load( "Hardening", mHardening );
+        rSerializer.load( "PrestressFactor", mPrestressFactor );
+        rSerializer.load( "Alpha", mAlpha );
+        rSerializer.load( "OldAlpha", mOldAlpha );
+        rSerializer.load( "OldStrain", mOldStrain);
+        rSerializer.load( "CurrentStrain", mCurrentStrain);
+        rSerializer.load( "OldSElasticStrain", mOldSElasticStrain);
+        rSerializer.load( "CurrentElasticStrain", mCurrentElasticStrain);
+        rSerializer.load( "OldStress", mOldStress);
+        rSerializer.load( "CurrentStress", mCurrentStress);
+        rSerializer.load( "OldPlasticStrains", mOldPlasticStrains);
+        rSerializer.load( "CurrentPlasticStrains", mCurrentPlasticStrains);
+        rSerializer.load( "Prestress", mPrestress);
     }
 
     void CalculateStress( const Vector& StrainVector, Vector& StressVector, bool& isYielded, bool& isApex, double& dGamma );

@@ -17,6 +17,8 @@ set( KRATOS_STRUCTURAL_APPLICATION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_elements/mixed_lagrangian.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_elements/kinematic_linear.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_elements/unsaturated_soils_element_2phase_small_strain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/custom_elements/unsaturated_soils_element_2phase_small_strain_staggered.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/custom_elements/unsaturated_soils_element_2phase_small_strain_scale_water_pressure.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_elements/unsaturated_soils_element_3phase_small_strain.cpp    
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_elements/crisfield_truss_element.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_elements/ebst.cpp
@@ -30,7 +32,7 @@ set( KRATOS_STRUCTURAL_APPLICATION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_python/add_custom_io_to_python.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_python/add_constitutive_laws_to_python.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_python/structural_python_application.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/custom_python/add_custom_parallel_strategies_to_python.cpp 
+#    ${CMAKE_CURRENT_SOURCE_DIR}/custom_python/add_custom_parallel_strategies_to_python.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_python/add_fluency_criteria_to_python.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_python/add_custom_processes_to_python.cpp
 
@@ -42,7 +44,6 @@ set( KRATOS_STRUCTURAL_APPLICATION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/isotropic_damage_implex.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/isotropic_planestress_wrinkling.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/isotropic_3d.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/neo_hookean_3d.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/hyperelastic_3d.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/hyperelastic_2d.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/viscoelastic_2d.cpp
@@ -56,7 +57,7 @@ set( KRATOS_STRUCTURAL_APPLICATION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/fluid_2d.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/external_isotropic_3d.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/hooks_law.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/drucker_prager.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/drucker_prager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/casm.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/orthotropic_3d.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/plasticity_2d.cpp
@@ -67,7 +68,6 @@ set( KRATOS_STRUCTURAL_APPLICATION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/isotropic_rankine_damage_3d.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/tutorial_damage_model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/constitutive_laws/cam_clay_3d.cpp
-
     #rankine_yield_function.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/fluency_criteria/isotropic_rankine_yield_function.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/fluency_criteria/morh_coulomb_yield_function.cpp
@@ -109,14 +109,20 @@ set( KRATOS_STRUCTURAL_APPLICATION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/slave_contact_point_3d.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/contact_link_3D_explicit.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/point_point_joint_condition.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/point_point_lagrange_condition.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/elastic_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/pile_kinematic_linear.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/embedded_node_lagrange_tying_condition.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/embedded_node_penalty_tying_condition.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/embedded_point_lagrange_tying_condition.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/custom_conditions/embedded_point_penalty_tying_condition.cpp
 )
 
 ###############################################################
 ## define library Kratos which defines the basic python interface
 add_library(KratosStructuralApplication SHARED ${KRATOS_STRUCTURAL_APPLICATION_SOURCES})
-set_target_properties(KratosStructuralApplication PROPERTIES COMPILE_DEFINITIONS "LEGACY_STRUCTURAL_APPLICATION=EXPORT,API")
 target_link_libraries(KratosStructuralApplication KratosCore )
+target_link_libraries(KratosStructuralApplication ${MPI_LIBRARIES} )
 set_target_properties(KratosStructuralApplication PROPERTIES PREFIX "")
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")

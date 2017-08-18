@@ -566,8 +566,8 @@ public:
 		  std::cout<<"   Eta Factor      = "<< meta << std::endl;  
 		  //KRATOS_WATCH(mDelta_p)
 		  
-//		  is_converged = mpConvergenceCriteria->PostCriteria(BaseType::GetModelPart(),rDofSet,mA, mDx, q_Inc_Aux);
-          is_converged = mpConvergenceCriteria->PreCriteria(BaseType::GetModelPart(),rDofSet,mA, mDx, q_Inc_Aux);
+		  is_converged = mpConvergenceCriteria->PostCriteria(BaseType::GetModelPart(),rDofSet,mA, mDx, q_Inc_Aux);
+		  
 	      }
                  
               else if(iteration_number==1 && mstep!=1)   
@@ -612,8 +612,8 @@ public:
 		   //KRATOS_WATCH(mDelta_p[4517])
 		   //KRATOS_WATCH(mDelta_p[4588])
 		   //KRATOS_WATCH(mDelta_p[4589])
-
-           is_converged = mpConvergenceCriteria->PostCriteria(BaseType::GetModelPart(),rDofSet,mA, mDx, q_Inc_Aux);
+		   is_converged = mpConvergenceCriteria->PostCriteria(BaseType::GetModelPart(),rDofSet,mA, mDx, q_Inc_Aux);
+		   
 		  }
 		  
 		  else
@@ -1192,7 +1192,7 @@ private:
         DofsArrayType& rDofSet = pBuilderAndSolver->GetDofSet();
 
         //setting up the Vectors involved to the correct size with value cero
-        pBuilderAndSolver->ResizeAndInitializeVectors(pScheme, mpA,mpDx,mpb,BaseType::GetModelPart().Elements(),BaseType::GetModelPart().Conditions(),BaseType::GetModelPart().GetProcessInfo());
+        pBuilderAndSolver->ResizeAndInitializeVectors(mpA,mpDx,mpb,BaseType::GetModelPart().Elements(),BaseType::GetModelPart().Conditions(),BaseType::GetModelPart().GetProcessInfo());
         InitializeAuxVectors(mpDelta_p);
 	InitializeAuxVectors(mpDelta_pold);
 	InitializeAuxVectors(mpX_old);  

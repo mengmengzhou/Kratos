@@ -80,11 +80,16 @@ PointForce3D::PointForce3D(IndexType NewId, GeometryType::Pointer pGeometry,  Pr
 {
 }
 
-Condition::Pointer PointForce3D::Create(IndexType NewId, NodesArrayType
-                                        const& ThisNodes,  PropertiesType::Pointer pProperties) const
+Condition::Pointer PointForce3D::Create(IndexType NewId, NodesArrayType const& ThisNodes,
+                                        PropertiesType::Pointer pProperties) const
 {
-    return Condition::Pointer(new PointForce3D(NewId,
-                              GetGeometry().Create(ThisNodes), pProperties));
+    return Condition::Pointer(new PointForce3D(NewId, GetGeometry().Create(ThisNodes), pProperties));
+}
+
+Condition::Pointer PointForce3D::Create(IndexType NewId, GeometryType::Pointer pGeom,
+                                        PropertiesType::Pointer pProperties) const
+{
+    return Condition::Pointer(new PointForce3D(NewId, pGeom, pProperties));
 }
 
 PointForce3D::~PointForce3D()

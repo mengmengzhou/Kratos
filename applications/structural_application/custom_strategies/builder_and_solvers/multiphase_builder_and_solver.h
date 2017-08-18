@@ -245,10 +245,7 @@ public:
 
         for ( typename ElementsArrayType::ptr_iterator it = pElements.ptr_begin(); it != pElements.ptr_end(); ++it )
         {
-            bool element_is_active = true;
-            if( (*it)->IsDefined(ACTIVE) )
-                element_is_active = (*it)->Is(ACTIVE);
-            if ( element_is_active )
+            if ( !( *it )->GetValue( IS_INACTIVE ) )
             {
                 //calculate elemental contribution
                 pScheme->CalculateSystemContributions( *it, LHS_Contribution, RHS_Contribution, EquationId, CurrentProcessInfo );
@@ -274,10 +271,7 @@ public:
         // assemble all conditions
         for ( typename ConditionsArrayType::ptr_iterator it = ConditionsArray.ptr_begin(); it != ConditionsArray.ptr_end(); ++it )
         {
-            bool condition_is_active = true;
-            if( (*it)->IsDefined(ACTIVE) )
-                condition_is_active = (*it)->Is(ACTIVE);
-            if ( condition_is_active )
+            if ( !( *it )->GetValue( IS_INACTIVE ) )
             {
                 //calculate elemental contribution
                 pScheme->Condition_CalculateSystemContributions( *it, LHS_Contribution, RHS_Contribution, EquationId, CurrentProcessInfo );
@@ -328,10 +322,7 @@ public:
 
             for ( typename ElementsArrayType::ptr_iterator it = it_begin; it != it_end; ++it )
             {
-                bool element_is_active = true;
-                if( (*it)->IsDefined(ACTIVE) )
-                    element_is_active = (*it)->Is(ACTIVE);
-                if ( element_is_active )
+                if ( !( *it )->GetValue( IS_INACTIVE ) )
                 {
                     //calculate elemental contribution
                     pScheme->CalculateSystemContributions( *it, LHS_Contribution, RHS_Contribution, EquationId, CurrentProcessInfo );
@@ -366,10 +357,7 @@ public:
 
             for ( typename ConditionsArrayType::ptr_iterator it = it_begin; it != it_end; ++it )
             {
-                bool condition_is_active = true;
-                if( (*it)->IsDefined(ACTIVE) )
-                    condition_is_active = (*it)->Is(ACTIVE);
-                if ( condition_is_active )
+                if ( !( *it )->GetValue( IS_INACTIVE ) )
                 {
                     //calculate elemental contribution
                     pScheme->Condition_CalculateSystemContributions( *it, LHS_Contribution, RHS_Contribution, EquationId, CurrentProcessInfo );
@@ -427,10 +415,7 @@ public:
 
         for ( typename ElementsArrayType::ptr_iterator it = pElements.ptr_begin(); it != pElements.ptr_end(); ++it )
         {
-            bool element_is_active = true;
-            if( (*it)->IsDefined(ACTIVE) )
-                element_is_active = (*it)->Is(ACTIVE);
-            if ( element_is_active )
+            if ( !( *it )->GetValue( IS_INACTIVE ) )
             {
                 //calculate elemental contribution
                 pScheme->Calculate_LHS_Contribution( *it, LHS_Contribution, EquationId, CurrentProcessInfo );
@@ -449,10 +434,7 @@ public:
 
         for ( typename ConditionsArrayType::ptr_iterator it = ConditionsArray.ptr_begin(); it != ConditionsArray.ptr_end(); ++it )
         {
-            bool condition_is_active = true;
-            if( (*it)->IsDefined(ACTIVE) )
-                condition_is_active = (*it)->Is(ACTIVE);
-            if ( condition_is_active )
+            if ( !( *it )->GetValue( IS_INACTIVE ) )
             {
                 //calculate elemental contribution
                 pScheme->Condition_Calculate_LHS_Contribution( *it, LHS_Contribution, EquationId, CurrentProcessInfo );
@@ -497,10 +479,7 @@ public:
 
         for ( typename ElementsArrayType::ptr_iterator it = pElements.ptr_begin(); it != pElements.ptr_end(); ++it )
         {
-            bool element_is_active = true;
-            if( (*it)->IsDefined(ACTIVE) )
-                element_is_active = (*it)->Is(ACTIVE);
-            if ( element_is_active )
+            if ( !( *it )->GetValue( IS_INACTIVE ) )
             {
                 //calculate elemental contribution
                 pScheme->Calculate_LHS_Contribution( *it, LHS_Contribution, EquationId, CurrentProcessInfo );
@@ -519,10 +498,7 @@ public:
 
         for ( typename ConditionsArrayType::ptr_iterator it = ConditionsArray.ptr_begin(); it != ConditionsArray.ptr_end(); ++it )
         {
-            bool condition_is_active = true;
-            if( (*it)->IsDefined(ACTIVE) )
-                condition_is_active = (*it)->Is(ACTIVE);
-            if ( condition_is_active )
+            if ( !( *it )->GetValue( IS_INACTIVE ) )
             {
                 //calculate elemental contribution
                 pScheme->Condition_Calculate_LHS_Contribution( *it, LHS_Contribution, EquationId, CurrentProcessInfo );
@@ -898,7 +874,7 @@ public:
 
     //**************************************************************************
     //**************************************************************************
-    void ResizeAndInitializeVectors( typename TSchemeType::Pointer pScheme,
+    void ResizeAndInitializeVectors(
         TSystemMatrixPointerType& pA,
         TSystemVectorPointerType& pDx,
         TSystemVectorPointerType& pb,
@@ -1024,8 +1000,8 @@ public:
             Kaa.resize( mAirPressureFreeDofs, mAirPressureFreeDofs, false );
 
 
-            ConstructMatrixStructure(pScheme,  Kuu, Kuw, Kua, Kwu, Kww, Kwa, Kau, Kaw, Kaa, rElements, rConditions, rCurrentProcessInfo );
-            ConstructMatrixStructure(pScheme,  A, rElements, rConditions, rCurrentProcessInfo );
+            ConstructMatrixStructure( Kuu, Kuw, Kua, Kwu, Kww, Kwa, Kau, Kaw, Kaa, rElements, rConditions, rCurrentProcessInfo );
+            ConstructMatrixStructure( A, rElements, rConditions, rCurrentProcessInfo );
             A.resize( BaseType::mEquationSystemSize, BaseType::mEquationSystemSize, false );
             AllocateSystemMatrix( A );
             ConstructSystemMatrix( A );
@@ -1197,7 +1173,7 @@ protected:
     /**@name Protected Operators*/
     /*@{ */
     //**************************************************************************
-    virtual void ConstructMatrixStructure( typename TSchemeType::Pointer pScheme,
+    virtual void ConstructMatrixStructure(
         TSystemMatrixType& A,
         ElementsContainerType& rElements,
         ConditionsArrayType& rConditions,
@@ -1212,7 +1188,7 @@ protected:
 
         for ( typename ElementsContainerType::iterator i_element = rElements.begin() ; i_element != rElements.end() ; i_element++ )
         {
-            pScheme->EquationId( *(i_element.base()) , ids, CurrentProcessInfo);
+            ( i_element )->EquationIdVector( ids, CurrentProcessInfo );
 
             for ( std::size_t i = 0 ; i < ids.size() ; i++ )
                 if ( ids[i] < equation_size )
@@ -1231,7 +1207,7 @@ protected:
 
         for ( typename ConditionsArrayType::iterator i_condition = rConditions.begin() ; i_condition != rConditions.end() ; i_condition++ )
         {
-            pScheme->Condition_EquationId( *(i_condition.base()), ids, CurrentProcessInfo);
+            ( i_condition )->EquationIdVector( ids, CurrentProcessInfo );
 
             for ( std::size_t i = 0 ; i < ids.size() ; i++ )
                 if ( ids[i] < equation_size )
@@ -1326,7 +1302,7 @@ protected:
 //         }
 
     /// Compute graphs for the different matrices involved in the problem
-    virtual void ConstructMatrixStructure( typename TSchemeType::Pointer pScheme,
+    virtual void ConstructMatrixStructure(
         TSystemMatrixType& Kuu, TSystemMatrixType& Kuw, TSystemMatrixType& Kua,
         TSystemMatrixType& Kwu, TSystemMatrixType& Kww, TSystemMatrixType& Kwa,
         TSystemMatrixType& Kau, TSystemMatrixType& Kaw, TSystemMatrixType& Kaa,
@@ -1352,7 +1328,7 @@ protected:
         for ( typename ElementsContainerType::const_iterator itElem = rElements.begin();
                 itElem != rElements.end(); itElem++ )
         {
-            pScheme->EquationId( *(itElem.base()) , ids, CurrentProcessInfo);
+            itElem->EquationIdVector( ids, CurrentProcessInfo );
 
             for ( std::size_t i = 0; i < ids.size(); i++ )
             {
@@ -1411,7 +1387,7 @@ protected:
         for ( typename ConditionsArrayType::const_iterator itCond = rConditions.begin();
                 itCond != rConditions.end(); itCond++ )
         {
-            pScheme->Condition_EquationId( *(itCond.base()), ids, CurrentProcessInfo);
+            itCond->EquationIdVector( ids, CurrentProcessInfo );
 
             for ( std::size_t i = 0; i < ids.size(); i++ )
             {

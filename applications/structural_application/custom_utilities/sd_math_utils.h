@@ -69,11 +69,11 @@ public:
 
     typedef MathUtils<TDataType> MathUtilsType;
 
-    typedef boost::numeric::ublas::vector<Vector> Second_Order_Tensor; // dos opciones: un tensor de segundo orden y/o un vector que almacena un vector
+    typedef boost::numeric::ublas::vector<VectorType> Second_Order_Tensor; // dos opciones: un tensor de segundo orden y/o un vector que almacena un vector
 
     typedef boost::numeric::ublas::vector<Second_Order_Tensor> Third_Order_Tensor;
 
-    typedef boost::numeric::ublas::vector<boost::numeric::ublas::vector<Matrix> > Fourth_Order_Tensor;
+    typedef boost::numeric::ublas::vector<boost::numeric::ublas::vector<MatrixType> > Fourth_Order_Tensor;
 
     typedef matrix<Second_Order_Tensor> Matrix_Second_Tensor; // Acumulo un tensor de 2 orden en una matriz.
 
@@ -94,7 +94,7 @@ public:
      * three real (not complex) solutions
      */
 
-    static inline bool CardanoFormula(double a, double b, double c, double d, Vector& solution)
+    static inline bool CardanoFormula(double a, double b, double c, double d, VectorType& solution)
     {
         solution.resize(3,false);
         noalias(solution)= ZeroVector(3);
@@ -161,24 +161,24 @@ public:
      * WARNING only valid for 2*2 and 3*3 Matrices yet
      */
 
-    static inline Vector EigenValues(const Matrix& A, double crit, double zero)
+    static inline VectorType EigenValues(const MatrixType& A, double crit, double zero)
     {
         int dim= A.size1();
 
 
-        Matrix Convergence(2,dim);
+        MatrixType Convergence(2,dim);
 
         double delta;
 
         double abs;
 
-        Vector Result=ZeroVector(dim);
+        VectorType Result=ZeroVector(dim);
 
-        Matrix HelpA= ZeroMatrix(dim, dim);
+        MatrixType HelpA= ZeroMatrix(dim, dim);
 
-        Matrix HelpQ= ZeroMatrix(dim, dim);
+        MatrixType HelpQ= ZeroMatrix(dim, dim);
 
-        Matrix HelpR= ZeroMatrix(dim, dim);
+        MatrixType HelpR= ZeroMatrix(dim, dim);
 
         HelpA=A;
 
@@ -246,6 +246,63 @@ public:
 
 
     /**
+    Organize a 3D eigenvalues vector to the sequence 1 > 2 > 3
+     */
+    template<class TValuesContainerType>
+    static inline Vector OrganizeEigenvalues(const TValuesContainerType& rEigenvalues)
+    {
+        Vector Result(3);
+
+        if(rEigenvalues[0] >= rEigenvalues[1] && rEigenvalues[0] >= rEigenvalues[2])
+        {
+            Result[0] = rEigenvalues[0];
+            if(rEigenvalues[1] >= rEigenvalues[2])
+            {
+                Result[1] = rEigenvalues[1];
+                Result[2] = rEigenvalues[2];
+            }
+            else
+            {
+                Result[1] = rEigenvalues[2];
+                Result[2] = rEigenvalues[1];
+            }
+        }
+        else if(rEigenvalues[1] >= rEigenvalues[0] && rEigenvalues[1] >= rEigenvalues[2])
+        {
+            Result[0] = rEigenvalues[1];
+            if(rEigenvalues[0] >= rEigenvalues[2])
+            {
+                Result[1] = rEigenvalues[0];
+                Result[2] = rEigenvalues[2];
+            }
+            else
+            {
+                Result[1] = rEigenvalues[2];
+                Result[2] = rEigenvalues[0];
+            }
+        }
+        else if(rEigenvalues[2] >= rEigenvalues[0] && rEigenvalues[2] >= rEigenvalues[1])
+        {
+            Result[0] = rEigenvalues[2];
+            if(rEigenvalues[0] >= rEigenvalues[1])
+            {
+                Result[1] = rEigenvalues[0];
+                Result[2] = rEigenvalues[1];
+            }
+            else
+            {
+                Result[1] = rEigenvalues[1];
+                Result[2] = rEigenvalues[0];
+            }
+        }
+        else
+            KRATOS_THROW_ERROR(std::logic_error, "Something must be wrong. This case can't happe. At", __FUNCTION__)
+
+        return Result;
+    }
+
+
+    /**
      * @}
      */
     /**
@@ -262,9 +319,9 @@ public:
         //QR Factorization with Householder-Algo
         int dim= A.size1();
 
-        Vector y(dim);
+        VectorType y(dim);
 
-        Vector w(dim);
+        VectorType w(dim);
 
         R.resize(dim,dim,false);
 
@@ -274,16 +331,16 @@ public:
 
         Q=ZeroMatrix(dim,dim);
 
-        Matrix Help= A;
+        MatrixType Help= A;
 
-        Matrix unity= ZeroMatrix(dim,dim);
+        MatrixType unity= ZeroMatrix(dim,dim);
 
         for(int j=0; j<dim; j++)
             unity(j,j)=1.0;
 
-        std::vector<Matrix> HelpQ(dim-1);
+        std::vector<MatrixType> HelpQ(dim-1);
 
-        std::vector<Matrix> HelpR(dim-1);
+        std::vector<MatrixType> HelpR(dim-1);
 
         for(int i=0; i< dim-1; i++)
         {
@@ -380,7 +437,7 @@ public:
 
     static inline void EigenVectors(const MatrixType& A, MatrixType& vectors, VectorType& lambda, double zero_tolerance =1e-9, int max_iterations = 10)
     {
-        Matrix Help= A;
+        MatrixType Help= A;
 
         for(int i=0; i<3; i++)
             for(int j=0; j<3; j++)
@@ -391,20 +448,20 @@ public:
 
         lambda.resize(Help.size1(),false);
 
-        Matrix HelpDummy(Help.size1(),Help.size2());
+        MatrixType HelpDummy(Help.size1(),Help.size2());
 
         bool is_converged = false;
 
-        Matrix unity=ZeroMatrix(Help.size1(),Help.size2());
+        MatrixType unity=ZeroMatrix(Help.size1(),Help.size2());
 
         for(unsigned int i=0; i< Help.size1(); i++)
             unity(i,i)= 1.0;
 
-        Matrix V= unity;
+        MatrixType V= unity;
 
-        Matrix VDummy(Help.size1(),Help.size2());
+        MatrixType VDummy(Help.size1(),Help.size2());
 
-        Matrix Rotation(Help.size1(),Help.size2());
+        MatrixType Rotation(Help.size1(),Help.size2());
 
 
         for(int iterations=0; iterations<max_iterations; iterations++)
@@ -507,7 +564,7 @@ public:
             }
             V= VDummy;
 
-//                 Matrix VTA= ZeroMatrix(3,3);
+//                 MatrixType VTA= ZeroMatrix(3,3);
 //                 for(int i=0; i< Help.size1(); i++)
 //                 {
 //                     for(int j=0; j< Help.size1(); j++)
@@ -767,7 +824,7 @@ public:
     {
         KRATOS_TRY
 
-        Matrix StrainTensor;
+        MatrixType StrainTensor;
         //KRATOS_WATCH(Strains)
         if (Strains.size()==3)
         {
@@ -797,10 +854,34 @@ public:
         KRATOS_CATCH("")
     }
 
-    static inline Vector TensorToStrainVector( const Matrix& Tensor )
+    static inline void StrainVectorToTensor(const VectorType& StrainVector, MatrixType& StrainTensor)
+    {
+        if(StrainVector.size() == 3) // plane strain
+        {
+            noalias(StrainTensor) = ZeroMatrix(3, 3);
+            StrainTensor(0, 0) = StrainVector(0);
+            StrainTensor(0, 1) = 0.5 * StrainVector(2);
+            StrainTensor(1, 0) = 0.5 * StrainVector(2);
+            StrainTensor(1, 1) = StrainVector(1);
+        }
+        else if(StrainVector.size() == 6) // 3d
+        {
+            StrainTensor(0, 0) = StrainVector(0);
+            StrainTensor(0, 1) = 0.5 * StrainVector(3);
+            StrainTensor(0, 2) = 0.5 * StrainVector(5);
+            StrainTensor(1, 0) = 0.5 * StrainVector(3);
+            StrainTensor(1, 1) = StrainVector(1);
+            StrainTensor(1, 2) = 0.5 * StrainVector(4);
+            StrainTensor(2, 0) = 0.5 * StrainVector(5);
+            StrainTensor(2, 1) = 0.5 * StrainVector(4);
+            StrainTensor(2, 2) = StrainVector(2);
+        }
+    }
+
+    static inline VectorType TensorToStrainVector( const MatrixType& Tensor )
     {
         KRATOS_TRY
-        Vector StrainVector;
+        VectorType StrainVector;
 
 
         if (Tensor.size1()==2)
@@ -828,6 +909,67 @@ public:
         KRATOS_CATCH("")
     }
 
+    static inline void StrainTensorToVector(const MatrixType& StrainTensor, VectorType& StrainVector)
+    {
+        if(StrainVector.size() == 3)
+        {
+	        StrainVector[0] = StrainTensor(0, 0);
+	        StrainVector[1] = StrainTensor(1, 1);
+	        StrainVector[2] = 2.0*StrainTensor(0, 1);
+        }
+        else if(StrainVector.size() == 6)
+        {
+            StrainVector[0] = StrainTensor(0, 0);
+            StrainVector[1] = StrainTensor(1, 1);
+            StrainVector[2] = StrainTensor(2, 2);
+            StrainVector[3] = 2.0*StrainTensor(0, 1);
+            StrainVector[4] = 2.0*StrainTensor(1, 2);
+            StrainVector[5] = 2.0*StrainTensor(0, 2);
+        }
+    }
+
+    static inline void StressVectorToTensor(const VectorType& StressVector, MatrixType& StressTensor)
+    {
+        if(StressVector.size() == 3) // plane strain
+        {
+            noalias(StressTensor) = ZeroMatrix(3, 3);
+            StressTensor(0, 0) = StressVector(0);
+            StressTensor(0, 1) = StressVector(2);
+            StressTensor(1, 0) = StressVector(2);
+            StressTensor(1, 1) = StressVector(1);
+        }
+        else if(StressVector.size() == 6) // 3d
+        {
+            StressTensor(0, 0) = StressVector(0);
+            StressTensor(0, 1) = StressVector(3);
+            StressTensor(0, 2) = StressVector(5);
+            StressTensor(1, 0) = StressVector(3);
+            StressTensor(1, 1) = StressVector(1);
+            StressTensor(1, 2) = StressVector(4);
+            StressTensor(2, 0) = StressVector(5);
+            StressTensor(2, 1) = StressVector(4);
+            StressTensor(2, 2) = StressVector(2);
+        }
+    }
+
+    static inline void StressTensorToVector(const MatrixType& StressTensor, VectorType& StressVector)
+    {
+        if(StressVector.size() == 3)
+        {
+	        StressVector[0] = StressTensor(0, 0);
+	        StressVector[1] = StressTensor(1, 1);
+	        StressVector[2] = StressTensor(0, 1);
+        }
+        else if(StressVector.size() == 6)
+        {
+            StressVector[0] = StressTensor(0, 0);
+            StressVector[1] = StressTensor(1, 1);
+            StressVector[2] = StressTensor(2, 2);
+            StressVector[3] = StressTensor(0, 1);
+            StressVector[4] = StressTensor(1, 2);
+            StressVector[5] = StressTensor(0, 2);
+        }
+    }
 
     /**
     * Builds the Inverse of Matrix input
@@ -839,7 +981,7 @@ public:
         int singular = 0;
         using namespace boost::numeric::ublas;
         typedef permutation_matrix<std::size_t> pmatrix;
-        Matrix A(input);
+        MatrixType A(input);
         pmatrix pm(A.size1());
         singular = lu_factorize(A,pm);
         inverse.assign( IdentityMatrix(A.size1()));
@@ -852,7 +994,7 @@ public:
     * @param Tensor the given second order tensor
     * @return the norm of the given tensor
     */
-    static double normTensor(Matrix& Tensor)
+    static double normTensor(MatrixType& Tensor)
     {
         double result=0.0;
         for(unsigned int i=0; i< Tensor.size1(); i++)
@@ -869,7 +1011,7 @@ public:
     * @param Vector the given vector
     * @param Tensor the symmetric second order tensor
     */
-    static inline void VectorToTensor(const Vector& Stress,Matrix& Tensor)
+    static inline void VectorToTensor(const VectorType& Stress,MatrixType& Tensor)
     {
         if(Stress.size()==6)
         {
@@ -900,7 +1042,7 @@ public:
     * @param Tensor the given symmetric second order tensor
     * @param Vector the vector
     */
-    static void TensorToVector( const Matrix& Tensor, Vector& Vector)
+    static void TensorToVector( const MatrixType& Tensor, VectorType& Vector)
     {
         //if(Vector.size()!= 6)
         unsigned int  dim  =  Tensor.size1();
@@ -924,7 +1066,72 @@ public:
         return;
     }
 
-    static inline void TensorToMatrix(Fourth_Order_Tensor& Tensor,Matrix& Matrix)
+    // THis uses the notation [o_xx o_yy o_zz o_xy o_yz o_xz]
+    // Note that, this already accounts for factor 2 in [e_xx e_yy e_zz 2e_xy 2e_yz 2e_xz] (see https://en.wikiversity.org/wiki/Introduction_to_Elasticity/Constitutive_relations)
+    static inline void TensorToMatrix(const Fourth_Order_Tensor& Tensor, MatrixType& Matrix)
+    {
+        if (Matrix.size1() == 6)
+        {
+            Matrix(0, 0) = Tensor[0][0](0, 0);
+            Matrix(0, 1) = Tensor[0][0](1, 1);
+            Matrix(0, 2) = Tensor[0][0](2, 2);
+            Matrix(0, 3) = Tensor[0][0](0, 1);
+            Matrix(0, 4) = Tensor[0][0](1, 2);
+            Matrix(0, 5) = Tensor[0][0](0, 2);
+
+            Matrix(1, 0) = Tensor[1][1](0, 0);
+            Matrix(1, 1) = Tensor[1][1](1, 1);
+            Matrix(1, 2) = Tensor[1][1](2, 2);
+            Matrix(1, 3) = Tensor[1][1](0, 1);
+            Matrix(1, 4) = Tensor[1][1](1, 2);
+            Matrix(1, 5) = Tensor[1][1](0, 2);
+
+            Matrix(2, 0) = Tensor[2][2](0, 0);
+            Matrix(2, 1) = Tensor[2][2](1, 1);
+            Matrix(2, 2) = Tensor[2][2](2, 2);
+            Matrix(2, 3) = Tensor[2][2](0, 1);
+            Matrix(2, 4) = Tensor[2][2](1, 2);
+            Matrix(2, 5) = Tensor[2][2](0, 2);
+
+            Matrix(3, 0) = Tensor[0][1](0, 0);
+            Matrix(3, 1) = Tensor[0][1](1, 1);
+            Matrix(3, 2) = Tensor[0][1](2, 2);
+            Matrix(3, 3) = Tensor[0][1](0, 1);
+            Matrix(3, 4) = Tensor[0][1](1, 2);
+            Matrix(3, 5) = Tensor[0][1](0, 2);
+
+            Matrix(4, 0) = Tensor[1][2](0, 0);
+            Matrix(4, 1) = Tensor[1][2](1, 1);
+            Matrix(4, 2) = Tensor[1][2](2, 2);
+            Matrix(4, 3) = Tensor[1][2](0, 1);
+            Matrix(4, 4) = Tensor[1][2](1, 2);
+            Matrix(4, 5) = Tensor[1][2](0, 2);
+
+            Matrix(5, 0) = Tensor[0][2](0, 0);
+            Matrix(5, 1) = Tensor[0][2](1, 1);
+            Matrix(5, 2) = Tensor[0][2](2, 2);
+            Matrix(5, 3) = Tensor[0][2](0, 1);
+            Matrix(5, 4) = Tensor[0][2](1, 2);
+            Matrix(5, 5) = Tensor[0][2](0, 2);
+        }
+        else if(Matrix.size1() == 3)
+        {
+            Matrix(0, 0) = Tensor[0][0](0, 0);
+            Matrix(0, 1) = Tensor[0][0](1, 1);
+            Matrix(0, 2) = Tensor[0][0](0, 1);
+            Matrix(1, 0) = Tensor[1][1](0, 0);
+            Matrix(1, 1) = Tensor[1][1](1, 1);
+            Matrix(1, 2) = Tensor[1][1](0, 1);
+            Matrix(2, 0) = Tensor[0][1](0, 0);
+            Matrix(2, 1) = Tensor[0][1](1, 1);
+            Matrix(2, 2) = Tensor[0][1](0, 1);
+        }
+        return;
+    }
+
+    // THis uses the notation [o_xx o_yy o_zz o_xy o_xz o_yz]
+    // Note that, this already accounts for factor 2 in [e_xx e_yy e_zz 2e_xy 2e_xz 2e_yz] (see https://en.wikiversity.org/wiki/Introduction_to_Elasticity/Constitutive_relations)
+    static inline void TensorToMatrix2(Fourth_Order_Tensor& Tensor, MatrixType& Matrix)
     {
         // Simetrias seguras
         //  Cijkl = Cjilk;
@@ -1000,7 +1207,7 @@ public:
     * @param Tensor the given Matrix
     * @param Vector the Tensor
     */
-    static void MatrixToTensor(MatrixType& A,std::vector<std::vector<Matrix> >& Tensor)
+    static void MatrixToTensor(MatrixType& A,std::vector<std::vector<MatrixType> >& Tensor)
     {
         int help1 = 0;
         int help2 = 0;
@@ -1095,7 +1302,7 @@ public:
     * @param Tensor the given Tensor
     * @param Vector the Matrix
     */
-    static void TensorToMatrix(std::vector<std::vector<Matrix> >& Tensor,Matrix& Matrix)
+    static void TensorToMatrix(std::vector<std::vector<MatrixType> >& Tensor,MatrixType& Matrix)
     {
         int help1 = 0;
         int help2 = 0;
@@ -1170,7 +1377,7 @@ public:
      * @param Tensor the given Tensor
      * @param Vector the Matrix
      */
-    static void TensorToMatrix( const array_1d<double, 81>& Tensor, Matrix& Matrix )
+    static void TensorToMatrix( const array_1d<double, 81>& Tensor, MatrixType& Matrix )
     {
         if(Matrix.size1()!=6 || Matrix.size2()!=6)
             Matrix.resize(6,6,false);
@@ -1220,12 +1427,118 @@ public:
         return;
     }
 
+    static inline void ExtractVolumetricDeviatoricTensor( const MatrixType& C, MatrixType& dev, double& vol )
+    {
+        vol = C(0, 0) + C(1, 1) + C(2, 2);
+        noalias(dev) = C;
+        dev(0, 0) -= vol / 3;
+        dev(1, 1) -= vol / 3;
+        dev(2, 2) -= vol / 3;
+    }
+
+    static inline void CalculateFourthOrderDeviatoricTensor( Fourth_Order_Tensor& C )
+    {
+        MatrixType kronecker(3, 3);
+        noalias(kronecker) = ZeroMatrix(3, 3);
+        for(unsigned int i = 0; i < 3; ++i)
+            kronecker(i, i) = 1;
+        
+        C.resize(3);
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            C[i].resize(3);
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                C[i][j].resize(3, 3);
+                noalias(C[i][j]) = ZeroMatrix(3, 3);
+                for(unsigned int k = 0; k < 3; ++k)
+                {
+                    for(unsigned int l = 0; l < 3; ++l)
+                        C[i][j](k,l) = 0.5 * kronecker(i, k) * kronecker(j, l)
+                                     + 0.5 * kronecker(i, l) * kronecker(j, k)
+                                     - 1.0 / 3 * kronecker(i, j) * kronecker(k, l);
+                }
+            }
+        }
+    }
+
+    static inline void CalculateFourthOrderZeroTensor( Fourth_Order_Tensor& C )
+    {
+        C.resize(3);
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            C[i].resize(3);
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                C[i][j].resize(3, 3);
+                noalias(C[i][j]) = ZeroMatrix(3, 3);
+            }
+        }
+    }
+
+    static inline void CalculateFourthOrderSymmetricTensor( Fourth_Order_Tensor& C )
+    {
+        MatrixType kronecker = IdentityMatrix(3);
+        C.resize(3);
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            C[i].resize(3);
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                C[i][j].resize(3, 3);
+                noalias(C[i][j]) = ZeroMatrix(3, 3);
+                for(unsigned int k = 0; k < 3; ++k)
+                    for(unsigned int l = 0; l < 3; ++l)
+                        C[i][j](k,l) = 0.5 * (kronecker(i, k) * kronecker(j, l) + kronecker(i, l) * kronecker(j, k));
+            }
+        }
+    }
+
+    /// REF: Eq. (2.100) Souze de Neto, Computational Plasticity
+    static inline void CalculateFourthOrderUnitTensor( Fourth_Order_Tensor& C )
+    {
+        MatrixType kronecker = IdentityMatrix(3);
+        
+        C.resize(3);
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            C[i].resize(3);
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                C[i][j].resize(3, 3);
+                noalias(C[i][j]) = ZeroMatrix(3, 3);
+                for(unsigned int k = 0; k < 3; ++k)
+                    for(unsigned int l = 0; l < 3; ++l)
+                        C[i][j](k,l) = kronecker(i, k) * kronecker(j, l);
+            }
+        }
+    }
+
+    /**
+     * Zero out a given 4th order tensor
+     * @param C the given Tensor
+     */
+    static void ZeroFourthOrderTensor( Fourth_Order_Tensor& C )
+    {
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                for(unsigned int k = 0; k < 3; ++k)
+                {
+                    for(unsigned int l = 0; l < 3; ++l)
+                        C[i][j](k,l) = 0.0;
+                }
+            }
+        }
+    }
+
     /**
      * Scales a given 4th order tensor by a scalar (C = C*a)
      * @param C the given Tensor
      * @param alpha
      */
-    static void ScaleFourthOrderTensor( Fourth_Order_Tensor& C, double alpha )
+    static void ScaleFourthOrderTensor( Fourth_Order_Tensor& C, const double& alpha )
     {
         for(unsigned int i = 0; i < 3; ++i)
         {
@@ -1241,11 +1554,77 @@ public:
     }
 
     /**
+     * Copy the fourth order tensor A -> B
+     * @param A the source Tensor
+     * @param B the target tensor
+     */
+    static void CopyFourthOrderTensor( const Fourth_Order_Tensor& A, Fourth_Order_Tensor& B )
+    {
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                for(unsigned int k = 0; k < 3; ++k)
+                {
+                    for(unsigned int l = 0; l < 3; ++l)
+                        B[i][j](k,l) = A[i][j](k,l);
+                }
+            }
+        }
+    }
+
+    /**
+     * Computes contraction of a fourth order tensor and matrix and add to a second order tensor (Result += alpha * (AA : B))
+     * @param alpha
+     * @param AA the fourth order Tensor
+     * @param B the second order Tensor
+     */
+    static void ContractFourthOrderTensor(const double& alpha, const Fourth_Order_Tensor& A, const MatrixType& B, MatrixType& Result)
+    {
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                for(unsigned int k = 0; k < 3; ++k)
+                {
+                    for(unsigned int l = 0; l < 3; ++l)
+                    {
+                        Result(i, j) += alpha * A[i][j](k, l) * B(k, l);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Computes contraction of a fourth order tensor and matrix and add to a second order tensor (Result += alpha * (A : B))
+     * @param alpha
+     * @param A the second order Tensor
+     * @param BB the fourth order Tensor
+     */
+    static void ContractFourthOrderTensor(const double& alpha, const MatrixType& A, const Fourth_Order_Tensor& BB, MatrixType& Result)
+    {
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                for(unsigned int k = 0; k < 3; ++k)
+                {
+                    for(unsigned int l = 0; l < 3; ++l)
+                    {
+                        Result(k, l) += alpha * A(i, j) * BB[i][j](k, l);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Computes outer product of two 2nd order tensors (Matrix) and add to a given 4th order tensor (Result += alpha * (A \odot B))
      * @param C the given Tensor
      * @param alpha
      */
-    static void OuterProductFourthOrderTensor(const double alpha, const Matrix& A,const Matrix& B, Fourth_Order_Tensor& Result)
+    static void OuterProductFourthOrderTensor(const double& alpha, const MatrixType& A, const MatrixType& B, Fourth_Order_Tensor& Result)
     {
         for(unsigned int i = 0; i < 3; ++i)
         {
@@ -1262,15 +1641,27 @@ public:
         }
     }
 
+    // C += alpha A
+    static inline void AddFourthOrderTensor(const double& alpha, const Fourth_Order_Tensor& A, Fourth_Order_Tensor& Result)
+    {
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                noalias(Result[i][j]) += alpha * A[i][j];
+            }
+        }
+    }
+
     /**
     * Generates the fourth order deviatoric unity tensor
     * @param Unity the deviatoric unity (will be overwritten)
     */
-    static void DeviatoricUnity(std::vector<std::vector<Matrix> >& Unity)
+    static void DeviatoricUnity(std::vector<std::vector<MatrixType> >& Unity)
     {
         Unity.resize(3);
 
-        Matrix kronecker(3,3);
+        MatrixType kronecker(3,3);
         noalias(kronecker)=ZeroMatrix(3,3);
         for(unsigned int i=0; i<3; i++)
         {
@@ -1303,7 +1694,7 @@ public:
      */
     static void DeviatoricUnity(array_1d<double,81>& Unity)
     {
-        Matrix kronecker(3,3);
+        MatrixType kronecker(3,3);
         noalias(kronecker)=ZeroMatrix(3,3);
         for(unsigned int i=0; i<3; i++)
         {
@@ -1319,6 +1710,168 @@ public:
     }
 
     /**
+    * Compute the elasticity tensor
+    * @param C Elastic tensor
+    * @param E Young modulus
+    * @param NU Poisson ratio
+    */
+    static inline void CalculateElasticTensor( Fourth_Order_Tensor& C, const double E, const double NU )
+    {
+        MatrixType kronecker(3, 3);
+        noalias(kronecker) = ZeroMatrix(3, 3);
+        for(unsigned int i = 0; i < 3; ++i)
+            kronecker(i, i) = 1.0;
+        
+        double lambda = NU * E / ((1 + NU) * (1 - 2 * NU));
+        double mu     = E / (2 * (1 + NU));
+        
+        C.resize(3);
+        for(unsigned int i = 0; i < 3; ++i)
+        {
+            C[i].resize(3);
+            for(unsigned int j = 0; j < 3; ++j)
+            {
+                C[i][j].resize(3, 3);
+                noalias(C[i][j]) = ZeroMatrix(3, 3);
+                for(unsigned int k = 0; k < 3; ++k)
+                {
+                    for(unsigned int l = 0; l < 3; ++l)
+                        C[i][j](k,l) = lambda * kronecker(i, j) * kronecker(k, l)
+                                     + mu * (kronecker(i, k) * kronecker(j, l)
+                                           + kronecker(i, l) * kronecker(j, k));
+                  }
+             }
+        }
+    }
+
+    // return A:B
+    static inline double inner_prod(const MatrixType& A, const MatrixType& B)
+    {
+        double res = 0.0;
+        for(unsigned int i = 0; i < 3; ++i)
+            for(unsigned int j = 0; j < 3; ++j)
+                res += A(i, j) * B(i, j);
+        return res;
+    }
+
+    static inline double Trace(const MatrixType& A)
+    {
+        double tr = 0.0;
+        for(unsigned int i = 0; i < A.size1(); ++i)
+            tr += A(i, i);
+        return tr;
+    }
+
+    static inline void ComputeDerivativeIsochoricTensorFunction(
+        int ii, int mm, int jj,
+        const std::vector<double>& pstress,
+        const std::vector<double>& pstrain,
+        const MatrixType& dpstrs,
+        const std::vector<MatrixType>& E,
+        Fourth_Order_Tensor& Dep
+    )
+    {
+        MatrixType X = pstrain[0] * E[0] + pstrain[1] * E[1] + pstrain[2] * E[2];
+        Fourth_Order_Tensor dX2dX;
+        CalculateFourthOrderZeroTensor(dX2dX);
+        MatrixType I = IdentityMatrix(3);
+        for(int i = 0; i < 3; ++i)
+            for(int j = 0; j < 3; ++j)
+                for(int k = 0; k < 3; ++k)
+                    for(int l = 0; l < 3; ++l)
+                        dX2dX[i][j](k, l) = 0.5 * (I(i, k) * X(l, j)
+                                                 + I(i, l) * X(k, j)
+                                                 + X(i, k) * I(j, l)
+                                                 + X(i, l) * I(k, j));
+
+        #ifdef DEBUG_MOHR_COULOMB
+        KRATOS_WATCH(pstrain[ii])
+        KRATOS_WATCH(pstrain[mm])
+        KRATOS_WATCH(pstrain[jj])
+        #endif
+
+        // box A.6
+        Fourth_Order_Tensor Is;
+        CalculateFourthOrderSymmetricTensor(Is);
+        CalculateFourthOrderZeroTensor(Dep);
+        if( ( fabs(pstrain[ii] - pstrain[mm]) > 1.0e-10 )
+         && ( fabs(pstrain[mm] - pstrain[jj]) > 1.0e-10 )
+         && ( fabs(pstrain[ii] - pstrain[jj]) > 1.0e-10 ) )
+        {
+            #ifdef DEBUG_MOHR_COULOMB_WARNING_BOX_A6
+            std::cout << "Box A.6 first case" << std::endl;
+            #endif
+            int cyc[] = {ii, mm, jj};
+            for(int i0 = 0; i0 < 3; ++i0)
+            {
+                int i1 = (i0 == 0 ? 1 : (i0 == 1 ? 2 : 0)); // i1 = i0 + 1
+                int i2 = (i0 == 0 ? 2 : (i0 == 1 ? 0 : 1)); // i2 = i0 + 2
+
+                int a = cyc[i0];
+                int b = cyc[i1];
+                int c = cyc[i2];
+
+                double aux1 = pstress[a] / (pstrain[a] - pstrain[b]) / (pstrain[a] - pstrain[c]);
+                double aux2 = pstrain[b] + pstrain[c];
+                double aux3 = pstrain[a] - pstrain[b] + pstrain[a] - pstrain[c];
+                double aux4 = pstrain[b] - pstrain[c];
+                AddFourthOrderTensor(aux1, dX2dX, Dep);
+                AddFourthOrderTensor(-aux1 * aux2, Is, Dep);
+                OuterProductFourthOrderTensor(-aux1 * aux3, E[a], E[a], Dep);
+                OuterProductFourthOrderTensor(-aux1 * aux4, E[b], E[b], Dep);
+                OuterProductFourthOrderTensor(aux1 * aux4, E[c], E[c], Dep);
+            }
+
+            for(int i = 0; i < 3; ++i)
+            {
+                for(int j = 0; j < 3; ++j)
+                {
+                    OuterProductFourthOrderTensor(dpstrs(i, j), E[i], E[j], Dep);
+                }
+            }
+        }
+        else
+        {
+            int a, b, c;
+            bool isSame = false;
+            if( ( fabs(pstrain[jj] - pstrain[mm]) < 1.0e-10 ) && ( fabs(pstrain[ii] - pstrain[jj]) > 1.0e-10 ))
+            { a = ii; b = mm; c = jj; }
+            else if( ( fabs(pstrain[jj] - pstrain[ii]) < 1.0e-10 ) && ( fabs(pstrain[ii] - pstrain[mm]) > 1.0e-10 ))
+            { a = mm; b = ii; c = jj; }
+            else if( ( fabs(pstrain[ii] - pstrain[mm]) < 1.0e-10 ) && ( fabs(pstrain[jj] - pstrain[mm]) > 1.0e-10 ))
+            { a = jj; b = ii; c = mm; }
+            else isSame = true;
+
+            if(!isSame)
+            {
+                #ifdef DEBUG_MOHR_COULOMB_WARNING_BOX_A6
+                std::cout << "Box A.6 second case" << std::endl;
+                #endif
+                double s1 = (pstress[a] - pstress[c]) / pow(pstrain[a] - pstrain[c], 2) + 1.0 / (pstrain[a] - pstrain[c]) * (dpstrs(c, b) - dpstrs(c, c));
+                double s2 = 2 * pstrain[c] * (pstress[a] - pstress[c]) / pow(pstrain[a] - pstrain[c], 2) + (pstrain[a] + pstrain[c]) / (pstrain[a] - pstrain[c]) * (dpstrs(c, b) - dpstrs(c, c));
+                double s3 = 2 * (pstress[a] - pstress[c]) / pow(pstrain[a] - pstrain[c], 3) + 1.0 / pow(pstrain[a] - pstrain[c], 2) * (dpstrs(a, c) + dpstrs(c, a) - dpstrs(a, a) - dpstrs(c, c));
+                double s4 = 2 * pstrain[c] * (pstress[a] - pstress[c]) / pow(pstrain[a] - pstrain[c], 3) + 1.0 / (pstrain[a] - pstrain[c]) * (dpstrs(a, c) - dpstrs(c, b)) + pstrain[c] / pow(pstrain[a] - pstrain[c], 2) * (dpstrs(a, c) + dpstrs(c, a) - dpstrs(a, a) - dpstrs(c, c));
+                double s5 = 2 * pstrain[c] * (pstress[a] - pstress[c]) / pow(pstrain[a] - pstrain[c], 3) + 1.0 / (pstrain[a] - pstrain[c]) * (dpstrs(c, a) - dpstrs(c, b)) + pstrain[c] / pow(pstrain[a] - pstrain[c], 2) * (dpstrs(a, c) + dpstrs(c, a) - dpstrs(a, a) - dpstrs(c, c));
+                double s6 = 2 * pow(pstrain[c], 2) * (pstress[a] - pstress[c]) / pow(pstrain[a] - pstrain[c], 3) + pstrain[a] * pstrain[c] / pow(pstrain[a] - pstrain[c], 2) * (dpstrs(a, c) + dpstrs(c, a)) - pow(pstrain[c], 2) / pow(pstrain[a] - pstrain[c], 2) * (dpstrs(a, a) + dpstrs(c, c)) - (pstrain[a] + pstrain[c]) / (pstrain[a] - pstrain[c]) * dpstrs(c, b);
+                AddFourthOrderTensor(s1, dX2dX, Dep);
+                AddFourthOrderTensor(-s2, Is, Dep);
+                OuterProductFourthOrderTensor(-s3, X, X, Dep);
+                OuterProductFourthOrderTensor(s4, X, I, Dep);
+                OuterProductFourthOrderTensor(s5, I, X, Dep);
+                OuterProductFourthOrderTensor(-s6, I, I, Dep);
+            }
+            else
+            {
+                #ifdef DEBUG_MOHR_COULOMB_WARNING_BOX_A6
+                std::cout << "Box A.6 third case" << std::endl;
+                #endif
+                AddFourthOrderTensor(dpstrs(ii, ii) - dpstrs(ii, mm), Is, Dep);
+                OuterProductFourthOrderTensor(dpstrs(ii, mm), I, I, Dep);
+            }
+        }
+    }
+
+    /**
     * Performs clipping on the two polygons clipping_points and subjected_points (the technique used i
     * Sutherland-Hodgman clipping) and returns the overlapping polygon result_points. The method works
     * in 3D. Both polygons have to be convex, but they can be slightly perturbated in 3D space, this
@@ -1331,8 +1884,8 @@ public:
     static bool Clipping(std::vector<Point<3>* >& clipping_points,std::vector<Point<3>* >& subjected_points, std::vector<Point<3>* >& result_points, double tolerance)
     {
         result_points= subjected_points;
-        Vector actual_edge(3);
-        Vector actual_normal(3);
+        VectorType actual_edge(3);
+        VectorType actual_normal(3);
         std::vector<Point<3>* > temp_results;
         bool is_visible= false;
         for(unsigned int clipp_edge=0; clipp_edge<clipping_points.size(); clipp_edge++)
@@ -1384,21 +1937,21 @@ public:
                     continue;
                 }
                 //Calculate minimal distance between the two points
-                Vector b(2);
+                VectorType b(2);
                 b(0)= -inner_prod((*(result_points[index_subj_2])-*(result_points[subj_edge])),(*(result_points[subj_edge])-*(clipping_points[clipp_edge])));
                 b(1)= inner_prod((*(clipping_points[index_clipp_2])-*(clipping_points[clipp_edge])),(*(result_points[subj_edge])-*(clipping_points[clipp_edge])));
-                Matrix A(2,2);
+                MatrixType A(2,2);
                 A(0,0)=inner_prod((*(result_points[index_subj_2])-*(result_points[subj_edge])),(*(result_points[index_subj_2])-*(result_points[subj_edge])));
                 A(0,1)=-inner_prod((*(result_points[index_subj_2])-*(result_points[subj_edge])),(*(clipping_points[index_clipp_2])-*(clipping_points[clipp_edge])));
                 A(1,0)= A(0,1);
                 A(1,1)=inner_prod(*(clipping_points[index_clipp_2])-*(clipping_points[clipp_edge]),*(clipping_points[index_clipp_2])-*(clipping_points[clipp_edge]));
-                Vector coeff(2);
+                VectorType coeff(2);
                 coeff(0)=1.0/A(0,0)*(b(0)-A(0,1)/(A(1,1)-A(0,1)*A(1,0)/A(0,0))*(b(1)-b(0)*A(1,0)/A(0,0)));
                 coeff(1)=1.0/(A(1,1)-A(0,1)*A(1,0)/A(0,0))*(b(1)-b(0)*A(1,0)/A(0,0));
 
 
                 //TEST on distance to endpoints of the line
-                Vector dist_vec(3);
+                VectorType dist_vec(3);
                 noalias(dist_vec)= *(result_points[subj_edge])+coeff(0)*(*(result_points[index_subj_2])-*(result_points[subj_edge]))-(*(clipping_points[clipp_edge])+coeff(1)*(*(clipping_points[index_clipp_2])-*(clipping_points[clipp_edge])));
 
                 if( coeff(0) > tolerance && coeff(0) < (1-tolerance)&& (sqrt(inner_prod(dist_vec,dist_vec))< tolerance))
@@ -1421,6 +1974,88 @@ public:
             return false;
         else
             return true;
+    }
+
+    /**
+     * Solve a1 * x + b1 * y = c1
+     *       a2 * x + b2 * y = c2
+     */
+    static void Solve2Unknowns(
+        TDataType a1, TDataType b1, TDataType c1,
+        TDataType a2, TDataType b2, TDataType c2,
+        TDataType& x, TDataType& y
+    )
+    {
+        x = (c1 * b2 - c2 * b1) / (a1 * b2 - a2 * b1);
+        y = (c2 * a1 - c1 * a2) / (a1 * b2 - a2 * b1);
+    }
+    
+    /**
+     * Solve a1 * x + b1 * y + c1 * z = d1
+     *       a2 * x + b2 * y + c2 * z = d2
+     *       a3 * x + b3 * y + c3 * z = d3
+     */
+    static void Solve3Unknowns(
+        TDataType a1, TDataType b1, TDataType c1, TDataType d1,
+        TDataType a2, TDataType b2, TDataType c2, TDataType d2,
+        TDataType a3, TDataType b3, TDataType c3, TDataType d3,
+        TDataType& x, TDataType& y, TDataType& z
+    )
+    {
+        TDataType DetA = Det3(a1, b1, c1, a2, b2, c2, a3, b3, c3);
+        x = Det3(d1, b1, c1, d2, b2, c2, d3, b3, c3) / DetA;
+        y = Det3(a1, d1, c1, a2, d2, c2, a3, d3, c3) / DetA;
+        z = Det3(a1, b1, d1, a2, b2, d2, a3, b3, d3) / DetA;
+    }
+
+    /*
+     * Solve the quadratic equation a*x^2 + b*x + c = 0
+     * In return:   0: no solution
+     *              1: one solution
+     *              2: two solutions
+     */
+    static int SolveQuadratic(
+        TDataType a, TDataType b, TDataType c,
+        TDataType x[2]
+    )
+    {
+        TDataType b2 = b / 2;
+        TDataType delta = b2 * b2 - a * c;
+        
+        if(delta < 0.0)
+        {
+            return 0; // no solution
+        }
+        else if(delta == 0.00)
+        {
+            if(a == 0.0)
+            {
+                return 0; // no solution
+            }
+            else
+            {
+                x[0] = -b2 / a;
+                x[1] = x[0];
+                return 1; // one solution
+            }
+        }
+        else
+        {
+            if(a == 0.0)
+            {
+                x[0] = - c / b;
+                x[1] = x[0];
+                return 1; // one solution
+            }
+            else
+            {
+                x[0] = (-b2 - sqrt(delta)) / a;
+                x[1] = (-b2 + sqrt(delta)) / a;
+                return 2; // two solution
+            }
+        }
+        
+        return 0;
     }
 
 private:

@@ -58,6 +58,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // Project includes
 #include "includes/define.h"
+#include "geometries/point_3d.h"
 #include "custom_conditions/elastic_constraint.h"
 #include "structural_application.h"
 #include "utilities/math_utils.h"
@@ -74,24 +75,33 @@ ElasticConstraint::ElasticConstraint(IndexType NewId, GeometryType::Pointer
     //DO NOT ADD DOFS HERE!!!
 }
 
-//************************************************************************************
-//************************************************************************************
-ElasticConstraint::ElasticConstraint(IndexType NewId, GeometryType::Pointer pGeometry,  PropertiesType::Pointer pProperties)
+ElasticConstraint::ElasticConstraint(IndexType NewId, GeometryType::Pointer pGeometry, PropertiesType::Pointer pProperties)
     : Condition(NewId, pGeometry, pProperties)
 {
 }
 
-Condition::Pointer ElasticConstraint::Create(IndexType NewId, NodesArrayType
-                                        const& ThisNodes,  PropertiesType::Pointer pProperties) const
+ElasticConstraint::ElasticConstraint( IndexType NewId, Node<3>::Pointer const& pNode, PropertiesType::Pointer pProperties )
+    : Condition( NewId, GeometryType::Pointer( new Point3D<Node<3> >( pNode ) ), pProperties )
 {
-    return Condition::Pointer(new ElasticConstraint(NewId,
-                              GetGeometry().Create(ThisNodes), pProperties));
 }
 
 ElasticConstraint::~ElasticConstraint()
 {
 }
 
+//************************************************************************************
+//************************************************************************************
+Condition::Pointer ElasticConstraint::Create(IndexType NewId, NodesArrayType const& ThisNodes,
+        PropertiesType::Pointer pProperties) const
+{
+    return Condition::Pointer(new ElasticConstraint(NewId, GetGeometry().Create(ThisNodes), pProperties));
+}
+
+Condition::Pointer ElasticConstraint::Create(IndexType NewId, GeometryType::Pointer pGeom,
+        PropertiesType::Pointer pProperties) const
+{
+    return Condition::Pointer(new ElasticConstraint(NewId, pGeom, pProperties));
+}
 
 //************************************************************************************
 //************************************************************************************
@@ -143,10 +153,10 @@ void ElasticConstraint::CalculateAll( MatrixType& rLeftHandSideMatrix, VectorTyp
     if(rLeftHandSideMatrix.size1() != number_of_nodes*dim)
         rLeftHandSideMatrix.resize(number_of_nodes*dim,number_of_nodes*dim,false);
     noalias(rLeftHandSideMatrix) = ZeroMatrix(number_of_nodes*dim,number_of_nodes*dim);
+
     if(rRightHandSideVector.size() != number_of_nodes*dim)
         rRightHandSideVector.resize(number_of_nodes*dim,false);
     noalias(rRightHandSideVector) = ZeroVector(number_of_nodes*dim);
-    
 
     if( number_of_nodes == 1 )
     {
@@ -160,16 +170,23 @@ void ElasticConstraint::CalculateAll( MatrixType& rLeftHandSideMatrix, VectorTyp
     }
     else
     {
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        //initialize the geometry
+        GetGeometry().Initialize(GetGeometry().GetDefaultIntegrationMethod());
+        #endif
+
+        GeometryData::IntegrationMethod ThisIntegrationMethod = GetGeometry().GetDefaultIntegrationMethod();
+
         //reading integration points and local gradients
-        const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( GetGeometry().GetDefaultIntegrationMethod() );
-        const GeometryType::ShapeFunctionsGradientsType& DN_De = GetGeometry().ShapeFunctionsLocalGradients( GetGeometry().GetDefaultIntegrationMethod() );
-        const Matrix& Ncontainer = GetGeometry().ShapeFunctionsValues( GetGeometry().GetDefaultIntegrationMethod() );
+        const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( ThisIntegrationMethod );
+        const GeometryType::ShapeFunctionsGradientsType& DN_De = GetGeometry().ShapeFunctionsLocalGradients( ThisIntegrationMethod );
+        const Matrix& Ncontainer = GetGeometry().ShapeFunctionsValues( ThisIntegrationMethod );
         
-        array_1d<double, 3 > tangent_1;
-        array_1d<double, 3 > tangent_2;
-        array_1d<double, 3 > normal_vector;
+        array_1d<double, 3> tangent_1;
+        array_1d<double, 3> tangent_2;
+        array_1d<double, 3> normal_vector;
              
-        for (unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++)
+        for (unsigned int PointNumber = 0; PointNumber < integration_points.size(); ++PointNumber)
         {
             Vector bedding = ZeroVector(3);
             Vector displacement = ZeroVector(3);
@@ -183,32 +200,58 @@ void ElasticConstraint::CalculateAll( MatrixType& rLeftHandSideMatrix, VectorTyp
              
             for ( unsigned int node = 0; node < GetGeometry().size(); node++ )
             {
-                tangent_1 += GetGeometry()[node] * DN_De[PointNumber]( node, 0 );
-                tangent_2 += GetGeometry()[node] * DN_De[PointNumber]( node, 1 );
+                tangent_1 += GetGeometry()[node].GetInitialPosition() * DN_De[PointNumber]( node, 0 );
+                tangent_2 += GetGeometry()[node].GetInitialPosition() * DN_De[PointNumber]( node, 1 );
             
                 noalias( displacement ) += GetGeometry()[node].GetSolutionStepValue( DISPLACEMENT ) * Ncontainer(PointNumber,node);
                 noalias( bedding ) += GetGeometry()[node].GetSolutionStepValue( ELASTIC_BEDDING_STIFFNESS ) * Ncontainer(PointNumber,node);
             }
-        
+
             normal_vector = MathUtils<double>::CrossProduct( tangent_1, tangent_2 );
             double IntegrationWeight = integration_points[PointNumber].Weight();
             double dA = MathUtils<double>::Norm3( normal_vector );
-        
-            for ( unsigned int node = 0; node < GetGeometry().size(); node++ )
+            KRATOS_WATCH(displacement)
+//            KRATOS_WATCH(IntegrationWeight)
+//            KRATOS_WATCH(dA)
+//            KRATOS_WATCH(bedding)
+//            KRATOS_WATCH(CalculateStiffnessMatrixFlag)
+
+            if( CalculateResidualVectorFlag )
             {
-                for( unsigned int i=0; i<dim; i++ )
+                for ( unsigned int prim = 0; prim < GetGeometry().size(); ++prim )
                 {
-                    if( CalculateResidualVectorFlag )
+                    for( unsigned int i = 0; i < dim; ++i )
                     {
-                        rRightHandSideVector[node*dim+i] -= displacement[i]*bedding[i]*IntegrationWeight*dA;
+                        rRightHandSideVector[prim*dim+i] -= displacement[i]*bedding[i]*IntegrationWeight*dA;
                     }
-                    if( CalculateStiffnessMatrixFlag )
+                }
+            }
+
+            if( CalculateStiffnessMatrixFlag )
+            {
+                for ( unsigned int prim = 0; prim < GetGeometry().size(); ++prim )
+                {
+                    for( unsigned int i = 0; i < dim; ++i )
                     {
-                        rLeftHandSideMatrix(node*dim+i,node*dim+i) += bedding[i]*IntegrationWeight*dA;
+                        for ( unsigned int sec = 0; sec < GetGeometry().size(); ++sec )
+                        {
+                            rLeftHandSideMatrix(prim*dim+i, sec*dim+i) += Ncontainer(PointNumber,sec) * bedding[i] * IntegrationWeight*dA;
+                        }
                     }
                 }
             }
         }
+
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        //clean the internal data of the geometry
+        GetGeometry().Clean();
+        #endif
+
+        if( CalculateResidualVectorFlag )
+            KRATOS_WATCH( rRightHandSideVector )
+
+        if( CalculateStiffnessMatrixFlag )
+            KRATOS_WATCH( rLeftHandSideMatrix )
     }
     
     KRATOS_CATCH("")
@@ -220,11 +263,14 @@ void ElasticConstraint::CalculateAll( MatrixType& rLeftHandSideMatrix, VectorTyp
 //************************************************************************************
 void ElasticConstraint::EquationIdVector(EquationIdVectorType& rResult, ProcessInfo& CurrentProcessInfo)
 {
-    int number_of_nodes = GetGeometry().PointsNumber();
+    unsigned int number_of_nodes = GetGeometry().size();
     unsigned int index;
     unsigned int dim = 3;
-    rResult.resize(number_of_nodes*dim);
-    for (int i=0; i<number_of_nodes; i++)
+
+    if(rResult.size() != number_of_nodes*dim)
+        rResult.resize(number_of_nodes*dim);
+
+    for (unsigned int i = 0; i < number_of_nodes; i++)
     {
         index = i*dim;
         rResult[index] = (GetGeometry()[i].GetDof(DISPLACEMENT_X).EquationId());
@@ -237,10 +283,14 @@ void ElasticConstraint::EquationIdVector(EquationIdVectorType& rResult, ProcessI
 //************************************************************************************
 void ElasticConstraint::GetDofList(DofsVectorType& ConditionalDofList,ProcessInfo& CurrentProcessInfo)
 {
-    unsigned int dim = 3;
-    ConditionalDofList.resize(GetGeometry().size()*dim);
+    unsigned int number_of_nodes = GetGeometry().size();
     unsigned int index;
-    for (unsigned int i=0; i<GetGeometry().size(); i++)
+    unsigned int dim = 3;
+
+    if(ConditionalDofList.size() != number_of_nodes*dim)
+        ConditionalDofList.resize(number_of_nodes*dim);
+
+    for (unsigned int i = 0; i < number_of_nodes; i++)
     {
         index = i*dim;
         ConditionalDofList[index] = (GetGeometry()[i].pGetDof(DISPLACEMENT_X));

@@ -305,6 +305,7 @@ public:
         KRATOS_TRY
 
         ProcessInfo CurrentProcessInfo= r_model_part.GetProcessInfo();
+        BaseType::InitializeNonLinIteration(r_model_part, A, Dx, b);
         //Update nodal values and nodal velocities at mAlpha
         for(ModelPart::NodeIterator i = r_model_part.NodesBegin() ;
                 i != r_model_part.NodesEnd() ; i++)
@@ -485,7 +486,7 @@ public:
         TSystemVectorType& b)
     {
         KRATOS_TRY
-
+        BaseType::FinalizeNonLinIteration(r_model_part, A, Dx, b);
         KRATOS_CATCH("")
     }
 
@@ -578,10 +579,11 @@ public:
         TSystemVectorType& b)
     {
 
-        InitializeNonLinIteration(r_model_part, A, Dx, b);
+//        InitializeNonLinIteration(r_model_part, A, Dx, b); // hbui: why do we have it here?
 
         ProcessInfo CurrentProcessInfo= r_model_part.GetProcessInfo();
 
+        // we manually FinalizeSolutionStep for each entities because the parent function is multithreaded
         ElementsArrayType& pElements = r_model_part.Elements();
         for (typename ElementsArrayType::ptr_iterator it = pElements.ptr_begin(); it != pElements.ptr_end(); ++it)
         {
@@ -748,7 +750,7 @@ public:
 
         Matrix MassMatrix;
 
-        (rCurrentElement)->InitializeNonLinearIteration(CurrentProcessInfo);
+//        (rCurrentElement)->InitializeNonLinearIteration(CurrentProcessInfo); // hbui: we shall call it from outside
 
         (rCurrentElement)->CalculateLocalSystem(LHS_Contribution, RHS_Contribution, CurrentProcessInfo);
 
@@ -776,7 +778,7 @@ public:
         ProcessInfo& CurrentProcessInfo)
     {
         //Initializing the non linear iteration for the current element
-        (rCurrentElement) -> InitializeNonLinearIteration(CurrentProcessInfo);
+//        (rCurrentElement) -> InitializeNonLinearIteration(CurrentProcessInfo); // hbui: we shall call it from outside
         //basic operations for the element considered
         (rCurrentElement)->CalculateRightHandSide(RHS_Contribution,CurrentProcessInfo);
         (rCurrentElement)->EquationIdVector(EquationId,CurrentProcessInfo);
@@ -824,8 +826,7 @@ public:
         ProcessInfo& CurrentProcessInfo)
     {
         KRATOS_TRY
-        (rCurrentCondition) ->
-        CalculateRightHandSide(RHS_Contribution,CurrentProcessInfo);
+        (rCurrentCondition)->CalculateRightHandSide(RHS_Contribution,CurrentProcessInfo);
         (rCurrentCondition)->EquationIdVector(EquationId,CurrentProcessInfo);
         KRATOS_CATCH("")
     }

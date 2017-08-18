@@ -123,7 +123,7 @@ public:
     /// Default constructor.
     /// This constructor will take all elements of the model_part for topology optimization
     TopologyUpdateProcess(ModelPart& r_model_part, double volfrac, double rmin, int ft)
-    : mr_model_part(r_model_part), mvolfrac(volfrac), mrmin(rmin), mtotal_volume(0.0), mft(ft), mbinsize(100)
+    : mr_model_part(r_model_part), mvolfrac(volfrac), mrmin(rmin), mft(ft), mbinsize(100), mtotal_volume(0.0)
     {
         mrElements = r_model_part.Elements();
     }
@@ -200,7 +200,11 @@ public:
             if(num_results >= max_number_of_results)
             {
                 KRATOS_WATCH((*it)->Id())
-                KRATOS_THROW_ERROR(std::runtime_error, "The number of founded neighbour elements is larger than maximum number of results.", "Try to increase the maximum number of results.")
+                std::stringstream ss;
+                ss << "Error at element " << (*it)->Id();
+                ss << ".The number of founded neighbour elements (=" << num_results << ") is larger than maximum number of results (="
+                   << max_number_of_results << "). Try to increase the maximum number of results." << std::endl;
+                KRATOS_THROW_ERROR(std::runtime_error, ss.str(), "")
             }
 
             if(num_results > 0)
@@ -221,6 +225,8 @@ public:
         }
 
         /* Initialize the material density and young modulus for each element */
+        std::size_t min_neighbour_size = 1e10;
+        std::size_t max_neighbour_size = 0;
         for(ElementsContainerType::iterator i_element = mrElements.begin() ; i_element != mrElements.end(); ++i_element)
         {
             i_element->SetValue(MATERIAL_DENSITY, mvolfrac);
@@ -230,7 +236,17 @@ public:
             double young = GetModulus(i_element->GetProperties(), i_element->GetValue(MATERIAL_DENSITY_FILTERED));
             std::vector<double> Modulus(integration_points.size(), young);
             i_element->SetValueOnIntegrationPoints(YOUNG_MODULUS, Modulus, mr_model_part.GetProcessInfo());
+
+            std::size_t neighbour_size = i_element->GetValue(NEIGHBOUR_ELEMENTS).size();
+            if(neighbour_size <= 1)
+            {
+                std::cout << "WARNING: Element " << i_element->Id() << " has no neighbour" << std::endl;
+            }
+            if(neighbour_size > max_neighbour_size) max_neighbour_size = neighbour_size;
+            if(neighbour_size < min_neighbour_size) min_neighbour_size = neighbour_size;
         }
+        KRATOS_WATCH(min_neighbour_size)
+        KRATOS_WATCH(max_neighbour_size)
 
         /* Compute the total volume of the system */
         mtotal_volume = 0.0;
@@ -297,7 +313,7 @@ public:
             i_element->SetValue(ELEMENT_DV, 1.0);
         }
         mobjective = Compliance;
-//        KRATOS_WATCH(Compliance)
+        std::cout << "Compute structural compliance completed. Compliance = " << Compliance << std::endl;
 
         #ifdef DEBUG_WITH_MPI
         if(mpi_rank == 0)
@@ -373,6 +389,7 @@ public:
         }
         else
             KRATOS_THROW_ERROR(std::logic_error, "Invalid type of filter:", mft)
+        std::cout << "Compute structural sensitivity completed" << std::endl;
 
         // synchronize
         this->Synchronize(ELEMENT_DC_FILTERED);
@@ -381,12 +398,12 @@ public:
         /*** OPTIMALITY CRITERIA UPDATE OF DESIGN VARIABLES AND PHYSICAL DENSITIES ***/
         double l1 = 0.0;
         double l2 = 1.0e9;
-        double lmid;
+        double lmid = 0.5*(l1+l2);
         double move = 0.2; // TODO parameterize these options
         double tol = 1.0e-3;
-//        unsigned int cnt = 0;
+        unsigned int cnt = 0;
 
-        while( (l2 - l1) / (l1 + l2) > tol )
+        while( ( (l2 - l1) / (l1 + l2) > tol ) && ( lmid > tol ) )
         {
             lmid = 0.5 * (l1 + l2);
 
@@ -454,6 +471,7 @@ public:
 //            KRATOS_WATCH(l2)
 //            KRATOS_WATCH(lmid)
         }
+        std::cout << "Optimality criteria update completed" << std::endl;
 
         // compute the change in total density
         mchange = 0.0;

@@ -187,10 +187,10 @@ void LineForce::CalculateRightHandSide( VectorType& rRightHandSideVector,
                 Load( i ) += LoadOnNode( i ) * Ncontainer( PointNumber, n );
             }
         }
-        
+//        KRATOS_WATCH(Load)
         double IntegrationWeight = GetGeometry().IntegrationPoints()[PointNumber].Weight();
 
-//        if(dim == 2) IntegrationWeight *= GetProperties()[THICKNESS]; // TODO: check
+        if(dim == 2) IntegrationWeight *= GetProperties()[THICKNESS];
 
         Vector t = ZeroVector( dim );//tangential vector
         for ( unsigned int n = 0; n < GetGeometry().size(); ++n )

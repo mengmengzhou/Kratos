@@ -164,11 +164,13 @@ Vector& PlaneStress::GetValue( const Variable<Vector>& rThisVariable, Vector& rV
 {
     if ( rThisVariable == STRESSES )
     {
-//        const unsigned int size = mCurrentStress.size();
-//        rValue.resize(size, false );
-//        noalias( rValue ) = mCurrentStress;
+        rValue = mCurrentStress;
+    }
 
-        rValue.resize(6, false);
+    if ( rThisVariable == THREED_STRESSES )
+    {
+        if(rValue.size() != 6)
+            rValue.resize(6, false);
         rValue(0) = mCurrentStress(0);
         rValue(1) = mCurrentStress(1);
         rValue(2) = 0.0;
@@ -191,6 +193,12 @@ void PlaneStress::InitializeMaterial( const Properties& props,
     mNU = props[POISSON_RATIO];
 }
 
+void PlaneStress::ResetMaterial( const Properties& props,
+                                 const GeometryType& geom,
+                                 const Vector& ShapeFunctionsValues )
+{
+    noalias(mCurrentStress) = ZeroVector(3);
+}
 
 void PlaneStress::InitializeSolutionStep( const Properties& props,
         const GeometryType& geom, //this is just to give the array of nodes

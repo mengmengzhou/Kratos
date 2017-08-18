@@ -43,9 +43,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 /* *********************************************************
 *
-*   Last Modified by:    $Author: Nelson$
-*   Date:                $Date: 2009-03-17 14:35:29 $
-*   Revision:            $Revision: 1.2 $
+*   Last Modified by:    $Author: Jelena$
+*   Date:                $Date:  $
+*   Revision:            $Revision: 1.0 $
 *
 * ***********************************************************/
 
@@ -67,8 +67,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "includes/serializer.h"
 //#include "includes/ublas_interface.h"
 #include "includes/variables.h"
-#include "custom_conditions/master_contact_point_2d.h"
-#include "custom_conditions/slave_contact_point_2d.h"
 
 namespace Kratos
 {
@@ -91,17 +89,19 @@ public:
     /**
      * Default constructor.
      */
-//     PointPointJointCondition( IndexType NewId, GeometryType::Pointer pGeometry);
+    PointPointJointCondition( IndexType NewId, GeometryType::Pointer pGeometry);
+
+    PointPointJointCondition( IndexType NewId, GeometryType::Pointer pGeometry,
+                           PropertiesType::Pointer pProperties);
 
 //     PointPointJointCondition( IndexType NewId, NodesArrayType const& ThisNodes);
-    
-    PointPointJointCondition( IndexType NewId, Node<3>::Pointer const& node1, Node<3>::Pointer const& node2 );
-    
-    PointPointJointCondition( IndexType NewId, NodesArrayType const& ThisNodes );
 
-
-//     PointPointJointCondition( IndexType NewId, GeometryType::Pointer pGeometry,
-//                            PropertiesType::Pointer pProperties);
+    /**
+     * Custom constructor.
+     */
+    PointPointJointCondition( IndexType NewId, Node<3>::Pointer const& node1, Node<3>::Pointer const& node2, PropertiesType::Pointer pProperties );
+    
+    PointPointJointCondition( IndexType NewId, NodesArrayType const& ThisNodes, PropertiesType::Pointer pProperties );
 
 
     /**

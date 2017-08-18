@@ -50,6 +50,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 * ***********************************************************/
 
 // System includes
+#include <typeinfo>
 
 
 // External includes
@@ -64,6 +65,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "geometries/tetrahedra_3d_4.h"
 #include "geometries/prism_3d_6.h"
 #include "structural_application.h"
+
+#define ENABLE_DEBUG_CONSTITUTIVE_LAW
 
 namespace Kratos
 {
@@ -83,91 +86,112 @@ UnsaturatedSoilsElement_2phase_SmallStrain::UnsaturatedSoilsElement_2phase_Small
         GeometryType::Pointer pGeometry,  PropertiesType::Pointer pProperties )
     : Element( NewId, pGeometry, pProperties )
 {
+    // account for Bezier geometry
+    std::string geo_name = typeid(GetGeometry()).name();
+    if ( geo_name.find("Bezier") != std::string::npos )
+    {
+        mNodesPressMin = 1;
+        mNodesPressMax = GetGeometry().size();
+        mNodesDispMin = 1;
+        mNodesDispMax = GetGeometry().size();
+        mpPressureGeometry = this->pGetGeometry();
+        mThisIntegrationMethod = GeometryData::GI_GAUSS_1;
+//        mThisIntegrationMethod = GeometryData::GI_GAUSS_2;
+//        mThisIntegrationMethod = GeometryData::GI_GAUSS_3;
+//        mThisIntegrationMethod = GetGeometry().GetDefaultIntegrationMethod();//default method
+        mIsStabilised = true;
+        mIsInitialized = false;
+        return;
+    }
+
     //setting up the nodal degrees of freedom
     //with DISPLACEMENT_X, DISPLACEMENT_Y, DISPLACEMENT_Z
     //DOFs at the end of time step
     //All calculations are made on the general midpoint alpha
     // Variables DOF_ALPHA are updated in the scheme
-    if ( GetGeometry().size() == 27 || GetGeometry().size() == 20 || GetGeometry().size() == 10  || GetGeometry().size() == 15 || GetGeometry().size() == 8 )
+    if ( GetGeometry().GetGeometryType() == GeometryData::Kratos_Hexahedra3D27 )
     {
-        if ( GetGeometry().size() == 27 )
-        {
-            mNodesPressMin = 1;
-            mNodesPressMax = 8;
-            mNodesDispMin = 1;
-            mNodesDispMax = 27;
-            mpPressureGeometry = Geometry< Node<3> >::Pointer( new Hexahedra3D8 <Node<3> >(
-                                     GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ),
-                                     GetGeometry()( 4 ), GetGeometry()( 5 ), GetGeometry()( 6 ), GetGeometry()( 7 ) ) );
-            mThisIntegrationMethod = GeometryData::GI_GAUSS_3;
-            mIsStabilised = false;
-        }
-
-        if ( GetGeometry().size() == 20 ) //remarks: this element does not work correctly with the 20 nodes discretisation. See the cube consolidation test
-        {
-            mNodesPressMin = 1;
-            mNodesPressMax = 8;
-            mNodesDispMin = 1;
-            mNodesDispMax = 20;
-            mpPressureGeometry = Geometry< Node<3> >::Pointer( new Hexahedra3D8 <Node<3> >(
-                                     GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ),
-                                     GetGeometry()( 4 ), GetGeometry()( 5 ), GetGeometry()( 6 ), GetGeometry()( 7 ) ) );
-            mThisIntegrationMethod = GeometryData::GI_GAUSS_3;
-            mIsStabilised = false;
-        }
-
-        if ( GetGeometry().size() == 10 )
-        {
-            mNodesPressMin = 1;
-            mNodesPressMax = 4;
-            mNodesDispMin = 1;
-            mNodesDispMax = 10;
-            mpPressureGeometry = Geometry< Node<3> >::Pointer( new Tetrahedra3D4 <Node<3> >( GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ) ) );
+        mNodesPressMin = 1;
+        mNodesPressMax = 8;
+        mNodesDispMin = 1;
+        mNodesDispMax = 27;
+        mpPressureGeometry = Geometry< Node<3> >::Pointer( new Hexahedra3D8 <Node<3> >(
+                                 GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ),
+                                 GetGeometry()( 4 ), GetGeometry()( 5 ), GetGeometry()( 6 ), GetGeometry()( 7 ) ) );
+        mThisIntegrationMethod = GeometryData::GI_GAUSS_3;
+        mIsStabilised = false;
+    }
+    else if ( GetGeometry().GetGeometryType() == GeometryData::Kratos_Hexahedra3D20 ) //remarks: this element does not work correctly with the 20 nodes discretisation. See the cube consolidation test
+    {
+        mNodesPressMin = 1;
+        mNodesPressMax = 8;
+        mNodesDispMin = 1;
+        mNodesDispMax = 20;
+        mpPressureGeometry = Geometry< Node<3> >::Pointer( new Hexahedra3D8 <Node<3> >(
+                                 GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ),
+                                 GetGeometry()( 4 ), GetGeometry()( 5 ), GetGeometry()( 6 ), GetGeometry()( 7 ) ) );
+        mThisIntegrationMethod = GeometryData::GI_GAUSS_3;
+        mIsStabilised = false;
+    }
+    else if ( GetGeometry().GetGeometryType() == GeometryData::Kratos_Tetrahedra3D10 )
+    {
+        mNodesPressMin = 1;
+        mNodesPressMax = 4;
+        mNodesDispMin = 1;
+        mNodesDispMax = 10;
+        mpPressureGeometry = Geometry< Node<3> >::Pointer( new Tetrahedra3D4 <Node<3> >( GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ) ) );
 //            mThisIntegrationMethod = GeometryData::GI_GAUSS_5; //???
-            mThisIntegrationMethod = GeometryData::GI_GAUSS_3; //???
-            mIsStabilised = false;
-        }
-
-        if ( GetGeometry().size() == 15 )
-        {
-            mNodesPressMin = 1;
-            mNodesPressMax = 6;
-            mNodesDispMin = 1;
-            mNodesDispMax = 15;
-            mpPressureGeometry = Geometry< Node<3> >::Pointer( new Prism3D6 <Node<3> >( GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ), GetGeometry()( 4 ), GetGeometry()( 5 ) ) );
-            mThisIntegrationMethod = GeometryData::GI_GAUSS_2;
-            mIsStabilised = false;
-        }
-
+//        mThisIntegrationMethod = GeometryData::GI_GAUSS_3; //??? // using this integration rule, GiD will not be able to display
+        mThisIntegrationMethod = GeometryData::GI_GAUSS_2;
+        mIsStabilised = false;
+    }
+    else if ( GetGeometry().GetGeometryType() == GeometryData::Kratos_Prism3D15 )
+    {
+        mNodesPressMin = 1;
+        mNodesPressMax = 6;
+        mNodesDispMin = 1;
+        mNodesDispMax = 15;
+        mpPressureGeometry = Geometry< Node<3> >::Pointer( new Prism3D6 <Node<3> >( GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ), GetGeometry()( 4 ), GetGeometry()( 5 ) ) );
+        mThisIntegrationMethod = GeometryData::GI_GAUSS_2;
+        mIsStabilised = false;
+    }
         // low order element, stabilisation activated
-        if ( GetGeometry().size() == 8 )
-        {
-            mNodesPressMin = 1;
-            mNodesPressMax = 8;
-            mNodesDispMin = 1;
-            mNodesDispMax = 8;
-            mpPressureGeometry = Geometry< Node<3> >::Pointer( new Hexahedra3D8 <Node<3> >(
-                                     GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ),
-                                     GetGeometry()( 4 ), GetGeometry()( 5 ), GetGeometry()( 6 ), GetGeometry()( 7 ) ) );
-            mThisIntegrationMethod = GeometryData::GI_GAUSS_2; //remarks: GI_GAUSS_2 gives better result than GI_GAUSS_3 for tunnel problem
-            mIsStabilised = true;
-        }
-        
-        if ( GetGeometry().size() == 4 )
-        {
-            mNodesPressMin = 1;
-            mNodesPressMax = 4;
-            mNodesDispMin = 1;
-            mNodesDispMax = 4;
-            mpPressureGeometry = Geometry< Node<3> >::Pointer( new Tetrahedra3D4 <Node<3> >(
-                                     GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ) ) );
-            mThisIntegrationMethod = GeometryData::GI_GAUSS_1;
-            mIsStabilised = true;
-        }
+    else if ( GetGeometry().GetGeometryType() == GeometryData::Kratos_Hexahedra3D8 )
+    {
+        mNodesPressMin = 1;
+        mNodesPressMax = 8;
+        mNodesDispMin = 1;
+        mNodesDispMax = 8;
+        mpPressureGeometry = Geometry< Node<3> >::Pointer( new Hexahedra3D8 <Node<3> >(
+                                 GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ),
+                                 GetGeometry()( 4 ), GetGeometry()( 5 ), GetGeometry()( 6 ), GetGeometry()( 7 ) ) );
+        mThisIntegrationMethod = GeometryData::GI_GAUSS_2; //remarks: GI_GAUSS_2 gives better result than GI_GAUSS_3 for tunnel problem
+        mIsStabilised = true;
+    }
+    else if ( GetGeometry().GetGeometryType() == GeometryData::Kratos_Tetrahedra3D4 )
+    {
+        mNodesPressMin = 1;
+        mNodesPressMax = 4;
+        mNodesDispMin = 1;
+        mNodesDispMax = 4;
+        mpPressureGeometry = Geometry< Node<3> >::Pointer( new Tetrahedra3D4 <Node<3> >(
+                                 GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ) ) );
+        mThisIntegrationMethod = GeometryData::GI_GAUSS_2;
+        mIsStabilised = true;
+    }
+    else if ( GetGeometry().GetGeometryType() == GeometryData::Kratos_Prism3D6 )
+    {
+        mNodesPressMin = 1;
+        mNodesPressMax = 6;
+        mNodesDispMin = 1;
+        mNodesDispMax = 6;
+        mpPressureGeometry = Geometry< Node<3> >::Pointer( new Prism3D6 <Node<3> >( GetGeometry()( 0 ), GetGeometry()( 1 ), GetGeometry()( 2 ), GetGeometry()( 3 ), GetGeometry()( 4 ), GetGeometry()( 5 ) ) );
+        mThisIntegrationMethod = GeometryData::GI_GAUSS_2;
+        mIsStabilised = true;
     }
     else
         KRATOS_THROW_ERROR( std::logic_error, "This element matches only with a quadratic hexahedra (8, 20 or 27), tetrahedra (4, 10) or prism (15) geometry" , *this );
-    
+
     mIsInitialized = false;
 }
 
@@ -176,6 +200,11 @@ Element::Pointer UnsaturatedSoilsElement_2phase_SmallStrain::Create( IndexType N
 {
     return Element::Pointer( new UnsaturatedSoilsElement_2phase_SmallStrain( NewId, GetGeometry().Create( ThisNodes ),
                              pProperties ) );
+}
+
+Element::Pointer UnsaturatedSoilsElement_2phase_SmallStrain::Create( IndexType NewId, GeometryType::Pointer pGeom, PropertiesType::Pointer pProperties ) const
+{
+    return Element::Pointer( new UnsaturatedSoilsElement_2phase_SmallStrain( NewId, pGeom, pProperties ) );
 }
 
 UnsaturatedSoilsElement_2phase_SmallStrain::~UnsaturatedSoilsElement_2phase_SmallStrain()
@@ -201,41 +230,56 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::Initialize()
 
         return;
     }
-    
+
+    if(GetProperties().Has( INTEGRATION_ORDER ) == true)
+    {
+        if(GetProperties()[INTEGRATION_ORDER] == 1)
+        {
+            mThisIntegrationMethod = GeometryData::GI_GAUSS_1;
+        }
+        else if(GetProperties()[INTEGRATION_ORDER] == 2)
+        {
+            mThisIntegrationMethod = GeometryData::GI_GAUSS_2;
+        }
+        else if(GetProperties()[INTEGRATION_ORDER] == 3)
+        {
+            mThisIntegrationMethod = GeometryData::GI_GAUSS_3;
+        }
+        else if(GetProperties()[INTEGRATION_ORDER] == 4)
+        {
+            mThisIntegrationMethod = GeometryData::GI_GAUSS_4;
+        }
+        else if(GetProperties()[INTEGRATION_ORDER] == 5)
+        {
+            mThisIntegrationMethod = GeometryData::GI_GAUSS_5;
+        }
+        else
+            KRATOS_THROW_ERROR(std::logic_error, "Does not support for more integration points", *this)
+    }
+
     //number of integration points used, mThisIntegrationMethod refers to the
     //integration method defined in the constructor
     const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
 
-    //initializing the Jacobian, the inverse Jacobian and Jacobians determinant in the reference
-    // configuration
-    mInvJ0.resize( integration_points.size() );
+    //initializing the Jacobian in the reference configuration
+    GeometryType::JacobiansType J0;
+    Matrix DeltaPosition(GetGeometry().size(), 3);
 
-    for ( unsigned int i = 0; i < integration_points.size(); i++ )
+    for ( unsigned int node = 0; node < GetGeometry().size(); ++node )
     {
-        mInvJ0[i].resize( dim, dim, false );
-        noalias( mInvJ0[i] ) = ZeroMatrix( dim, dim );
+        noalias( row( DeltaPosition, node ) ) = GetGeometry()[node].Coordinates() - GetGeometry()[node].GetInitialPosition();
     }
 
-    mDetJ0.resize( integration_points.size() );
+    J0 = GetGeometry().Jacobian( J0, mThisIntegrationMethod, DeltaPosition );
 
-    noalias( mDetJ0 ) = ZeroVector( integration_points.size() );
-
+    //calculating the domain size
     mTotalDomainInitialSize = 0.0;
-    
-    GeometryType::JacobiansType J0( integration_points.size() );
-
-    //calculating the Jacobian
-    J0 = GetGeometry().Jacobian( J0, mThisIntegrationMethod );
-
-    //calculating the inverse J0
-    for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++ )
+    for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); ++PointNumber )
     {
         //getting informations for integration
         double IntegrationWeight = integration_points[PointNumber].Weight();
-        //calculating and storing inverse of the jacobian and the parameters needed
-        MathUtils<double>::InvertMatrix( J0[PointNumber], mInvJ0[PointNumber], mDetJ0[PointNumber] );
         //calculating the total area/volume
-        mTotalDomainInitialSize += mDetJ0[PointNumber] * IntegrationWeight;
+        mTotalDomainInitialSize += MathUtils<double>::Det(J0[PointNumber]) * IntegrationWeight;
     }
 
     //Set Up Initial displacement for StressFreeActivation of Elements
@@ -254,36 +298,6 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::Initialize()
     }
 
     mIsInitialized = true;
-//    for ( unsigned int i = ( mNodesDispMin - 1 ) ; i < mNodesDispMax ; i++ )
-//    {
-//        ( GetGeometry()[i] ).GetSolutionStepValue( DISPLACEMENT_NULL ) =
-//            ( GetGeometry()[i] ).GetSolutionStepValue( DISPLACEMENT );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( DISPLACEMENT_EINS ) =
-//            ( GetGeometry()[i] ).GetSolutionStepValue( DISPLACEMENT );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( DISPLACEMENT_DT ) = ZeroVector( 3 );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( DISPLACEMENT_NULL_DT ) = ZeroVector( 3 );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( DISPLACEMENT_EINS_DT ) = ZeroVector( 3 );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( ACCELERATION ) = ZeroVector( 3 );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( ACCELERATION_NULL ) = ZeroVector( 3 );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( ACCELERATION_EINS ) = ZeroVector( 3 );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( DISPLACEMENT_OLD ) = ZeroVector( 3 );
-// // Removed due to Bug with Pressure DOFs accoiated to every node
-// //         }
-// //         for(unsigned int i = (mNodesPressMin-1) ; i < mNodesPressMax ; i++)
-// //         {
-//        ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE_NULL ) =
-//            ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE_EINS ) =
-//            ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE );
-//        ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE_DT ) = 0;
-//        ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE_NULL_DT ) = 0;
-//        ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE_EINS_DT ) = 0;
-//        ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE_ACCELERATION ) = 0;
-//        ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE_NULL_ACCELERATION ) = 0;
-//        ( GetGeometry()[i] ).GetSolutionStepValue( WATER_PRESSURE_EINS_ACCELERATION ) = 0;
-//        ( GetGeometry()[i] ).GetSolutionStepValue( REACTION_WATER_PRESSURE ) = 0;
-// //                 (GetGeometry()[i]).GetSolutionStepValue(PRESSURE)=0;
-//    }
 
     KRATOS_CATCH( "" )
 }
@@ -294,8 +308,16 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::ResetConstitutiveLaw()
 
     if ( GetProperties()[CONSTITUTIVE_LAW] != NULL )
     {
-        for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); i++ )
-            mConstitutiveLawVector[i]->ResetMaterial( GetProperties(), GetGeometry(), row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), i ) );
+        for ( unsigned int PointNumber = 0; PointNumber < mConstitutiveLawVector.size(); ++PointNumber )
+        {
+            #ifdef ENABLE_DEBUG_CONSTITUTIVE_LAW
+            mConstitutiveLawVector[PointNumber]->SetValue(PARENT_ELEMENT_ID, this->Id(), *(ProcessInfo*)0);
+            mConstitutiveLawVector[PointNumber]->SetValue(INTEGRATION_POINT_INDEX, PointNumber, *(ProcessInfo*)0);
+            #endif
+            Vector dummy;
+//            dummy = row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), PointNumber );
+            mConstitutiveLawVector[PointNumber]->ResetMaterial( GetProperties(), GetGeometry(),  dummy);
+        }
     }
 
     KRATOS_CATCH( "" )
@@ -308,12 +330,41 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::ResetConstitutiveLaw()
 */
 void UnsaturatedSoilsElement_2phase_SmallStrain::InitializeSolutionStep( ProcessInfo& CurrentProcessInfo )
 {
-    //reading integration points and local gradients
-    const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
-
-    for ( unsigned int Point = 0; Point < integration_points.size(); Point++ )
+    if(mConstitutiveLawVector[0]->Has(CURRENT_STRAIN_VECTOR))
     {
-        mConstitutiveLawVector[Point]->InitializeSolutionStep( GetProperties(), GetGeometry(), row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), Point ), CurrentProcessInfo );
+        std::vector<Vector> Values;
+        this->GetValueOnIntegrationPoints(CURRENT_STRAIN_VECTOR, Values, CurrentProcessInfo);
+        for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
+        {
+            mConstitutiveLawVector[Point]->SetValue( CURRENT_STRAIN_VECTOR, Values[Point], CurrentProcessInfo );
+        }
+    }
+
+    for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
+    {
+        Vector dummy;
+//        dummy = row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), Point );
+        mConstitutiveLawVector[Point]->InitializeSolutionStep( GetProperties(), GetGeometry(), dummy, CurrentProcessInfo );
+    }
+}
+
+void UnsaturatedSoilsElement_2phase_SmallStrain::InitializeNonLinearIteration( ProcessInfo& CurrentProcessInfo )
+{
+    if(mConstitutiveLawVector[0]->Has(CURRENT_STRAIN_VECTOR))
+    {
+        std::vector<Vector> Values;
+        this->GetValueOnIntegrationPoints(CURRENT_STRAIN_VECTOR, Values, CurrentProcessInfo);
+        for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
+        {
+            mConstitutiveLawVector[Point]->SetValue( CURRENT_STRAIN_VECTOR, Values[Point], CurrentProcessInfo );
+        }
+    }
+
+    for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
+    {
+        Vector dummy;
+//        dummy = row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), Point );
+        mConstitutiveLawVector[Point]->InitializeNonLinearIteration( GetProperties(), GetGeometry(), dummy, CurrentProcessInfo );
     }
 }
 
@@ -324,10 +375,10 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         bool CalculateStiffnessMatrixFlag, bool CalculateResidualVectorFlag )
 {
     KRATOS_TRY
-    
+
     unsigned int number_of_nodes_disp = ( mNodesDispMax - mNodesDispMin + 1 );
     unsigned int number_of_nodes_press = ( mNodesPressMax - mNodesPressMin + 1 );
-//    unsigned int number_of_nodes = number_of_nodes_disp+number_of_nodes_press;
+//    unsigned int number_of_nodes = number_of_nodes_disp + number_of_nodes_press;
     unsigned int dim = GetGeometry().WorkingSpaceDimension();
     unsigned int strain_size = dim * (dim + 1) / 2;
 
@@ -353,6 +404,11 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         noalias( rRightHandSideVector ) = ZeroVector( MatSize1 ); //resetting RHS
     }
 
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    // initialize the geometry
+    GetGeometry().Initialize(mThisIntegrationMethod);
+    #endif
+
     //reading integration points and local gradients
     const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
 
@@ -369,7 +425,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
     double Weight;
 
     double capillaryPressure;
-    
+
     double capillaryPressure_Dt;
 
     double waterPressure;
@@ -377,6 +433,8 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
     double porosity;
 
     double density;
+
+    Matrix InvJ(dim, dim);
 
     double DetJ = 0.0;
 
@@ -397,7 +455,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
     Vector N_DISP( number_of_nodes_disp );
 
     Vector N_PRESS( number_of_nodes_press );
-    
+
     Matrix tanC_W( dim, dim );
 
     if ( CalculateStiffnessMatrixFlag == true ) //calculation of the matrix is required
@@ -407,7 +465,6 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
 
         noalias( Help_K_WU ) = ZeroMatrix( MatSizeP, MatSizeU );
         noalias( Help_K_WW ) = ZeroMatrix( MatSizeP, MatSizeP );
-
     }
 
     if ( CalculateResidualVectorFlag == true ) //calculation of the matrix is required
@@ -437,6 +494,17 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         CurrentDisp( node, 2 ) = GetGeometry()[node].GetSolutionStepValue( DISPLACEMENT_Z );
     }
 
+    //initializing the Jacobian in the reference configuration
+    GeometryType::JacobiansType J0;
+    Matrix DeltaPosition(GetGeometry().size(), 3);
+
+    for ( unsigned int node = 0; node < GetGeometry().size(); ++node )
+    {
+        noalias( row( DeltaPosition, node ) ) = GetGeometry()[node].Coordinates() - GetGeometry()[node].GetInitialPosition();
+    }
+
+    J0 = GetGeometry().Jacobian( J0, mThisIntegrationMethod, DeltaPosition );
+
     /////////////////////////////////////////////////////////////////////////
     //// Integration in space to compute the average of pressure shape function
     /////////////////////////////////////////////////////////////////////////
@@ -447,7 +515,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); ++PointNumber )
         {
             Weight = integration_points[PointNumber].Weight();
-            DetJ   = mDetJ0[PointNumber];
+            DetJ   = MathUtils<double>::Det(J0[PointNumber]);
 
             // Shape Functions on current spatial quadrature point
             noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
@@ -456,7 +524,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         }
         N_PRESS_averaged /= mTotalDomainInitialSize;
     }
-        
+
     /////////////////////////////////////////////////////////////////////////
     //// Integration in space to compute the average of capillaryPressure_Dt
     /////////////////////////////////////////////////////////////////////////
@@ -466,12 +534,12 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); ++PointNumber )
         {
             Weight = integration_points[PointNumber].Weight();
-            DetJ   = mDetJ0[PointNumber];
+            DetJ   = MathUtils<double>::Det(J0[PointNumber]);
 
             // Shape Functions on current spatial quadrature point
             noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
             capillaryPressure_Dt = GetDerivativeDCapillaryPressureDt(N_PRESS);
-                
+
             averageCapillaryPressure_dt += capillaryPressure_Dt * Weight * DetJ;
         }
         averageCapillaryPressure_dt /= mTotalDomainInitialSize;
@@ -483,6 +551,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
     /////////////////////////////////////////////////////////////////////////
     Matrix Bdil_bar;
     if(GetProperties().Has(IS_BBAR))
+    {
         if(GetProperties()[IS_BBAR] == true)
         {
             Bdil_bar.resize(number_of_nodes_disp, dim);
@@ -490,15 +559,13 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
             for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); ++PointNumber )
             {
                 Weight = integration_points[PointNumber].Weight();
-                DetJ   = mDetJ0[PointNumber];
-                noalias( DN_DX_DISP ) = prod( DN_De_Displacement[PointNumber], mInvJ0[PointNumber] );
-//                KRATOS_WATCH(DN_DX_DISP)
-//                KRATOS_WATCH(Weight)
-//                KRATOS_WATCH(DetJ)
+                MathUtils<double>::InvertMatrix( J0[PointNumber], InvJ, DetJ );
+                noalias( DN_DX_DISP ) = prod( DN_De_Displacement[PointNumber], InvJ );
                 noalias(Bdil_bar) += DN_DX_DISP * Weight * DetJ;
             }
             Bdil_bar /= mTotalDomainInitialSize;
         }
+    }
 //    KRATOS_WATCH(Bdil_bar / dim)
 //    KRATOS_WATCH(mTotalDomainInitialSize)
     /////////////////////////////////////////////////////////////////////////
@@ -506,13 +573,13 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
     /////////////////////////////////////////////////////////////////////////
     for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); ++PointNumber )
     {
-        noalias( DN_DX_PRESS ) = prod( DN_De_Pressure[PointNumber], mInvJ0[PointNumber] );
+        MathUtils<double>::InvertMatrix( J0[PointNumber], InvJ, DetJ );
 
-        noalias( DN_DX_DISP ) = prod( DN_De_Displacement[PointNumber], mInvJ0[PointNumber] );
+        noalias( DN_DX_PRESS ) = prod( DN_De_Pressure[PointNumber], InvJ );
+
+        noalias( DN_DX_DISP ) = prod( DN_De_Displacement[PointNumber], InvJ );
 
         Weight = integration_points[PointNumber].Weight();
-
-        DetJ = mDetJ0[PointNumber];
 
         // Shape Functions on current spatial quadrature point
         noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
@@ -520,10 +587,12 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
 
         //Initializing B_Operator at the current integration point
         if(GetProperties().Has(IS_BBAR))
+        {
             if(GetProperties()[IS_BBAR] == true)
                 CalculateBBaroperator( B, DN_DX_DISP, Bdil_bar );
             else
                 CalculateBoperator( B, DN_DX_DISP );
+        }
         else
             CalculateBoperator( B, DN_DX_DISP );
 
@@ -531,7 +600,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         CalculateStrain( B, CurrentDisp, StrainVector );
 
         noalias(StressVector) = ZeroVector(6);
-        
+
         GetPressures( N_PRESS, capillaryPressure, waterPressure );
         // REMARKS: comment this to maintain consistent linearisation
 //        if( waterPressure < 0.0 ) // avoid going into saturated state
@@ -549,7 +618,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         density = GetAveragedDensity( capillaryPressure, porosity );
 
         CalculateStressAndTangentialStiffnessUnsaturatedSoils( StressVector, TanC_U, tanC_W, StrainVector, waterPressure,  PointNumber, rCurrentProcessInfo );
-        
+
         if ( CalculateStiffnessMatrixFlag == true )
         {
             //Calculation of spatial Stiffnes and Mass Matrix
@@ -589,15 +658,23 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateAll( MatrixType& rLeft
         AssembleTimeSpaceRHSFromSubVectors( rRightHandSideVector, Help_R_U, Help_R_W );
     }
 
-//    KRATOS_WATCH(Help_R_U)
-//    KRATOS_WATCH(Help_R_W)
-//    KRATOS_WATCH(Help_K_UU)
-//    KRATOS_WATCH(Help_K_UW)
-//    KRATOS_WATCH(Help_K_WU)
-//    KRATOS_WATCH(Help_K_WW)
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    // finalize the geometry
+    GetGeometry().Clean();
+    #endif
 
-//    KRATOS_WATCH(rRightHandSideVector)
-//    KRATOS_WATCH(rLeftHandSideMatrix)
+//    if(Id() == 1)
+//    {
+////        KRATOS_WATCH(Help_R_U)
+////        KRATOS_WATCH(Help_R_W)
+////        KRATOS_WATCH(Help_K_UU)
+////        KRATOS_WATCH(Help_K_UW)
+////        KRATOS_WATCH(Help_K_WU)
+////        KRATOS_WATCH(Help_K_WW)
+
+//        KRATOS_WATCH(rRightHandSideVector)
+//        KRATOS_WATCH(rLeftHandSideMatrix)
+//    }
 
     KRATOS_CATCH( "" )
 }
@@ -634,13 +711,23 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateLocalSystem( MatrixTyp
 ////************************************************************************************
 ////************************************************************************************
 
+void UnsaturatedSoilsElement_2phase_SmallStrain::MassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCurrentProcessInfo)
+{
+    KRATOS_THROW_ERROR(std::logic_error, "Deprecated method", "")
+}
+
 void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateMassMatrix( MatrixType& rMassMatrix, ProcessInfo& rCurrentProcessInfo )
 {
-    DampMatrix(rMassMatrix, rCurrentProcessInfo);
+    CalculateDampingMatrix(rMassMatrix, rCurrentProcessInfo);
 }
 
 ////************************************************************************************
 ////************************************************************************************
+
+void UnsaturatedSoilsElement_2phase_SmallStrain::DampMatrix(MatrixType& rDampMatrix, ProcessInfo& rCurrentProcessInfo)
+{
+    KRATOS_THROW_ERROR(std::logic_error, "Deprecated method", "")
+}
 
 void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrix( MatrixType& rDampMatrix, ProcessInfo& rCurrentProcessInfo )
 {
@@ -659,6 +746,11 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrix( MatrixT
         rDampMatrix.resize( MatSize1, MatSize1 );
 
     noalias( rDampMatrix ) = ZeroMatrix( MatSize1, MatSize1 ); //resetting LHS
+
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    // initialize the geometry
+    GetGeometry().Initialize(mThisIntegrationMethod);
+    #endif
 
     const Matrix& Ncontainer_Pressure = mpPressureGeometry->ShapeFunctionsValues( mThisIntegrationMethod );
 
@@ -697,7 +789,20 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrix( MatrixT
 
     noalias( Help_D_WW ) = ZeroMatrix( MatSizeP, MatSizeP );
 
+    Matrix InvJ(dim, dim);
+
     double DetJ = 0.0;
+
+    //initializing the Jacobian in the reference configuration
+    GeometryType::JacobiansType J0;
+    Matrix DeltaPosition(GetGeometry().size(), 3);
+
+    for ( unsigned int node = 0; node < GetGeometry().size(); ++node )
+    {
+        noalias( row( DeltaPosition, node ) ) = GetGeometry()[node].Coordinates() - GetGeometry()[node].GetInitialPosition();
+    }
+
+    J0 = GetGeometry().Jacobian( J0, mThisIntegrationMethod, DeltaPosition );
 
     /////////////////////////////////////////////////////////////////////////
     //// Integration in space to compute the average of pressure shape function
@@ -709,7 +814,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrix( MatrixT
         for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); ++PointNumber )
         {
             Weight = integration_points[PointNumber].Weight();
-            DetJ   = mDetJ0[PointNumber];
+            DetJ   = MathUtils<double>::Det(J0[PointNumber]);
 
             // Shape Functions on current spatial quadrature point
             noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
@@ -724,14 +829,15 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrix( MatrixT
     /////////////////////////////////////////////////////////////////////////
     for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++ )
     {
-        noalias( DN_DX_DISP ) = prod( DN_De_Displacement[PointNumber], mInvJ0[PointNumber] );
+        MathUtils<double>::InvertMatrix( J0[PointNumber], InvJ, DetJ );
+
+        noalias( DN_DX_DISP ) = prod( DN_De_Displacement[PointNumber], InvJ );
 
 //     double DetDef= Determinant_DeformationTensor(DN_DX_DISP);
 
         Weight = integration_points[PointNumber].Weight();
         // Jacobian on current quadrature point
 
-        DetJ = mDetJ0[PointNumber];
         // Shape Functions on current spatial quadrature point
         noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
 
@@ -754,7 +860,35 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrix( MatrixT
 
     AssembleTimeSpaceStiffnessFromDampSubMatrices( rDampMatrix, Help_D_UU, Help_D_UW, Help_D_WU, Help_D_WW );
 
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    // finalize the geometry
+    GetGeometry().Clean();
+    #endif
+
     KRATOS_CATCH( "" )
+}
+
+////************************************************************************************
+////************************************************************************************
+
+void UnsaturatedSoilsElement_2phase_SmallStrain::FinalizeNonLinearIteration( ProcessInfo& CurrentProcessInfo )
+{
+    if(mConstitutiveLawVector[0]->Has(CURRENT_STRAIN_VECTOR))
+    {
+        std::vector<Vector> Values;
+        this->GetValueOnIntegrationPoints(CURRENT_STRAIN_VECTOR, Values, CurrentProcessInfo);
+        for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
+        {
+            mConstitutiveLawVector[Point]->SetValue( CURRENT_STRAIN_VECTOR, Values[Point], CurrentProcessInfo );
+        }
+    }
+
+    for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
+    {
+        Vector dummy;
+//        dummy = row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), Point );
+        mConstitutiveLawVector[Point]->FinalizeNonLinearIteration( GetProperties(), GetGeometry(), dummy, CurrentProcessInfo );
+    }
 }
 
 ////************************************************************************************
@@ -762,27 +896,36 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrix( MatrixT
 
 void UnsaturatedSoilsElement_2phase_SmallStrain::FinalizeSolutionStep( ProcessInfo& CurrentProcessInfo )
 {
-    //reading integration points and local gradients
-    const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
-
-    for ( unsigned int Point = 0; Point < integration_points.size(); Point++ )
+    if(mConstitutiveLawVector[0]->Has(CURRENT_STRAIN_VECTOR))
     {
-        mConstitutiveLawVector[Point]->FinalizeSolutionStep( GetProperties(), GetGeometry(), row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), Point ), CurrentProcessInfo );
+        std::vector<Vector> Values;
+        this->GetValueOnIntegrationPoints(CURRENT_STRAIN_VECTOR, Values, CurrentProcessInfo);
+        for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
+        {
+            mConstitutiveLawVector[Point]->SetValue( CURRENT_STRAIN_VECTOR, Values[Point], CurrentProcessInfo );
+        }
     }
 
-    Vector Dummy_Vector( 9 );
-
-    noalias( Dummy_Vector ) = mConstitutiveLawVector[0]->GetValue( INTERNAL_VARIABLES, Dummy_Vector );
-
-    for ( unsigned int i = 0; i < GetGeometry().size(); i++ )
+    for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
     {
-        GetGeometry()[i].GetSolutionStepValue( MOMENTUM_X ) = Dummy_Vector( 0 );
-        GetGeometry()[i].GetSolutionStepValue( MOMENTUM_Y ) = Dummy_Vector( 1 );
-        GetGeometry()[i].GetSolutionStepValue( MOMENTUM_Z ) = Dummy_Vector( 2 );
-        GetGeometry()[i].GetSolutionStepValue( PRESSURE ) = Dummy_Vector( 3 );
-        GetGeometry()[i].GetSolutionStepValue( ERROR_RATIO ) = Dummy_Vector( 4 );
-        GetGeometry()[i].GetSolutionStepValue( EXCESS_PORE_WATER_PRESSURE ) = GetGeometry()[i].GetSolutionStepValue( WATER_PRESSURE ) - 9.81 * 1000.0 * ( 20.0 - GetGeometry()[i].Z() );
+        Vector dummy;
+//        dummy = row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), Point );
+        mConstitutiveLawVector[Point]->FinalizeSolutionStep( GetProperties(), GetGeometry(), dummy, CurrentProcessInfo );
     }
+
+//    Vector Dummy_Vector( 9 );
+// 
+//    noalias( Dummy_Vector ) = mConstitutiveLawVector[0]->GetValue( INTERNAL_VARIABLES, Dummy_Vector );
+// 
+//    for ( unsigned int i = 0; i < GetGeometry().size(); i++ )
+//    {
+//        GetGeometry()[i].GetSolutionStepValue( MOMENTUM_X ) = Dummy_Vector( 0 );
+//        GetGeometry()[i].GetSolutionStepValue( MOMENTUM_Y ) = Dummy_Vector( 1 );
+//        GetGeometry()[i].GetSolutionStepValue( MOMENTUM_Z ) = Dummy_Vector( 2 );
+//        GetGeometry()[i].GetSolutionStepValue( PRESSURE ) = Dummy_Vector( 3 );
+//        GetGeometry()[i].GetSolutionStepValue( ERROR_RATIO ) = Dummy_Vector( 4 );
+//        GetGeometry()[i].GetSolutionStepValue( EXCESS_PORE_WATER_PRESSURE ) = GetGeometry()[i].GetSolutionStepValue( WATER_PRESSURE ) - 9.81 * 1000.0 * ( 20.0 - GetGeometry()[i].Z() );
+//    }
 }
 
 //************************************************************************************
@@ -792,63 +935,80 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateOnIntegrationPoints( c
 {
     KRATOS_TRY
 
-    unsigned int number_of_nodes_press = ( mNodesPressMax - mNodesPressMin + 1 );
-
-    //reading integration points and local gradients
-    const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
-
-    if ( Output.size() != integration_points.size() )
-        Output.resize( integration_points.size() );
-
-    const Matrix& Ncontainer_Pressure = mpPressureGeometry->ShapeFunctionsValues( mThisIntegrationMethod );
-
-    Vector N_PRESS( number_of_nodes_press );
-
-    double capillaryPressure;
-
-    double waterPressure;
-
-    double saturation;
-
-    /////////////////////////////////////////////////////////////////////////
-    //// Integration in space sum_(beta=0)^(number of quadrature points)
-    /////////////////////////////////////////////////////////////////////////
-    for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++ )
+    if ( rVariable == SATURATION || rVariable == WATER_PRESSURE || rVariable == EXCESS_PORE_WATER_PRESSURE || rVariable == AIR_PRESSURE )
     {
-        // Shape Functions on current spatial quadrature point
-        if ( N_PRESS.size() != number_of_nodes_press )
-            N_PRESS.resize( number_of_nodes_press );
+        unsigned int number_of_nodes_press = ( mNodesPressMax - mNodesPressMin + 1 );
 
-        noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
-        GeometryType::CoordinatesArrayType gp_position;
-        gp_position = GetGeometry().GlobalCoordinates( gp_position, GetGeometry().IntegrationPoints()[PointNumber] );
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        // initialize the geometry
+        GetGeometry().Initialize(mThisIntegrationMethod);
+        #endif
 
-        GetPressures( N_PRESS, capillaryPressure, waterPressure );
+        //reading integration points and local gradients
+        const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
 
-        saturation = GetSaturation( capillaryPressure );
+        if ( Output.size() != integration_points.size() )
+            Output.resize( integration_points.size() );
 
-        if ( rVariable == SATURATION )
+        const Matrix& Ncontainer_Pressure = mpPressureGeometry->ShapeFunctionsValues( mThisIntegrationMethod );
+
+        Vector N_PRESS( number_of_nodes_press );
+
+        double capillaryPressure;
+
+        double waterPressure;
+
+        double saturation;
+
+        /////////////////////////////////////////////////////////////////////////
+        //// Integration in space sum_(beta=0)^(number of quadrature points)
+        /////////////////////////////////////////////////////////////////////////
+        for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++ )
         {
-            Output[PointNumber] = saturation;
+            // Shape Functions on current spatial quadrature point
+            if ( N_PRESS.size() != number_of_nodes_press )
+                N_PRESS.resize( number_of_nodes_press );
+
+            noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
+            GeometryType::CoordinatesArrayType gp_position;
+            gp_position = GetGeometry().GlobalCoordinates( gp_position, integration_points[PointNumber] );
+
+            GetPressures( N_PRESS, capillaryPressure, waterPressure );
+
+            saturation = GetSaturation( capillaryPressure );
+
+            if ( rVariable == SATURATION )
+            {
+                Output[PointNumber] = saturation;
+            }
+
+            if ( rVariable == WATER_PRESSURE )
+            {
+                Output[PointNumber] = waterPressure;
+            }
+
+            if ( rVariable == EXCESS_PORE_WATER_PRESSURE )
+            {
+                Output[PointNumber] = waterPressure - mReferencePressures[PointNumber];
+            }
+
+            if ( rVariable == AIR_PRESSURE )
+            {
+                Output[PointNumber] = 0.0;
+            }
+        /////////////////////////////////////////////////////////////////////////
+        //// End Integration in space sum_(beta=0)^(number of quadrature points)
+        /////////////////////////////////////////////////////////////////////////
         }
 
-        if ( rVariable == WATER_PRESSURE )
-        {
-            Output[PointNumber] = waterPressure;
-        }
-
-        if ( rVariable == EXCESS_PORE_WATER_PRESSURE )
-        {
-            Output[PointNumber] = waterPressure - mReferencePressures[PointNumber];
-        }
-
-        if ( rVariable == AIR_PRESSURE )
-        {
-            Output[PointNumber] = 0.0;
-        }
-    /////////////////////////////////////////////////////////////////////////
-    //// End Integration in space sum_(beta=0)^(number of quadrature points)
-    /////////////////////////////////////////////////////////////////////////
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        // finalize the geometry
+        GetGeometry().Clean();
+        #endif
+    }
+    else
+    {
+        GetValueOnIntegrationPoints(rVariable, Output, rCurrentProcessInfo);
     }
 
     KRATOS_CATCH( "" )
@@ -885,7 +1045,8 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::EquationIdVector( EquationIdVec
 {
     DofsVectorType ElementalDofList;
     this->GetDofList(ElementalDofList, CurrentProcessInfo);
-    rResult.resize(ElementalDofList.size());
+    if(rResult.size() != ElementalDofList.size())
+        rResult.resize(ElementalDofList.size());
     for(unsigned int i = 0; i < ElementalDofList.size(); ++i)
         rResult[i] = ElementalDofList[i]->EquationId();
 }
@@ -1310,7 +1471,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateStiffnesMatrixUU( Matr
     }
 
     noalias( K ) -=
-        prod( trans( B_Operator ), ( Weight * detJ ) * Matrix( prod( C, B_Operator ) ) );
+        prod( trans( B_Operator ), ( Weight * detJ ) * Matrix( prod( C, B_Operator ) ) ); //for now it's -1, but it will be reversed again in the final assembly to local stiffness matrix, see AssembleTimeSpaceStiffnessFromStiffSubMatrices
 
     KRATOS_CATCH( "" )
 }
@@ -1400,15 +1561,15 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::AddInternalForcesToRHSW( Vector
 
     for ( unsigned int prim = 0; prim < pressure_size; prim++ )
     {
-        Help_R_W( prim ) +=
+        Help_R_W( prim ) -=
             N_PRESS( prim ) * porosity * DS_Dpc * Dpc_Dt * Weight * DetJ/* * GetProperties()[SCALE]*/ ;
-        Help_R_W( prim ) +=
+        Help_R_W( prim ) -=
             N_PRESS( prim ) * saturation * div_Dt * Weight * DetJ/* * GetProperties()[SCALE]*/ ;
 
         for ( unsigned int gamma = 0; gamma < dim; gamma++ )
         {
             Help_R_W( prim ) +=
-                ( -1 ) * ( DN_DX_PRESS( prim, gamma ) * flow_water( gamma ) )
+                ( DN_DX_PRESS( prim, gamma ) * flow_water( gamma ) )
                 * Weight * DetJ/* * GetProperties()[SCALE]*/ ;
         }
     }
@@ -1444,7 +1605,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::AddInternalForcesToRHSWs(
         
     for ( unsigned int prim = 0; prim < pressure_size; ++prim )
     {
-        Help_R_W( prim ) += (-0.5 * t / G) *
+        Help_R_W( prim ) += (0.5 * t / G) *
                         ( N_PRESS( prim ) - N_PRESS_averaged( prim ) ) *
                         ( capillaryPressure_Dt - averageCapillaryPressure_dt ) *
                         Weight * DetJ;
@@ -1479,7 +1640,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateStiffnesMatrixWU
         {
             for ( unsigned int j = 0; j < dim; ++j )
             {
-                Help_K_WU( prim, sec*dim + j ) +=
+                Help_K_WU( prim, sec*dim + j ) -=
                     N_PRESS( prim ) * DnDdivU * DSDpc * Dpc_Dt * DN_DX_DISP( sec, j )
                     * Weight * DetJ/* * GetProperties()[SCALE]*/ ;
             }
@@ -1520,21 +1681,21 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateStiffnesMatrixWW
         for ( unsigned int sec = 0; sec < pressure_size; sec++ )
         {
             Help_K_WW( prim, sec ) +=
-                ( -1 ) * N_PRESS( prim ) * porosity * D2S_Dpc2 * Dpc_Dt * N_PRESS( sec )
+                N_PRESS( prim ) * porosity * D2S_Dpc2 * Dpc_Dt * N_PRESS( sec )
                 * Weight * DetJ/* * GetProperties()[SCALE]*/;
 
             Help_K_WW( prim, sec ) +=
-                ( -1 ) * N_PRESS( prim ) * DSDpc * Ddiv_Dt * N_PRESS( sec )
+                N_PRESS( prim ) * DSDpc * Ddiv_Dt * N_PRESS( sec )
                 * Weight * DetJ/* * GetProperties()[SCALE]*/;
 
             for ( unsigned int gamma = 0; gamma < dim; gamma++ )
             {
                 Help_K_WW( prim, sec ) +=
-                    ( -1 ) * DN_DX_PRESS( prim, gamma ) * Dflow_waterDpw( gamma )
+                    DN_DX_PRESS( prim, gamma ) * Dflow_waterDpw( gamma )
                     * N_PRESS( sec )
                     * Weight * DetJ/* * GetProperties()[SCALE]*/;
                 Help_K_WW( prim, sec ) +=
-                    ( -1 ) * DN_DX_PRESS( prim, gamma ) * Dflow_waterDgradpw
+                    DN_DX_PRESS( prim, gamma ) * Dflow_waterDgradpw
                     * DN_DX_PRESS( sec, gamma ) * Weight * DetJ/* * GetProperties()[SCALE]*/;
             }
         }
@@ -1567,7 +1728,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrixWU
         {
             for ( unsigned int j = 0; j < dim; j++ )
             {
-                Help_D_WU( prim, sec*dim + j ) +=
+                Help_D_WU( prim, sec*dim + j ) -=
                     N_PRESS( prim ) * saturation * DN_DX_DISP( sec, j )
                     * Weight * DetJ/* * GetProperties()[SCALE]*/;
             }
@@ -1589,7 +1750,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrixWW( Matri
         for ( unsigned int sec = 0; sec < pressure_size; sec++ )
         {
             Help_D_WW( prim, sec ) +=
-                ( -1 ) * N_PRESS( prim ) * porosity * DSDpc * N_PRESS( sec )
+                N_PRESS( prim ) * porosity * DSDpc * N_PRESS( sec )
                 * Weight * DetJ /* * GetProperties()[SCALE]*/;
         }
     }
@@ -1618,7 +1779,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateDampingMatrixWWs( Matr
     {
         for ( unsigned int sec = 0; sec < pressure_size; ++sec )
         {
-            Help_D_WW( prim, sec ) += (0.5 * t / G) *
+            Help_D_WW( prim, sec ) -= (0.5 * t / G) *
                             ( N_PRESS( prim ) - N_PRESS_averaged( prim ) ) *
                             ( N_PRESS( sec ) - N_PRESS_averaged( sec ) ) *
                             Weight * DetJ;
@@ -1763,7 +1924,7 @@ double UnsaturatedSoilsElement_2phase_SmallStrain::GetDerivativeDCapillaryPressu
 //************************************************************************************
 
 //POROSITY AND ITS DERIVATIVES
-
+//TODO check the implementation of GetPorosity, it should depend on the gradient of displacement
 double UnsaturatedSoilsElement_2phase_SmallStrain::GetPorosity( const Matrix& DN_DX_DISP )
 {
     double porosity = GetValue(POROSITY);
@@ -2160,7 +2321,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateStressAndTangentialSti
         rCurrentProcessInfo,
         GetProperties(),
         GetGeometry(),
-        row( GetGeometry().ShapeFunctionsValues(), PointNumber ),
+        row( GetGeometry().ShapeFunctionsValues(mThisIntegrationMethod), PointNumber ),
         true,
         1,
         true );
@@ -2258,17 +2419,25 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::CalculateBBaroperator
 
 //************************************************************************************
 //************************************************************************************
-void UnsaturatedSoilsElement_2phase_SmallStrain::InitializeMaterial
-()
+void UnsaturatedSoilsElement_2phase_SmallStrain::InitializeMaterial()
 {
     KRATOS_TRY
 
-    for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); i++ )
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    GetGeometry().Initialize(mThisIntegrationMethod);
+    #endif
+
+    for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); ++i )
     {
         mConstitutiveLawVector[i] = GetProperties()[CONSTITUTIVE_LAW]->Clone();
-        mConstitutiveLawVector[i]->InitializeMaterial(
-            GetProperties(), GetGeometry(), ZeroVector( 0 ) );
+        mConstitutiveLawVector[i]->SetValue( PARENT_ELEMENT_ID, this->Id(), *(ProcessInfo*)0);
+        mConstitutiveLawVector[i]->SetValue( INTEGRATION_POINT_INDEX, i, *(ProcessInfo*)0);
+        mConstitutiveLawVector[i]->InitializeMaterial( GetProperties(), GetGeometry(), row( GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod ), i ) );
     }
+
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    GetGeometry().Clean();
+    #endif
 
     KRATOS_CATCH( "" )
 }
@@ -2299,8 +2468,8 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
 
     if ( rVariable == MATERIAL_PARAMETERS )
     {
-        if ( rValues.size() != GetGeometry().IntegrationPoints( mThisIntegrationMethod ).size() )
-            rValues.resize( GetGeometry().IntegrationPoints( mThisIntegrationMethod ).size() );
+        if ( rValues.size() != mConstitutiveLawVector.size() )
+            rValues.resize( mConstitutiveLawVector.size() );
 
         for ( unsigned int ii = 0; ii < mConstitutiveLawVector.size(); ii++ )
             rValues[ii] = mConstitutiveLawVector[ii]->GetValue( rVariable, rValues[ii] );
@@ -2344,7 +2513,7 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
     //To Plot Stresses
     if ( rVariable == STRESSES )
     {
-        for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); i++ )
+        for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); ++i )
         {
             if ( rValues[i].size() != 6 )
                 rValues[i].resize( 6 );
@@ -2372,6 +2541,14 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
 
         Vector waterFlow( 3 );
 
+        Matrix InvJ(3, 3);
+
+        double DetJ;
+
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        GetGeometry().Initialize(mThisIntegrationMethod);
+        #endif
+
         const GeometryType::ShapeFunctionsGradientsType& DN_De_Displacement =
             GetGeometry().ShapeFunctionsLocalGradients( mThisIntegrationMethod );
         const GeometryType::ShapeFunctionsGradientsType& DN_De_Pressure =
@@ -2379,7 +2556,18 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
 
         const Matrix& Ncontainer_Pressure = mpPressureGeometry->ShapeFunctionsValues( mThisIntegrationMethod );
 
-        for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++ )
+        //initializing the Jacobian in the reference configuration
+        GeometryType::JacobiansType J0;
+        Matrix DeltaPosition(GetGeometry().size(), 3);
+
+        for ( unsigned int node = 0; node < GetGeometry().size(); ++node )
+        {
+            noalias( row( DeltaPosition, node ) ) = GetGeometry()[node].Coordinates() - GetGeometry()[node].GetInitialPosition();
+        }
+
+        J0 = GetGeometry().Jacobian( J0, mThisIntegrationMethod, DeltaPosition );
+
+        for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); ++PointNumber )
         {
             if ( rValues[PointNumber].size() != 9 )
                 rValues[PointNumber].resize( 9 );
@@ -2389,6 +2577,8 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
                 N_PRESS.resize( number_of_nodes_press );
 
             noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
+
+            MathUtils<double>::InvertMatrix( J0[PointNumber], InvJ, DetJ );
 
             GetPressures( N_PRESS, capillaryPressure, waterPressure );
 
@@ -2400,9 +2590,9 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
 
             rValues[PointNumber][2] = saturation;
 
-            noalias( DN_DX_PRESS ) = prod( DN_De_Pressure[PointNumber], mInvJ0[PointNumber] );
+            noalias( DN_DX_PRESS ) = prod( DN_De_Pressure[PointNumber], InvJ );
 
-            noalias( DN_DX_DISP ) = prod( DN_De_Displacement[PointNumber], mInvJ0[PointNumber] );
+            noalias( DN_DX_DISP ) = prod( DN_De_Displacement[PointNumber], InvJ );
 
             noalias( waterFlow ) = GetFlowWater( DN_DX_PRESS, DN_DX_DISP, capillaryPressure );
 
@@ -2418,6 +2608,10 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
 
             rValues[PointNumber][8] = 0.0;
         }
+
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        GetGeometry().Clean();
+        #endif
     }
 
     //To Plot Coordinates of Integration Points
@@ -2435,29 +2629,97 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
             noalias( rValues[i] ) = dummy;
         }
     }
+
+    if ( rVariable == STRAIN || rVariable == CURRENT_STRAIN_VECTOR )
+    {
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        //initialize the geometry
+        GetGeometry().Initialize(mThisIntegrationMethod);
+        #endif
+
+        // calculate shape function values and local gradients
+        unsigned int dim = GetGeometry().WorkingSpaceDimension();
+        unsigned int number_of_nodes = GetGeometry().size();
+        unsigned int strain_size = dim * (dim + 1) / 2;
+        unsigned int mat_size = dim * number_of_nodes;
+        Matrix B(strain_size, mat_size);
+        Vector StrainVector(strain_size);
+        Matrix DN_DX(number_of_nodes, dim);
+        Matrix CurrentDisp(number_of_nodes, dim);
+        Matrix InvJ(dim, dim);
+        double DetJ;
+
+        const GeometryType::ShapeFunctionsGradientsType& DN_De = GetGeometry().ShapeFunctionsLocalGradients( mThisIntegrationMethod );
+//        const Matrix& Ncontainer = GetGeometry().ShapeFunctionsValues( mThisIntegrationMethod );
+
+        // extract current displacements
+        for (unsigned int node = 0; node < GetGeometry().size(); ++node)
+            noalias(row(CurrentDisp, node)) =
+                GetGeometry()[node].GetSolutionStepValue(DISPLACEMENT);
+
+        //initializing the Jacobian in the reference configuration
+        GeometryType::JacobiansType J0;
+        Matrix DeltaPosition(GetGeometry().size(), 3);
+
+        for ( unsigned int node = 0; node < GetGeometry().size(); ++node )
+        {
+            noalias( row( DeltaPosition, node ) ) = GetGeometry()[node].Coordinates() - GetGeometry()[node].GetInitialPosition();
+        }
+
+        J0 = GetGeometry().Jacobian( J0, mThisIntegrationMethod, DeltaPosition );
+
+        for (unsigned int i = 0; i < mConstitutiveLawVector.size(); ++i)
+        {
+            if (rValues[i].size() != 6)
+                rValues[i].resize(6);
+
+            // compute B_Operator at the current integration point
+            MathUtils<double>::InvertMatrix( J0[i], InvJ, DetJ );
+            noalias(DN_DX) = prod(DN_De[i], InvJ);
+            CalculateBoperator(B, DN_DX);
+
+            // compute the strain at integration point
+            CalculateStrain(B, CurrentDisp, StrainVector);
+
+            if(rVariable == STRAIN)
+            {
+                if (rValues[i].size() != 6)
+                    rValues[i].resize(6);
+
+                if(dim == 2)
+                {
+                    rValues[i](0) = StrainVector(0);
+                    rValues[i](1) = StrainVector(1);
+                    rValues[i](2) = 0.0; // note: it's only correct for plane strain, TODO: we must make this available for plane stress constitutive law
+                    rValues[i](3) = StrainVector(2);
+                    rValues[i](4) = 0.0;
+                    rValues[i](5) = 0.0;
+                }
+                else if(dim == 3)
+                    noalias(rValues[i]) = StrainVector;
+            }
+            else if(rVariable == CURRENT_STRAIN_VECTOR)
+            {
+                if (rValues[i].size() != strain_size)
+                    rValues[i].resize(strain_size);
+                noalias(rValues[i]) = StrainVector;
+            }
+        }
+
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        GetGeometry().Clean();
+        #endif
+    }
 }
 
 void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( const Variable<double>& rVariable, std::vector<double>& rValues, const ProcessInfo& rCurrentProcessInfo )
 {
     KRATOS_TRY
-    
-    if( rVariable == PLASTICITY_INDICATOR )
-    {
-        if ( rValues.size() != GetGeometry().IntegrationPoints().size() )
-            rValues.resize( GetGeometry().IntegrationPoints().size() );
 
-        //reading integration points and local gradients
-        for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); Point++ )
-        {
-            rValues[Point] = mConstitutiveLawVector[Point]->GetValue( rVariable, rValues[Point] );
-        }
-        return;
-    }
-    
     if( rVariable == K0 )
     {
-        if ( rValues.size() != GetGeometry().IntegrationPoints().size() )
-            rValues.resize( GetGeometry().IntegrationPoints().size() );
+        if ( rValues.size() != mConstitutiveLawVector.size() )
+            rValues.resize( mConstitutiveLawVector.size() );
         
         for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); Point++ )
         {
@@ -2466,65 +2728,99 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( co
         
         return;
     }
-
-    unsigned int number_of_nodes_press = ( mNodesPressMax - mNodesPressMin + 1 );
-
-    //reading integration points and local gradients
-    const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
-
-    if ( rValues.size() != integration_points.size() )
-        rValues.resize( integration_points.size() );
-
-    const Matrix& Ncontainer_Pressure = mpPressureGeometry->ShapeFunctionsValues( mThisIntegrationMethod );
-
-    Vector N_PRESS( number_of_nodes_press );
-
-    double capillaryPressure;
-
-    double waterPressure;
-
-    double saturation;
-
-
-    /////////////////////////////////////////////////////////////////////////
-    //// Integration in space sum_(beta=0)^(number of quadrature points)
-    /////////////////////////////////////////////////////////////////////////
-    for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++ )
+    else if ( rVariable == SATURATION || rVariable == WATER_PRESSURE || rVariable == EXCESS_PORE_WATER_PRESSURE )
     {
-        GeometryType::CoordinatesArrayType gp_position;
-        gp_position = GetGeometry().GlobalCoordinates( gp_position, GetGeometry().IntegrationPoints()[PointNumber] );
 
-        // Shape Functions on current spatial quadrature point
-        if ( N_PRESS.size() != number_of_nodes_press )
-            N_PRESS.resize( number_of_nodes_press );
+        unsigned int number_of_nodes_press = ( mNodesPressMax - mNodesPressMin + 1 );
 
-        noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        GetGeometry().Initialize(mThisIntegrationMethod);
+        #endif
 
-        GetPressures( N_PRESS, capillaryPressure, waterPressure );
+        //reading integration points and local gradients
+        const GeometryType::IntegrationPointsArrayType& integration_points = GetGeometry().IntegrationPoints( mThisIntegrationMethod );
 
-        saturation = GetSaturation( capillaryPressure );
+        if ( rValues.size() != integration_points.size() )
+            rValues.resize( integration_points.size() );
 
-        if ( rVariable == SATURATION )
+        const Matrix& Ncontainer_Pressure = mpPressureGeometry->ShapeFunctionsValues( mThisIntegrationMethod );
+
+        Vector N_PRESS( number_of_nodes_press );
+
+        double capillaryPressure;
+
+        double waterPressure;
+
+        double saturation;
+
+
+        /////////////////////////////////////////////////////////////////////////
+        //// Integration in space sum_(beta=0)^(number of quadrature points)
+        /////////////////////////////////////////////////////////////////////////
+        for ( unsigned int PointNumber = 0; PointNumber < integration_points.size(); PointNumber++ )
         {
-            rValues[PointNumber] = saturation;
-        }
+            GeometryType::CoordinatesArrayType gp_position;
+            gp_position = GetGeometry().GlobalCoordinates( gp_position, integration_points[PointNumber] );
 
-        if ( rVariable == WATER_PRESSURE )
-        {
-            rValues[PointNumber] = waterPressure;
-//            KRATOS_WATCH(waterPressure)
-        }
+            // Shape Functions on current spatial quadrature point
+            if ( N_PRESS.size() != number_of_nodes_press )
+                N_PRESS.resize( number_of_nodes_press );
 
-        if ( rVariable == EXCESS_PORE_WATER_PRESSURE )
-        {
-            rValues[PointNumber] = waterPressure - mReferencePressures[PointNumber];
+            noalias( N_PRESS ) = row( Ncontainer_Pressure, PointNumber );
+
+            GetPressures( N_PRESS, capillaryPressure, waterPressure );
+
+            saturation = GetSaturation( capillaryPressure );
+
+            if ( rVariable == SATURATION )
+            {
+                rValues[PointNumber] = saturation;
+            }
+
+            if ( rVariable == WATER_PRESSURE )
+            {
+                rValues[PointNumber] = waterPressure;
+    //            KRATOS_WATCH(waterPressure)
+            }
+
+            if ( rVariable == EXCESS_PORE_WATER_PRESSURE )
+            {
+                rValues[PointNumber] = waterPressure - mReferencePressures[PointNumber];
+            }
         }
+        /////////////////////////////////////////////////////////////////////////
+        //// End Integration in space sum_(beta=0)^(number of quadrature points)
+        /////////////////////////////////////////////////////////////////////////
+
+        #ifdef ENABLE_BEZIER_GEOMETRY
+        GetGeometry().Clean();
+        #endif
     }
-    /////////////////////////////////////////////////////////////////////////
-    //// End Integration in space sum_(beta=0)^(number of quadrature points)
-    /////////////////////////////////////////////////////////////////////////
+    else
+    {
+        if ( rValues.size() != mConstitutiveLawVector.size() )
+            rValues.resize( mConstitutiveLawVector.size() );
+
+        //reading values at integration points
+        for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); ++Point )
+        {
+            rValues[Point] = mConstitutiveLawVector[Point]->GetValue( rVariable, rValues[Point] );
+        }
+        return;
+    }
 
     KRATOS_CATCH( "" )
+}
+
+void UnsaturatedSoilsElement_2phase_SmallStrain::GetValueOnIntegrationPoints( const Variable<std::string>& rVariable, std::vector<std::string>& rValues, const ProcessInfo& rCurrentProcessInfo )
+{
+    if ( rValues.size() != mConstitutiveLawVector.size() )
+        rValues.resize( mConstitutiveLawVector.size() );
+
+    for ( unsigned int Point = 0; Point < mConstitutiveLawVector.size(); Point++ )
+    {
+        rValues[Point] = mConstitutiveLawVector[Point]->GetValue(rVariable, rValues[Point]);
+    }
 }
 
 void UnsaturatedSoilsElement_2phase_SmallStrain::SetValueOnIntegrationPoints( const Variable<Matrix>& rVariable, std::vector<Matrix>& rValues, const ProcessInfo& rCurrentProcessInfo )
@@ -2547,19 +2843,12 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::SetValueOnIntegrationPoints( co
 void UnsaturatedSoilsElement_2phase_SmallStrain::SetValueOnIntegrationPoints( const Variable<Vector>& rVariable, std::vector<Vector>& rValues, const ProcessInfo& rCurrentProcessInfo )
 {
     if ( rValues.size() != mConstitutiveLawVector.size() )
-        return;
+        KRATOS_THROW_ERROR(std::logic_error, "The size of rValues and mConstitutiveLawVector is incompatible", "")
 
-    if ( rVariable == INSITU_STRESS || rVariable == PRESTRESS )
-        for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); i++ )
-            mConstitutiveLawVector[i]->SetValue( PRESTRESS, rValues[i], rCurrentProcessInfo );
-
-    if ( rVariable == INTERNAL_VARIABLES )
-        for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); i++ )
-            mConstitutiveLawVector[i]->SetValue( INTERNAL_VARIABLES, rValues[i], rCurrentProcessInfo );
-
-    if ( rVariable == MATERIAL_PARAMETERS )
-        for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); i++ )
-            mConstitutiveLawVector[i]->SetValue( rVariable, rValues[i], rCurrentProcessInfo );
+    for ( unsigned int PointNumber = 0; PointNumber < mConstitutiveLawVector.size(); ++PointNumber )
+    {
+        mConstitutiveLawVector[PointNumber]->SetValue( rVariable, rValues[PointNumber], rCurrentProcessInfo );
+    }
 }
 
 void UnsaturatedSoilsElement_2phase_SmallStrain::SetValueOnIntegrationPoints( const Kratos::Variable< ConstitutiveLaw::Pointer >& rVariable, std::vector< ConstitutiveLaw::Pointer >& rValues, const Kratos::ProcessInfo& rCurrentProcessInfo )
@@ -2598,11 +2887,54 @@ void UnsaturatedSoilsElement_2phase_SmallStrain::SetValueOnIntegrationPoints( co
 
 }
 
+void UnsaturatedSoilsElement_2phase_SmallStrain::SetValueOnIntegrationPoints( const Variable<int>& rVariable, std::vector<int>& rValues, const ProcessInfo& rCurrentProcessInfo )
+{
+    for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); ++i )
+    {
+        mConstitutiveLawVector[i]->SetValue( rVariable, rValues[i], rCurrentProcessInfo );
+    }
+}
+
+void UnsaturatedSoilsElement_2phase_SmallStrain::SetValueOnIntegrationPoints( const Variable<std::string>& rVariable, std::vector<std::string>& rValues, const ProcessInfo& rCurrentProcessInfo )
+{
+    for ( unsigned int i = 0; i < mConstitutiveLawVector.size(); i++ )
+    {
+        mConstitutiveLawVector[i]->SetValue( rVariable, rValues[i], rCurrentProcessInfo );
+    }
+}
+
 UnsaturatedSoilsElement_2phase_SmallStrain::IntegrationMethod UnsaturatedSoilsElement_2phase_SmallStrain::GetIntegrationMethod() const
 {
     return mThisIntegrationMethod;
 }
 
+int UnsaturatedSoilsElement_2phase_SmallStrain::Check(const Kratos::ProcessInfo& rCurrentProcessInfo)
+{
+    KRATOS_TRY
+
+    if (this->Id() < 1)
+    {
+        KRATOS_THROW_ERROR(std::logic_error, "Element found with Id 0 or negative", __FUNCTION__);
+    }
+
+    if (mTotalDomainInitialSize < 0)
+    {
+        std::cout << "error on element -> " << this->Id() << std::endl;
+        std::cout << "mTotalDomainInitialSize = " << mTotalDomainInitialSize << std::endl;
+        KRATOS_THROW_ERROR(std::logic_error, "Domain size can not be less than 0. Please check Jacobian.", __FUNCTION__);
+    }
+
+    //verify that the constitutive law exists
+    if (this->GetProperties().Has(CONSTITUTIVE_LAW) == false)
+    {
+        KRATOS_THROW_ERROR(std::logic_error, "constitutive law not provided for property ", this->GetProperties().Id());
+    }
+
+    KRATOS_CATCH( "" )
+
+    return 1;
+}
+
 } // Namespace Kratos
 
-
+#undef ENABLE_DEBUG_CONSTITUTIVE_LAW

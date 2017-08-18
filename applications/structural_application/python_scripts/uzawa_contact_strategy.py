@@ -42,6 +42,7 @@ class SolvingStrategyPython:
         self.echo_level = 1
         self.builder_and_solver = builder_and_solver
         self.dof_util = DofUtility()
+        self.calculate_reaction_process = None
 
         #local matrices and vectors
         self.pA = self.space_utils.CreateEmptyMatrixPointer()
@@ -80,6 +81,8 @@ class SolvingStrategyPython:
             self.scheme.Initialize(self.model_part)
         if (self.scheme.ElementsAreInitialized() == False): 
             self.scheme.InitializeElements(self.model_part)
+        if (self.scheme.ConditionsAreInitialized() == False): 
+            self.scheme.InitializeConditions(self.model_part)
         for proc in self.attached_processes:
             proc.ExecuteInitialize()
 
@@ -272,7 +275,7 @@ class SolvingStrategyPython:
             #reorder the system dof id
             self.system_reorderer.Execute()
             #allocate memory for the system and preallocate the structure of the matrix
-            self.builder_and_solver.ResizeAndInitializeVectors(self.scheme, self.pA,self.pDx,self.pb,self.model_part.Elements,self.model_part.Conditions,self.model_part.ProcessInfo)
+            self.builder_and_solver.ResizeAndInitializeVectors(self.pA,self.pDx,self.pb,self.model_part.Elements,self.model_part.Conditions,self.model_part.ProcessInfo)
             #updating references
             self.A = (self.pA).GetReference()
             self.Dx = (self.pDx).GetReference()
@@ -292,9 +295,6 @@ class SolvingStrategyPython:
 
         self.scheme.InitializeNonLinIteration(self.model_part,self.A,self.Dx,self.b)
 
-        #provide data for the preconditioner and linear solver
-#        self.linear_solver.ProvideAdditionalData(self.A,self.Dx,self.b,self.builder_and_solver.GetDofSet(),self.model_part)
-
         #build and solve the problem
         if(self.Parameters['decouple_build_and_solve'] == False):
             self.builder_and_solver.BuildAndSolve(self.scheme,self.model_part,self.A,self.Dx,self.b)
@@ -302,7 +302,14 @@ class SolvingStrategyPython:
         else:
             self.builder_and_solver.Build(self.scheme,self.model_part,self.A,self.b)
             self.dof_util.ListDofs(self.builder_and_solver.GetDofSet(),self.builder_and_solver.GetEquationSystemSize())
+            #provide data for the preconditioner and linear solver
+            if self.linear_solver.AdditionalPhysicalDataIsNeeded():
+                self.linear_solver.ProvideAdditionalData(self.A,self.Dx,self.b,self.builder_and_solver.GetDofSet(),self.model_part)
             self.linear_solver.Solve(self.A,self.Dx,self.b)
+
+        #calculate reaction process
+        if not(self.calculate_reaction_process == None):
+            self.calculate_reaction_process.Execute()
 
 #        diagAstr = ""
 #        for i in range(0, self.A.Size1()):
@@ -358,6 +365,24 @@ class SolvingStrategyPython:
         if(MoveMeshFlag == True):
             self.scheme.MoveMesh(self.model_part.Nodes);
         
+        #to account for prescribed displacement, the displacement at prescribed nodes need to be updated
+        for node in self.model_part.Nodes:
+            if node.IsFixed(DISPLACEMENT_X):
+                curr_disp = node.GetSolutionStepValue(DISPLACEMENT_X)
+                delta_disp = node.GetSolutionStepValue(PRESCRIBED_DELTA_DISPLACEMENT_X)
+                node.SetSolutionStepValue(DISPLACEMENT_X, curr_disp + delta_disp)
+                node.SetSolutionStepValue(PRESCRIBED_DELTA_DISPLACEMENT_X, 0.0) # set the prescribed displacement to zero to avoid update in the second step
+            if node.IsFixed(DISPLACEMENT_Y):
+                curr_disp = node.GetSolutionStepValue(DISPLACEMENT_Y)
+                delta_disp = node.GetSolutionStepValue(PRESCRIBED_DELTA_DISPLACEMENT_Y)
+                node.SetSolutionStepValue(DISPLACEMENT_Y, curr_disp + delta_disp)
+                node.SetSolutionStepValue(PRESCRIBED_DELTA_DISPLACEMENT_Y, 0.0) # set the prescribed displacement to zero to avoid update in the second step
+            if node.IsFixed(DISPLACEMENT_Z):
+                curr_disp = node.GetSolutionStepValue(DISPLACEMENT_Z)
+                delta_disp = node.GetSolutionStepValue(PRESCRIBED_DELTA_DISPLACEMENT_Z)
+                node.SetSolutionStepValue(DISPLACEMENT_Z, curr_disp + delta_disp)
+                node.SetSolutionStepValue(PRESCRIBED_DELTA_DISPLACEMENT_Z, 0.0) # set the prescribed displacement to zero to avoid update in the second step
+
         self.scheme.FinalizeNonLinIteration(self.model_part,self.A,self.Dx,self.b)
         
         #calculate the norm of the "correction" Dx

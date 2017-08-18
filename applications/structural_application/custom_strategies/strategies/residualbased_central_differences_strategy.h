@@ -805,7 +805,7 @@ public:
             {
                 Element::GeometryType& geom = it->GetGeometry(); // Nodos del elemento
                 (it)->Initialize();
-                (it)->Set(ACTIVE, true);
+                (it)->GetValue(IS_INACTIVE) = false;
                 (it)->CalculateMassMatrix(MassMatrix, CurrentProcessInfo);
                 const unsigned int& dim   = geom.WorkingSpaceDimension();
                 index = 0;
@@ -1216,7 +1216,7 @@ public:
             typename NodesArrayType::iterator i_begin=pNodes.ptr_begin()+node_partition[k];
             typename NodesArrayType::iterator i_end=pNodes.ptr_begin()+node_partition[k+1];
 
-            for(ModelPart::NodeIterator i=i_begin; i!= i_end; ++i)
+            for(typename ModelPart::NodeIterator i=i_begin; i!= i_end; ++i)
             {
                 array_1d<double,3>& normal    = (i->FastGetSolutionStepValue(NORMAL));
                 array_1d<double,3>& node_rhs  = (i->FastGetSolutionStepValue(RHS));
@@ -1273,9 +1273,9 @@ public:
         #pragma omp parallel for
         for(int k=0; k<number_of_threads; k++)
         {
-            DofsArrayType::iterator i_begin = rDofSet.begin()+dof_partition[k];
-            DofsArrayType::iterator i_end   = rDofSet.begin()+dof_partition[k+1];
-            for(DofsArrayType::iterator i_dof =i_begin; i_dof!= i_end; ++i_dof)
+            typename DofsArrayType::iterator i_begin = rDofSet.begin()+dof_partition[k];
+            typename DofsArrayType::iterator i_end   = rDofSet.begin()+dof_partition[k+1];
+            for(typename DofsArrayType::iterator i_dof =i_begin; i_dof!= i_end; ++i_dof)
             {
                 //for(typename DofsArrayType::iterator i_dof = rDofSet.begin() ; i_dof != rDofSet.end() ; ++i_dof)
                 mDx[i_dof->EquationId()] = i_dof->GetSolutionStepValue();

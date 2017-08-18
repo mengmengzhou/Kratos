@@ -260,6 +260,79 @@ public:
     }
 
     /**
+     * Transfer of nodal solution step variables.
+     * This Transfers all solution step variables from r_old_model_part
+     * to r_new_model_part.
+     * To cope with moved meshes, the source model_part is resetted to its
+     * reference configuration temporarily!
+     * @param r_old_model_part source model_part
+     * @param r_new_model_part target model_part
+                 */
+    template<class TVariableType>
+    void TransferGeneralNodalVariables(ModelPart& rSource, ModelPart& rTarget, const TVariableType& rThisVariable)
+    {
+        //reset source model part to reference configuration
+        for( ModelPart::NodeIterator it = rSource.NodesBegin() ;
+                it != rSource.NodesEnd(); it++ )
+        {
+            (*it).X() = (*it).X0();
+            (*it).Y() = (*it).Y0();
+            (*it).Z() = (*it).Z0();
+        }
+        //reset target model part to reference configuration
+        for( ModelPart::NodeIterator it = rTarget.NodesBegin() ;
+                it != rTarget.NodesEnd(); it++ )
+        {
+            (*it).X() = (*it).X0();
+            (*it).Y() = (*it).Y0();
+            (*it).Z() = (*it).Z0();
+        }
+        //time_target= time_source
+        ProcessInfo SourceCurrentProcessInfo= rSource.GetProcessInfo();
+        rTarget.CloneTimeStep(SourceCurrentProcessInfo[TIME]);
+
+        ElementsArrayType& OldMeshElementsArray= rSource.Elements();
+        Element::Pointer correspondingElement;
+//				FixDataValueContainer newNodalValues;
+//				FixDataValueContainer oldNodalValues;
+        Point<3>  localPoint;
+        Vector shape_functions_values;
+
+        for(ModelPart::NodeIterator it = rTarget.NodesBegin() ;
+                it != rTarget.NodesEnd() ; it++)
+        {
+            if(FindPartnerElement(*(it), OldMeshElementsArray,
+                                  correspondingElement,localPoint))
+            {
+                shape_functions_values = correspondingElement->GetGeometry().ShapeFunctionsValues(shape_functions_values, localPoint);
+                it->GetSolutionStepValue(rThisVariable) = shape_functions_values[0] * correspondingElement->GetGeometry()[0].GetSolutionStepValue(rThisVariable);
+                for(std::size_t i = 1; i < correspondingElement->GetGeometry().size(); ++i)
+                    it->GetSolutionStepValue(rThisVariable) += shape_functions_values[i] * correspondingElement->GetGeometry()[i].GetSolutionStepValue(rThisVariable);
+            }
+            else
+            {
+                std::cout<<"###### NO PARTNER FOUND IN OLD MESH : TransferNodalVariables(...)#####"<<std::endl;
+            }
+        }
+        //restore source model_part
+        for( ModelPart::NodeIterator it = rSource.NodesBegin() ;
+                it != rSource.NodesEnd(); it++ )
+        {
+            (*it).X() = (*it).X0()+(*it).GetSolutionStepValue( DISPLACEMENT_X );
+            (*it).Y() = (*it).Y0()+(*it).GetSolutionStepValue( DISPLACEMENT_Y );
+            (*it).Z() = (*it).Z0()+(*it).GetSolutionStepValue( DISPLACEMENT_Z );
+        }
+        //restore target model_part
+        for( ModelPart::NodeIterator it = rTarget.NodesBegin() ;
+                it != rTarget.NodesEnd(); it++ )
+        {
+            (*it).X() = (*it).X0()+(*it).GetSolutionStepValue( DISPLACEMENT_X );
+            (*it).Y() = (*it).Y0()+(*it).GetSolutionStepValue( DISPLACEMENT_Y );
+            (*it).Z() = (*it).Z0()+(*it).GetSolutionStepValue( DISPLACEMENT_Z );
+        }
+    }
+
+    /**
      * Transfer of PRESTRESS.
      * This transfers the in-situ stress from rSource to rTarget.
      * @param rSource the source model part
@@ -286,6 +359,7 @@ public:
             it->GetValueOnIntegrationPoints(PRESTRESS, PreStresses, rSource.GetProcessInfo());
             rTarget.Elements()[it->Id()].SetValueOnIntegrationPoints(PRESTRESS, PreStresses, rTarget.GetProcessInfo());
         }
+        std::cout << __FUNCTION__ << " from " << rSource.Name() << " to " << rTarget.Name() << " completed" << std::endl;
     }
 
     /**
@@ -300,8 +374,8 @@ public:
     }
 
     /**
-     * Transfer of INSITU_STRESS.
-     * This transfers the in-situ stress from rSource to rTarget.
+     * Transfer of specific variable.
+     * This transfers the variable from rSource to rTarget.
      * @param rSource the source model part
      * @param rTarget the target model part
                  */
@@ -344,6 +418,78 @@ public:
 
 // 				TransferVariablesToGaussPoints(rTarget, INSITU_STRESS);
         TransferVariablesToGaussPoints(rSource, rTarget, rThisVariable );
+
+        std::cout << "time for transferring variables to gauss points: " << timer1.elapsed() << std::endl;
+        timer1.restart();
+
+        //restore model_part
+
+//                 std::cout << "line 272" << std::endl;
+
+        for( ModelPart::NodeIterator it = rSource.NodesBegin() ;
+                it != rSource.NodesEnd(); it++ )
+        {
+            (*it).X() = (*it).X0()+(*it).GetSolutionStepValue( DISPLACEMENT_X );
+            (*it).Y() = (*it).Y0()+(*it).GetSolutionStepValue( DISPLACEMENT_Y );
+            (*it).Z() = (*it).Z0()+(*it).GetSolutionStepValue( DISPLACEMENT_Z );
+        }
+        for( ModelPart::NodeIterator it = rTarget.NodesBegin() ;
+                it != rTarget.NodesEnd(); it++ )
+        {
+            (*it).X() = (*it).X0()+(*it).GetSolutionStepValue( DISPLACEMENT_X );
+            (*it).Y() = (*it).Y0()+(*it).GetSolutionStepValue( DISPLACEMENT_Y );
+            (*it).Z() = (*it).Z0()+(*it).GetSolutionStepValue( DISPLACEMENT_Z );
+        }
+
+        std::cout << "time for restoring model part: " << timer1.elapsed() << std::endl;
+//                 std::cout << "line 290" << std::endl;
+    }
+
+    /**
+     * Transfer of specific variable with number of components.
+     * This transfers the variable from rSource to rTarget.
+     * @param rSource the source model part
+     * @param rTarget the target model part
+                 */
+    void TransferSpecificVariableWithComponents( ModelPart& rSource, ModelPart& rTarget, Variable<Vector>& rThisVariable, const std::size_t& ncomponents )
+    {
+        boost::timer timer1;
+//                 std::cout << "line 243" << std::endl;
+        //reset original model part to reference configuration
+        for( ModelPart::NodeIterator it = rSource.NodesBegin() ;
+                it != rSource.NodesEnd(); it++ )
+        {
+            (*it).X() = (*it).X0();
+            (*it).Y() = (*it).Y0();
+            (*it).Z() = (*it).Z0();
+        }
+
+
+//                 std::cout << "line 253" << std::endl;
+
+        for( ModelPart::NodeIterator it = rTarget.NodesBegin() ;
+                it != rTarget.NodesEnd(); it++ )
+        {
+            (*it).X() = (*it).X0();
+            (*it).Y() = (*it).Y0();
+            (*it).Z() = (*it).Z0();
+        }
+
+        std::cout << "time for resetting to reference configuration: " << timer1.elapsed() << std::endl;
+        timer1.restart();
+//                 std::cout << "line 263" << std::endl;
+
+        TransferVariablesToNodes(rSource, rThisVariable, ncomponents);
+
+        std::cout << "time for transferring GP variables to nodes: " << timer1.elapsed() << std::endl;
+        timer1.restart();
+
+// 				TransferVariablesBetweenMeshes(rSource, rTarget,INSITU_STRESS);
+
+//                 std::cout << "line 268" << std::endl;
+
+// 				TransferVariablesToGaussPoints(rTarget, INSITU_STRESS);
+        TransferVariablesToGaussPoints(rSource, rTarget, rThisVariable, ncomponents );
 
         std::cout << "time for transferring variables to gauss points: " << timer1.elapsed() << std::endl;
         timer1.restart();
@@ -622,6 +768,7 @@ public:
                                                 rTarget.GetProcessInfo());
         }
     }
+
     /**
      * Transfer of rThisVariable stored on nodes in source mesh to integration point of target
      * mesh via approximation by shape functions
@@ -634,7 +781,7 @@ public:
     source_model_part, Variable<double>& rThisVariable)
      */
     void TransferVariablesToGaussPoints(ModelPart& rSource, ModelPart& rTarget,
-                                        Variable<Kratos::Vector>& rThisVariable)
+                                        Variable<Kratos::Vector>& rThisVariable, std::size_t ncomponents = 6)
     {
         std::cout << "At TransferVariablesToGaussPoints(" << rSource.Name() << "," << rTarget.Name() << ", Variable<Vector> " << rThisVariable.Name() << std::endl;
         ElementsArrayType& SourceMeshElementsArray= rSource.Elements();
@@ -677,7 +824,7 @@ public:
 //                    KRATOS_WATCH(targetGlobalPoint)
                     Element::Pointer sourceElement;
                     //Calculate Value of rVariable(firstvalue, secondvalue) in OldMesh
-                    ValuesOnIntPoint[point].resize(6, false);
+                    ValuesOnIntPoint[point].resize(ncomponents, false);
                     if(FindPartnerElement(targetGlobalPoint, SourceMeshElementsArray,
                                           sourceElement,sourceLocalPoint))
                     {
@@ -699,6 +846,7 @@ public:
 #endif
 
     }
+
     /**
                  * Transfer of rThisVariable stored on nodes in source mesh to integration point of target
                  * mesh via approximation by shape functions
@@ -1147,6 +1295,190 @@ public:
         std::cout << "TransferVariablesToNodes for " << rThisVariable.Name() << " completed" << std::endl;
     }
 
+
+    void TransferVariablesToNodes(ModelPart& model_part, Variable<Kratos::Vector>& rThisVariable, const std::size_t& ncomponents)
+    {
+        ElementsArrayType& ElementsArray = model_part.Elements();
+
+        // count all the nodes at all the active elements
+        std::set<std::size_t> active_nodes;
+        std::map<std::size_t, std::size_t> node_row_id;
+        for( ElementsArrayType::ptr_iterator it = ElementsArray.ptr_begin(); it != ElementsArray.ptr_end(); ++it )
+        {
+            if( (*it)->GetValue(IS_INACTIVE) == false || (*it)->Is(ACTIVE) )
+            {
+                for( std::size_t i = 0; i < (*it)->GetGeometry().size(); ++i )
+                {
+                    active_nodes.insert( (*it)->GetGeometry()[i].Id() );
+                }
+            }
+        }
+KRATOS_WATCH(active_nodes.size())
+        // assign each node an id. That id is the row of this node in the global L2 projection matrix
+        std::size_t cnt = 0;
+        for( std::set<std::size_t>::iterator it = active_nodes.begin(); it != active_nodes.end(); ++it )
+        {
+            node_row_id[*it] = cnt++;
+            model_part.Nodes()[*it].GetSolutionStepValue(rThisVariable).resize(ncomponents, false);
+        }
+
+        //SetUpEquationSystem
+        SpaceType::MatrixType M(active_nodes.size(), active_nodes.size());
+        SpaceType::VectorType g(active_nodes.size());
+        SpaceType::VectorType b(active_nodes.size());
+        noalias(M)= ZeroMatrix(active_nodes.size(), active_nodes.size());
+
+        int number_of_threads = 1;
+#ifdef _OPENMP
+        number_of_threads = omp_get_max_threads();
+#endif
+        vector<unsigned int> element_partition;
+        CreatePartition(number_of_threads, ElementsArray.size(), element_partition);
+        boost::progress_display show_progress( ElementsArray.size() );
+
+        // create the structure for M a priori
+//        Timer::Start("ConstructMatrixStructure");
+        ConstructMatrixStructure(M, ElementsArray, node_row_id, model_part.GetProcessInfo());
+//        Timer::Stop("ConstructMatrixStructure");
+
+#ifdef _OPENMP
+        //create the array of lock
+        std::vector< omp_lock_t > lock_array(M.size1());
+        unsigned int M_size = M.size1();
+        for(unsigned int i = 0; i < M_size; ++i)
+            omp_init_lock(&lock_array[i]);
+#endif
+
+//        Timer::Start("Assemble Transferred stiffness matrix");
+#ifdef _OPENMP
+        #pragma omp parallel for
+#endif
+        for(int k = 0; k < number_of_threads; ++k)
+        {
+            ElementsArrayType::ptr_iterator it_begin = ElementsArray.ptr_begin() + element_partition[k];
+            ElementsArrayType::ptr_iterator it_end = ElementsArray.ptr_begin() + element_partition[k+1];
+                
+            for( ElementsArrayType::ptr_iterator it = it_begin; it != it_end; ++it )
+            {
+                if( (*it)->GetValue(IS_INACTIVE) == true && !(*it)->Is(ACTIVE) )
+                    continue;
+
+                unsigned int dim = (*it)->GetGeometry().WorkingSpaceDimension();
+
+                const IntegrationPointsArrayType& integration_points
+                = (*it)->GetGeometry().IntegrationPoints((*it)->GetIntegrationMethod());
+
+                GeometryType::JacobiansType J(integration_points.size());
+                J = (*it)->GetGeometry().Jacobian(J, (*it)->GetIntegrationMethod());
+
+                const Matrix& Ncontainer = (*it)->GetGeometry().ShapeFunctionsValues((*it)->GetIntegrationMethod());
+
+                double DetJ;
+                for(unsigned int point=0; point< integration_points.size(); point++)
+                {
+                    DetJ = MathUtils<double>::Det(J[point]);
+
+                    double dV= DetJ*integration_points[point].Weight();
+
+                    for(unsigned int prim=0 ; prim<(*it)->GetGeometry().size(); prim++)
+                    {
+                        unsigned int row = node_row_id[(*it)->GetGeometry()[prim].Id()];
+#ifdef _OPENMP
+                        omp_set_lock(&lock_array[row]);
+#endif
+                        for(unsigned int sec=0 ; sec<(*it)->GetGeometry().size(); sec++)
+                        {
+                            unsigned int col = node_row_id[(*it)->GetGeometry()[sec].Id()];
+                            M(row, col)+= Ncontainer(point, prim)*Ncontainer(point, sec) * dV;
+                        }
+#ifdef _OPENMP
+                        omp_unset_lock(&lock_array[row]);
+#endif
+                    }
+                }
+                
+                ++show_progress;
+            }
+        }
+//        Timer::Stop("Assemble Transferred stiffness matrix");
+
+        for(unsigned int firstvalue = 0; firstvalue < ncomponents; ++firstvalue)
+        {
+            noalias(g)= ZeroVector(active_nodes.size());
+            noalias(b)= ZeroVector(active_nodes.size());
+            //Transfer of GaussianVariables to Nodal Variablias via L_2-Minimization
+            // see Jiao + Heath "Common-refinement-based data tranfer ..."
+            // International Journal for numerical methods in engineering 61 (2004) 2402--2427
+            // for general description of L_2-Minimization
+            
+//            Timer::Start("Assemble Transferred rhs vector");
+#ifdef _OPENMP
+            #pragma omp parallel for
+#endif
+            for(int k = 0; k < number_of_threads; ++k)
+            {
+                ElementsArrayType::ptr_iterator it_begin = ElementsArray.ptr_begin() + element_partition[k];
+                ElementsArrayType::ptr_iterator it_end = ElementsArray.ptr_begin() + element_partition[k+1];
+            
+                for( ElementsArrayType::ptr_iterator it = it_begin; it != it_end; ++it )
+                {
+                    if( (*it)->GetValue(IS_INACTIVE) == true && !(*it)->Is(ACTIVE) )
+                        continue;
+
+                    const IntegrationPointsArrayType& integration_points
+                    = (*it)->GetGeometry().IntegrationPoints( (*it)->GetIntegrationMethod());
+
+                    GeometryType::JacobiansType J(integration_points.size());
+                    J = (*it)->GetGeometry().Jacobian(J, (*it)->GetIntegrationMethod());
+                    std::vector<Vector> ValuesOnIntPoint(integration_points.size());
+
+                    (*it)->GetValueOnIntegrationPoints(rThisVariable, ValuesOnIntPoint, model_part.GetProcessInfo());
+
+                    const Matrix& Ncontainer = (*it)->GetGeometry().ShapeFunctionsValues((*it)->GetIntegrationMethod());
+
+                    double DetJ;
+                    for(unsigned int point=0; point< integration_points.size(); point++)
+                    {
+                        DetJ = MathUtils<double>::Det(J[point]);
+
+                        double dV= DetJ*integration_points[point].Weight();
+
+                        for(unsigned int prim=0 ; prim<(*it)->GetGeometry().size(); prim++)
+                        {
+                            unsigned int row = node_row_id[(*it)->GetGeometry()[prim].Id()];
+#ifdef _OPENMP
+                            omp_set_lock(&lock_array[row]);
+#endif
+                            b(row) += (ValuesOnIntPoint[point](firstvalue)) * Ncontainer(point, prim) * dV;
+#ifdef _OPENMP
+                            omp_unset_lock(&lock_array[row]);
+#endif
+                        }
+                    }
+                }
+            }
+//            Timer::Stop("Assemble Transferred rhs vector");
+
+//            Timer::Start("Transfer solve");
+            mpLinearSolver->Solve(M, g, b);
+//            Timer::Stop("Transfer solve");
+
+//            Timer::Start("Transfer result");
+            for(std::set<std::size_t>::iterator it = active_nodes.begin(); it != active_nodes.end(); ++it)
+            {
+                model_part.Nodes()[*it].GetSolutionStepValue(rThisVariable)(firstvalue) = g(node_row_id[*it]);
+            }
+//            Timer::Stop("Transfer result");
+        }//END firstvalue
+        
+#ifdef _OPENMP
+        for(unsigned int i = 0; i < M_size; ++i)
+            omp_destroy_lock(&lock_array[i]);
+#endif
+        std::cout << "TransferVariablesToNodes for " << rThisVariable.Name() << " completed" << std::endl;
+    }
+
+
     /**
      * Transfer of rThisVariable defined on integration points to corresponding
      * nodal values. The transformation is done in a form that ensures a minimization
@@ -1230,22 +1562,203 @@ public:
 //            = g((it->Id()-1));
 //        }
 //    }
+
+//    void TransferVariablesToNodes(ModelPart& model_part, Variable<double>& rThisVariable)
+//    {
+//        ElementsArrayType& ElementsArray= model_part.Elements();
+
+//        //reset all values at node to zero// do not do this, some variable need the values at node, e.g. WATER_PRESSURE
+////        for(ModelPart::NodeIterator it = model_part.NodesBegin();
+////                it != model_part.NodesEnd() ; it++)
+////        {
+////            it->GetSolutionStepValue(rThisVariable) = 0.0;
+////        }
+
+//        //SetUpEquationSystem
+//        SpaceType::MatrixType M(model_part.NumberOfNodes(), model_part.NumberOfNodes());
+//        SpaceType::VectorType g(model_part.NumberOfNodes());
+//        SpaceType::VectorType b(model_part.NumberOfNodes());
+//        noalias(M)= ZeroMatrix(model_part.NumberOfNodes(), model_part.NumberOfNodes());
+
+//        int number_of_threads = 1;
+//#ifdef _OPENMP
+//        number_of_threads = omp_get_max_threads();
+//#endif
+//        vector<unsigned int> element_partition;
+//        CreatePartition(number_of_threads, ElementsArray.size(), element_partition);
+//        boost::progress_display show_progress( ElementsArray.size() );
+
+//        // create the structure for M a priori
+////        Timer::Start("ConstructMatrixStructure");
+//        ConstructMatrixStructure(M, ElementsArray, model_part.GetProcessInfo());
+////        Timer::Stop("ConstructMatrixStructure");
+
+//#ifdef _OPENMP
+//        //create the array of lock
+//        std::vector< omp_lock_t > lock_array(M.size1());
+//        unsigned int M_size = M.size1();
+//        for(unsigned int i = 0; i < M_size; ++i)
+//            omp_init_lock(&lock_array[i]);
+//#endif
+
+
+////        Timer::Start("Assemble Transferred stiffness matrix");
+//#ifdef _OPENMP
+//        #pragma omp parallel for
+//#endif
+//        for(int k = 0; k < number_of_threads; ++k)
+//        {
+//            ElementsArrayType::ptr_iterator it_begin = ElementsArray.ptr_begin() + element_partition[k];
+//            ElementsArrayType::ptr_iterator it_end = ElementsArray.ptr_begin() + element_partition[k+1];
+//                
+//            for( ElementsArrayType::ptr_iterator it = it_begin; it != it_end; ++it )
+//            {
+//                const IntegrationPointsArrayType& integration_points
+//                = (*it)->GetGeometry().IntegrationPoints((*it)->GetIntegrationMethod());
+
+//                GeometryType::JacobiansType J(integration_points.size());
+//                J = (*it)->GetGeometry().Jacobian(J, (*it)->GetIntegrationMethod());
+
+//                const Matrix& Ncontainer = (*it)->GetGeometry().ShapeFunctionsValues((*it)->GetIntegrationMethod());
+
+//                Matrix InvJ(3,3);
+//                double DetJ;
+//                for(unsigned int point=0; point< integration_points.size(); point++)
+//                {
+//                    MathUtils<double>::InvertMatrix(J[point],InvJ,DetJ);
+
+//                    double dV= DetJ*integration_points[point].Weight();
+
+//                    for(unsigned int prim=0 ; prim<(*it)->GetGeometry().size(); prim++)
+//                    {
+//                        unsigned int row = ((*it)->GetGeometry()[prim].Id()-1);
+//#ifdef _OPENMP
+//                        omp_set_lock(&lock_array[row]);
+//#endif
+//                        for(unsigned int sec=0 ; sec<(*it)->GetGeometry().size(); sec++)
+//                        {
+//                            unsigned int col = ((*it)->GetGeometry()[sec].Id()-1);
+//                            M(row, col)+= Ncontainer(point, prim)*Ncontainer(point, sec) * dV;
+//                        }
+//#ifdef _OPENMP
+//                        omp_unset_lock(&lock_array[row]);
+//#endif
+//                    }
+//                }
+//                
+//                ++show_progress;
+//            }
+//        }
+////        Timer::Stop("Assemble Transferred stiffness matrix");
+
+//            noalias(g)= ZeroVector(model_part.NumberOfNodes());
+//            noalias(b)= ZeroVector(model_part.NumberOfNodes());
+//            //Transfer of GaussianVariables to Nodal Variablias via L_2-Minimization
+//            // see Jiao + Heath "Common-refinement-based data tranfer ..."
+//            // International Journal for numerical methods in engineering 61 (2004) 2402--2427
+//            // for general description of L_2-Minimization
+//            
+////            Timer::Start("Assemble Transferred rhs vector");
+//#ifdef _OPENMP
+//            #pragma omp parallel for
+//#endif
+//            for(int k = 0; k < number_of_threads; ++k)
+//            {
+//                ElementsArrayType::ptr_iterator it_begin = ElementsArray.ptr_begin() + element_partition[k];
+//                ElementsArrayType::ptr_iterator it_end = ElementsArray.ptr_begin() + element_partition[k+1];
+//            
+//                for( ElementsArrayType::ptr_iterator it = it_begin;
+//                        it != it_end;
+//                        ++it )
+//                {
+//                    const IntegrationPointsArrayType& integration_points
+//                    = (*it)->GetGeometry().IntegrationPoints( (*it)->GetIntegrationMethod());
+
+//                    GeometryType::JacobiansType J(integration_points.size());
+//                    J = (*it)->GetGeometry().Jacobian(J, (*it)->GetIntegrationMethod());
+//                    std::vector<double> ValuesOnIntPoint(integration_points.size());
+
+//                    (*it)->GetValueOnIntegrationPoints(rThisVariable, ValuesOnIntPoint, model_part.GetProcessInfo());
+////                    std::cout << "ValuesOnIntPoint at element " << (*it)->Id() << ":";
+////                    for(std::size_t i = 0; i < integration_points.size(); ++i)
+////                        std::cout << " " << ValuesOnIntPoint[i];
+////                    std::cout << std::endl;
+
+//                    const Matrix& Ncontainer = (*it)->GetGeometry().ShapeFunctionsValues((*it)->GetIntegrationMethod());
+
+//                    Matrix InvJ(3,3);
+//                    double DetJ;
+//                    for(unsigned int point=0; point< integration_points.size(); point++)
+//                    {
+//                        MathUtils<double>::InvertMatrix(J[point],InvJ,DetJ);
+
+//                        double dV= DetJ*integration_points[point].Weight();
+
+//                        for(unsigned int prim=0 ; prim<(*it)->GetGeometry().size(); prim++)
+//                        {
+//                            unsigned int row = ((*it)->GetGeometry()[prim].Id()-1);
+//#ifdef _OPENMP
+//                            omp_set_lock(&lock_array[row]);
+//#endif
+//                            b(row) += ValuesOnIntPoint[point] * Ncontainer(point, prim) * dV;
+//#ifdef _OPENMP
+//                            omp_unset_lock(&lock_array[row]);
+//#endif
+//                        }
+//                    }
+//                }
+//            }
+////            Timer::Stop("Assemble Transferred rhs vector");
+
+////            Timer::Start("Transfer solve");
+//            mpLinearSolver->Solve(M, g, b);
+////            Timer::Stop("Transfer solve");
+
+////            Timer::Start("Transfer result");
+//            for(ModelPart::NodeIterator it = model_part.NodesBegin() ;
+//                    it != model_part.NodesEnd() ; it++)
+//            {
+//                it->GetSolutionStepValue(rThisVariable) = g((it->Id()-1));
+//            }
+////            Timer::Stop("Transfer result");
+
+//#ifdef _OPENMP
+//        for(unsigned int i = 0; i < M_size; ++i)
+//            omp_destroy_lock(&lock_array[i]);
+//#endif
+//        std::cout << "TransferVariablesToNodes for " << rThisVariable.Name() << " completed" << std::endl;
+//    }
+
     void TransferVariablesToNodes(ModelPart& model_part, Variable<double>& rThisVariable)
     {
-        ElementsArrayType& ElementsArray= model_part.Elements();
+        ElementsArrayType& ElementsArray = model_part.Elements();
 
-        //reset all values at node to zero// do not do this, some variable need the values at node, e.g. WATER_PRESSURE
-//        for(ModelPart::NodeIterator it = model_part.NodesBegin();
-//                it != model_part.NodesEnd() ; it++)
-//        {
-//            it->GetSolutionStepValue(rThisVariable) = 0.0;
-//        }
+        // count all the nodes at all the active elements
+        std::set<std::size_t> active_nodes;
+        std::map<std::size_t, std::size_t> node_row_id;
+        for( ElementsArrayType::ptr_iterator it = ElementsArray.ptr_begin(); it != ElementsArray.ptr_end(); ++it )
+        {
+            if( (*it)->GetValue(IS_INACTIVE) == false || (*it)->Is(ACTIVE) )
+            {
+                for( std::size_t i = 0; i < (*it)->GetGeometry().size(); ++i )
+                {
+                    active_nodes.insert( (*it)->GetGeometry()[i].Id() );
+                }
+            }
+        }
+KRATOS_WATCH(active_nodes.size())
+        // assign each node an id. That id is the row of this node in the global L2 projection matrix
+        std::size_t cnt = 0;
+        for( std::set<std::size_t>::iterator it = active_nodes.begin(); it != active_nodes.end(); ++it )
+        {
+            node_row_id[*it] = cnt++;
+        }
 
         //SetUpEquationSystem
-        SpaceType::MatrixType M(model_part.NumberOfNodes(), model_part.NumberOfNodes());
-        SpaceType::VectorType g(model_part.NumberOfNodes());
-        SpaceType::VectorType b(model_part.NumberOfNodes());
-        noalias(M)= ZeroMatrix(model_part.NumberOfNodes(), model_part.NumberOfNodes());
+        SpaceType::MatrixType M(active_nodes.size(), active_nodes.size());
+        SpaceType::VectorType g(active_nodes.size());
+        SpaceType::VectorType b(active_nodes.size());
+        noalias(M)= ZeroMatrix(active_nodes.size(), active_nodes.size());
 
         int number_of_threads = 1;
 #ifdef _OPENMP
@@ -1257,7 +1770,7 @@ public:
 
         // create the structure for M a priori
 //        Timer::Start("ConstructMatrixStructure");
-        ConstructMatrixStructure(M, ElementsArray, model_part.GetProcessInfo());
+        ConstructMatrixStructure(M, ElementsArray, node_row_id, model_part.GetProcessInfo());
 //        Timer::Stop("ConstructMatrixStructure");
 
 #ifdef _OPENMP
@@ -1280,46 +1793,47 @@ public:
                 
             for( ElementsArrayType::ptr_iterator it = it_begin; it != it_end; ++it )
             {
+                if( ! ( (*it)->GetValue(IS_INACTIVE) == false || (*it)->Is(ACTIVE) ) )
+                    continue;
+
                 const IntegrationPointsArrayType& integration_points
-                = (*it)->GetGeometry().IntegrationPoints((*it)->GetIntegrationMethod());
+                    = (*it)->GetGeometry().IntegrationPoints((*it)->GetIntegrationMethod());
 
                 GeometryType::JacobiansType J(integration_points.size());
                 J = (*it)->GetGeometry().Jacobian(J, (*it)->GetIntegrationMethod());
 
                 const Matrix& Ncontainer = (*it)->GetGeometry().ShapeFunctionsValues((*it)->GetIntegrationMethod());
 
-                Matrix InvJ(3,3);
                 double DetJ;
                 for(unsigned int point=0; point< integration_points.size(); point++)
                 {
-                    MathUtils<double>::InvertMatrix(J[point],InvJ,DetJ);
+                    DetJ = MathUtils<double>::Det(J[point]);
 
                     double dV= DetJ*integration_points[point].Weight();
 
                     for(unsigned int prim=0 ; prim<(*it)->GetGeometry().size(); prim++)
                     {
-                        unsigned int row = ((*it)->GetGeometry()[prim].Id()-1);
+                        unsigned int row = node_row_id[(*it)->GetGeometry()[prim].Id()];
 #ifdef _OPENMP
                         omp_set_lock(&lock_array[row]);
 #endif
                         for(unsigned int sec=0 ; sec<(*it)->GetGeometry().size(); sec++)
                         {
-                            unsigned int col = ((*it)->GetGeometry()[sec].Id()-1);
-                            M(row, col)+= Ncontainer(point, prim)*Ncontainer(point, sec) * dV;
+                            unsigned int col = node_row_id[(*it)->GetGeometry()[sec].Id()];
+                            M(row, col) += Ncontainer(point, prim)*Ncontainer(point, sec) * dV;
                         }
 #ifdef _OPENMP
                         omp_unset_lock(&lock_array[row]);
 #endif
                     }
                 }
-                
                 ++show_progress;
             }
         }
 //        Timer::Stop("Assemble Transferred stiffness matrix");
 
-            noalias(g)= ZeroVector(model_part.NumberOfNodes());
-            noalias(b)= ZeroVector(model_part.NumberOfNodes());
+            noalias(g)= ZeroVector(active_nodes.size());
+            noalias(b)= ZeroVector(active_nodes.size());
             //Transfer of GaussianVariables to Nodal Variablias via L_2-Minimization
             // see Jiao + Heath "Common-refinement-based data tranfer ..."
             // International Journal for numerical methods in engineering 61 (2004) 2402--2427
@@ -1334,17 +1848,18 @@ public:
                 ElementsArrayType::ptr_iterator it_begin = ElementsArray.ptr_begin() + element_partition[k];
                 ElementsArrayType::ptr_iterator it_end = ElementsArray.ptr_begin() + element_partition[k+1];
             
-                for( ElementsArrayType::ptr_iterator it = it_begin;
-                        it != it_end;
-                        ++it )
+                for( ElementsArrayType::ptr_iterator it = it_begin; it != it_end; ++it )
                 {
+                    if( ! ( (*it)->GetValue(IS_INACTIVE) == false || (*it)->Is(ACTIVE) ) )
+                        continue;
+
                     const IntegrationPointsArrayType& integration_points
-                    = (*it)->GetGeometry().IntegrationPoints( (*it)->GetIntegrationMethod());
+                        = (*it)->GetGeometry().IntegrationPoints( (*it)->GetIntegrationMethod());
 
                     GeometryType::JacobiansType J(integration_points.size());
                     J = (*it)->GetGeometry().Jacobian(J, (*it)->GetIntegrationMethod());
-                    std::vector<double> ValuesOnIntPoint(integration_points.size());
 
+                    std::vector<double> ValuesOnIntPoint(integration_points.size());
                     (*it)->GetValueOnIntegrationPoints(rThisVariable, ValuesOnIntPoint, model_part.GetProcessInfo());
 //                    std::cout << "ValuesOnIntPoint at element " << (*it)->Id() << ":";
 //                    for(std::size_t i = 0; i < integration_points.size(); ++i)
@@ -1353,17 +1868,16 @@ public:
 
                     const Matrix& Ncontainer = (*it)->GetGeometry().ShapeFunctionsValues((*it)->GetIntegrationMethod());
 
-                    Matrix InvJ(3,3);
                     double DetJ;
                     for(unsigned int point=0; point< integration_points.size(); point++)
                     {
-                        MathUtils<double>::InvertMatrix(J[point],InvJ,DetJ);
+                        DetJ = MathUtils<double>::Det(J[point]);
 
                         double dV= DetJ*integration_points[point].Weight();
 
                         for(unsigned int prim=0 ; prim<(*it)->GetGeometry().size(); prim++)
                         {
-                            unsigned int row = ((*it)->GetGeometry()[prim].Id()-1);
+                            unsigned int row = node_row_id[(*it)->GetGeometry()[prim].Id()];
 #ifdef _OPENMP
                             omp_set_lock(&lock_array[row]);
 #endif
@@ -1385,7 +1899,7 @@ public:
             for(ModelPart::NodeIterator it = model_part.NodesBegin() ;
                     it != model_part.NodesEnd() ; it++)
             {
-                it->GetSolutionStepValue(rThisVariable) = g((it->Id()-1));
+                it->GetSolutionStepValue(rThisVariable) = g(node_row_id[it->Id()]);
             }
 //            Timer::Stop("Transfer result");
 
@@ -1664,6 +2178,41 @@ public:
             }
         }//END firstvalue
     }
+
+    /// Transfer the variable at node from source mesh to target mesh
+    /// Using a simple scheme, where the node in target mesh is located in source mesh, and then the value is determined
+    template<class TVariableType>
+    void TransferVariablesFromNodeToNode(ModelPart& rSource, ModelPart& rTarget, TVariableType& rThisVariable)
+    {
+        ElementsArrayType& SourceMeshElementsArray = rSource.Elements();
+
+        for(ModelPart::NodeIterator it = rTarget.NodesBegin(); it != rTarget.NodesEnd(); ++it)
+        {
+            //Calculate Value of rVariable(firstvalue, secondvalue) in OldMesh
+            Point<3> sourceLocalPoint;
+            Element::Pointer sourceElement;
+            if(FindPartnerElement(*it, SourceMeshElementsArray, sourceElement, sourceLocalPoint))
+            {
+                Vector shape_functions_values;
+                shape_functions_values = sourceElement->GetGeometry().ShapeFunctionsValues(shape_functions_values, sourceLocalPoint);
+
+                it->GetSolutionStepValue(rThisVariable) =
+                    shape_functions_values[0] * sourceElement->GetGeometry()[0].GetSolutionStepValue(rThisVariable);
+
+                for(unsigned int i = 1; i < sourceElement->GetGeometry().size(); ++i)
+                {
+                    it->GetSolutionStepValue(rThisVariable) +=
+                        shape_functions_values[i] * sourceElement->GetGeometry()[i].GetSolutionStepValue(rThisVariable);
+                }
+            }
+            else
+            {
+                std::cout<<"###### NO PARTNER FOUND IN OLD MESH : TransferVariablesBetweenMeshes(...Vector...)#####"<<std::endl;
+                continue;
+            }
+        }
+    }
+
     /**
      * Transfer of rThisVariable stored on nodes form source mesh to target mesh.
      * The transformation is done in a way that ensures a minimization
@@ -2003,7 +2552,11 @@ public:
                     it != OldElementsSet->ptr_end(); ++it )
             {
 //                         std::cout << "checking elements list" << std::endl;
-                if( (*it)->GetGeometry().IsInside( newNode, rResult ) )
+//                KRATOS_WATCH(newNode)
+//                KRATOS_WATCH(rResult)
+                bool is_inside = (*it)->GetGeometry().IsInside( newNode, rResult );
+//                KRATOS_WATCH(is_inside)
+                if( is_inside )
                 {
 //                    std::cout << "isInside" << std::endl;
 //                    oldElement = *(*it);
@@ -2099,10 +2652,7 @@ protected:
         Element::EquationIdVectorType ids;
         for(ElementsArrayType::iterator i_element = rElements.begin() ; i_element != rElements.end() ; ++i_element)
         {
-            bool element_is_active = true;
-            if( (i_element)->IsDefined(ACTIVE) )
-                element_is_active = (i_element)->Is(ACTIVE);
-            if( element_is_active )
+            if( ! (i_element)->GetValue( IS_INACTIVE ) || (i_element)->Is(ACTIVE) )
             {
                 ids.resize((i_element)->GetGeometry().size());
                 for(unsigned int i = 0; i < (i_element)->GetGeometry().size();  ++i)
@@ -2172,7 +2722,91 @@ protected:
         }
 #endif
     }
-    
+
+    void ConstructMatrixStructure (
+        SpaceType::MatrixType& A,
+        ElementsArrayType& rElements,
+        std::map<std::size_t, std::size_t>& NodeRowId,
+        ProcessInfo& CurrentProcessInfo
+    )
+    {
+        std::size_t equation_size = A.size1();
+        std::vector<std::vector<std::size_t> > indices(equation_size);
+
+        Element::EquationIdVectorType ids;
+        for(ElementsArrayType::iterator i_element = rElements.begin() ; i_element != rElements.end() ; ++i_element)
+        {
+            if( ! (i_element)->GetValue( IS_INACTIVE ) || (i_element)->Is(ACTIVE) )
+            {
+                ids.resize((i_element)->GetGeometry().size());
+                for(unsigned int i = 0; i < (i_element)->GetGeometry().size();  ++i)
+                {
+                    ids[i] = NodeRowId[(i_element)->GetGeometry()[i].Id()];
+                }
+
+                for(std::size_t i = 0 ; i < ids.size() ; ++i)
+                {
+                    if(ids[i] < equation_size)
+                    {
+                        std::vector<std::size_t>& row_indices = indices[ids[i]];
+                        for(std::size_t j = 0 ; j < ids.size() ; j++)
+                        {
+                            if(ids[j] < equation_size)
+                            {
+                                AddUnique(row_indices,ids[j]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //allocating the memory needed
+        int data_size = 0;
+        for(std::size_t i = 0 ; i < indices.size() ; i++)
+        {
+            data_size += indices[i].size();
+        }
+        A.reserve(data_size, false);
+
+        //filling with zero the matrix (creating the structure)
+#ifndef _OPENMP
+        for(std::size_t i = 0 ; i < indices.size() ; i++)
+        {
+            std::vector<std::size_t>& row_indices = indices[i];
+            std::sort(row_indices.begin(), row_indices.end());
+
+            for(std::vector<std::size_t>::iterator it= row_indices.begin(); it != row_indices.end() ; it++)
+            {
+                A.push_back(i,*it,0.00);
+            }
+            row_indices.clear();
+        }
+#else
+        int number_of_threads = omp_get_max_threads();
+        vector<unsigned int> matrix_partition;
+        CreatePartition(number_of_threads, indices.size(), matrix_partition);
+        for( int k=0; k<number_of_threads; k++ )
+        {
+            #pragma omp parallel
+            if( omp_get_thread_num() == k )
+            {
+                for( std::size_t i = matrix_partition[k]; i < matrix_partition[k+1]; i++ )
+                {
+                    std::vector<std::size_t>& row_indices = indices[i];
+                    std::sort(row_indices.begin(), row_indices.end());
+
+                    for(std::vector<std::size_t>::iterator it= row_indices.begin(); it != row_indices.end() ; it++)
+                    {
+                        A.push_back(i, *it, 0.00);
+                    }
+                    row_indices.clear();
+                }
+            }
+        }
+#endif
+    }
+
     //**********AUXILIARY FUNCTION**************************************************************
     //******************************************************************************************
     inline void AddUnique(std::vector<std::size_t>& v, const std::size_t& candidate)

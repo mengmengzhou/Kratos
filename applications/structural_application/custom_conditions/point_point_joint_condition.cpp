@@ -43,9 +43,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 /* *********************************************************
 *
-*   Last Modified by:    $Author: Nelson $
-*   Date:                $Date: 2009-03-17 14:35:29 $
-*   Revision:            $Revision: 1.4 $
+*   Last Modified by:    $Author: Jelena $
+*   Date:                $Date: $
+*   Revision:            $Revision: 1.0 $
 *
 * ***********************************************************/
 
@@ -67,35 +67,34 @@ namespace Kratos
 {
 //************************************************************************************
 //************************************************************************************
-// PointPointJointCondition::PointPointJointCondition( IndexType NewId,
-//         GeometryType::Pointer pGeometry) :
-//     Condition( NewId, pGeometry )
-// {
-//     KRATOS_WATCH("IN REAL CONSTUCTOR");
-//     mStiffnessMatrix = ZeroMatrix(6,6);
-// }
-
-PointPointJointCondition::PointPointJointCondition( IndexType NewId, Node<3>::Pointer const& node1, Node<3>::Pointer const& node2 ) 
-    : Condition( NewId, GeometryType::Pointer( new Line3D2<Node<3> >( node1, node2 ) ) )
+PointPointJointCondition::PointPointJointCondition( IndexType NewId,
+        GeometryType::Pointer pGeometry) :
+    Condition( NewId, pGeometry )
 {
-//     mStiffnessMatrix = ZeroMatrix(6,6);
 }
 
-PointPointJointCondition::PointPointJointCondition( IndexType NewId, NodesArrayType const& ThisNodes ) 
-    : Condition( NewId, GeometryType::Pointer( new Line3D2<Node<3> >( ThisNodes ) ) )
+PointPointJointCondition::PointPointJointCondition( IndexType NewId, GeometryType::Pointer pGeometry,
+        PropertiesType::Pointer pProperties) :
+    Condition( NewId, pGeometry, pProperties )
 {
-//     mStiffnessMatrix = ZeroMatrix(6,6);
+}
+
+PointPointJointCondition::PointPointJointCondition( IndexType NewId, Node<3>::Pointer const& node1, Node<3>::Pointer const& node2,
+        PropertiesType::Pointer pProperties ) 
+    : Condition( NewId, GeometryType::Pointer( new Line3D2<Node<3> >( node1, node2 ) ), pProperties )
+{
+}
+
+PointPointJointCondition::PointPointJointCondition( IndexType NewId, NodesArrayType const& ThisNodes,
+        PropertiesType::Pointer pProperties ) 
+    : Condition( NewId, GeometryType::Pointer( new Line3D2<Node<3> >( ThisNodes ) ), pProperties )
+{
 }
 
 //************************************************************************************
 //**** life cycle ********************************************************************
 //************************************************************************************
-// PointPointJointCondition::PointPointJointCondition( IndexType NewId, GeometryType::Pointer pGeometry,
-//         PropertiesType::Pointer pProperties) :
-//     Condition( NewId, pGeometry, pProperties )
-// {
-//     mStiffnessMatrix = ZeroMatrix(6,6);
-// }
+
 
 // PointPointJointCondition::PointPointJointCondition( IndexType NewId, NodesArrayType const& ThisNodes)
 // {
@@ -106,9 +105,8 @@ Condition::Pointer PointPointJointCondition::Create( IndexType NewId,
         NodesArrayType const& ThisNodes,
         PropertiesType::Pointer pProperties) const
 {
-//     return Condition::Pointer( new PointPointJointCondition(NewId, GetGeometry().Create(ThisNodes),
-//                                pProperties));
-    return Condition::Pointer( new PointPointJointCondition( NewId, ThisNodes ) );
+     return Condition::Pointer( new PointPointJointCondition(NewId, GetGeometry().Create(ThisNodes),
+                                pProperties));
 }
 
 
@@ -198,21 +196,21 @@ void PointPointJointCondition::CalculateAll( MatrixType& rLeftHandSideMatrix,
     }
     
 //     noalias(rLeftHandSideMatrix) = mStiffnessMatrix;
-    noalias(rLeftHandSideMatrix) = GetValue( JOINT_STIFFNESS );
+//    noalias(rLeftHandSideMatrix) = GetValue( JOINT_STIFFNESS );
+    noalias(rLeftHandSideMatrix) = GetProperties()[ JOINT_STIFFNESS ];
+
     //compute internal forces
     Vector displacements = ZeroVector(6);
-    for( unsigned int i=0; i<2; i++ )
+    for( unsigned int i = 0; i < 2; i++ )
     {
-        displacements[3*i] = GetGeometry()[i].GetSolutionStepValue(DISPLACEMENT_X);
+        displacements[3*i  ] = GetGeometry()[i].GetSolutionStepValue(DISPLACEMENT_X);
         displacements[3*i+1] = GetGeometry()[i].GetSolutionStepValue(DISPLACEMENT_Y);
         displacements[3*i+2] = GetGeometry()[i].GetSolutionStepValue(DISPLACEMENT_Z);
-
     }
-    noalias(rRightHandSideVector) = prod(rLeftHandSideMatrix,displacements);
-    
-    KRATOS_WATCH( rLeftHandSideMatrix );
-    KRATOS_WATCH( rRightHandSideVector );
+    noalias(rRightHandSideVector) = -prod(rLeftHandSideMatrix, displacements);
 
+//    KRATOS_WATCH( rLeftHandSideMatrix );
+//    KRATOS_WATCH( rRightHandSideVector );
 }
 
 //************************************************************************************

@@ -127,28 +127,53 @@ int& Isotropic3D::GetValue( const Variable<int>& rThisVariable, int& rValue )
 
 double& Isotropic3D::GetValue( const Variable<double>& rThisVariable, double& rValue )
 {
-    if ( rThisVariable == PRESTRESS_FACTOR ){
+    if ( rThisVariable == PRESTRESS_FACTOR )
+    {
         rValue = mPrestressFactor;
-    return rValue;
+        return rValue;
     }
-    if(rThisVariable == YOUNG_MODULUS ){
+
+    if(rThisVariable == YOUNG_MODULUS )
+    {
        rValue = mE;
        return rValue;
-     }
+    }
 
-
-    if ( rThisVariable == POISSON_RATIO ){
+    if ( rThisVariable == POISSON_RATIO )
+    {
         rValue = mNU;
         return rValue;
     }
 
-    if(rThisVariable==DAMAGE){
+    if(rThisVariable == DAMAGE)
+    {
         rValue = 0.00;
         return rValue;
     }
 
-    if (rThisVariable==DELTA_TIME){
+    if (rThisVariable == DELTA_TIME)
+    {
         rValue = sqrt(mE/mDE);
+        return rValue;
+    }
+
+    if (rThisVariable == PRESSURE_P)
+    {
+        rValue = -(mCurrentStress[0] + mCurrentStress[1] + mCurrentStress[2]) / 3;
+        return rValue;
+    }
+
+    if (rThisVariable == PRESSURE_Q)
+    {
+        double p = (mCurrentStress[0] + mCurrentStress[1] + mCurrentStress[2]) / 3;
+        double sxx = mCurrentStress[0] - p;
+        double syy = mCurrentStress[1] - p;
+        double szz = mCurrentStress[2] - p;
+        double sxy = mCurrentStress[3];
+        double syz = mCurrentStress[4];
+        double sxz = mCurrentStress[5];
+
+        rValue = sqrt( 3.0 * ( 0.5*(sxx*sxx + syy*syy + szz*szz) + sxy*sxy + syz*syz + sxz*sxz ) );
         return rValue;
     }
 
@@ -167,13 +192,14 @@ Vector& Isotropic3D::GetValue( const Variable<Vector>& rThisVariable, Vector& rV
         return rValue;
     }
 
-    if ( rThisVariable == STRESSES )
+    if ( rThisVariable == STRESSES || rThisVariable == THREED_STRESSES )
     {
         const unsigned int size = mCurrentStress.size();
         rValue.resize(size, false );
         rValue  = mCurrentStress;
         return rValue;
     }
+
     if ( rThisVariable == PLASTIC_STRAIN_VECTOR )
     {
         rValue = ZeroVector( 6 );
@@ -221,6 +247,8 @@ void Isotropic3D::SetValue( const Variable<Vector>& rThisVariable, const Vector&
 {
     if ( rThisVariable == INSITU_STRESS || rThisVariable == PRESTRESS )
     {
+        if(mPrestress.size() != rValue.size())
+            mPrestress.resize(rValue.size(), false);
         noalias(mPrestress) = rValue;
     }
 }

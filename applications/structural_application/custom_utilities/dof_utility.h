@@ -83,8 +83,11 @@ public:
     {}
 
     /// List all the dofs in the model_part
-    void ListDofs(ModelPart::DofsArrayType& rDofSet, std::size_t EquationSystemSize)
+    static void ListDofs(ModelPart::DofsArrayType& rDofSet, const std::size_t& EquationSystemSize)
     {
+        KRATOS_WATCH(rDofSet.size())
+        KRATOS_WATCH(EquationSystemSize)
+
         // get the set of variables in the dof set and count them by type
         std::set<VariableData> VarSet;
         std::map<VariableData::KeyType, std::size_t> VarCount;
@@ -102,6 +105,12 @@ public:
         {
             std::cout << "    " << it->Name() << ": " << VarCount[it->Key()] << std::endl;
         }
+    }
+
+    template<class TVariableType>
+    static void PrintKey(const TVariableType& rThisVariable)
+    {
+        std::cout << "Variable " << rThisVariable.Name() << " key: " << rThisVariable.Key() << std::endl;
     }
 
 };//Class DofUtility
