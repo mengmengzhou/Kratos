@@ -574,6 +574,15 @@ public:
                                             array_1d<double, 6 > & rValue);
 
     /**
+     * returns the value of a specified variable
+     * @param rThisVariable the variable to be returned
+     * @param rValue a reference to the returned value
+     * @return the value of the specified variable
+     */
+    virtual std::string& GetValue(const Variable<std::string>& rVariable,
+                                            std::string& rValue);
+
+    /**
      * sets the value of a specified variable
      * @param rVariable the variable to be returned
      * @param Value new value of the specified variable
@@ -631,6 +640,16 @@ public:
      */
     virtual void SetValue(const Variable<array_1d<double, 6 > >& rVariable,
                           const array_1d<double, 6 > & rValue,
+                          const ProcessInfo& rCurrentProcessInfo);
+
+    /**
+     * sets the value of a specified variable
+     * @param rVariable the variable to be returned
+     * @param rValue new value of the specified variable
+     * @param rCurrentProcessInfo the process info
+     */
+    virtual void SetValue(const Variable<std::string>& rVariable,
+                          const std::string& rValue,
                           const ProcessInfo& rCurrentProcessInfo);
 
     /**
