@@ -144,6 +144,7 @@ public:
         : IndexedObject(NodeId),
           mIsFixed(false),
           mEquationId(IndexType()),
+          mLocalEquationId(IndexType()),
           mpSolutionStepsData(pThisSolutionStepsData),
           mpVariable(&rThisVariable),
           mpReaction(&msNone),
@@ -159,6 +160,7 @@ public:
         : IndexedObject(NodeId),
           mIsFixed(false),
           mEquationId(IndexType()),
+          mLocalEquationId(IndexType()),
           mpSolutionStepsData(pThisSolutionStepsData),
           mpVariable(&rThisVariable),
           mpReaction(&rThisReaction),
@@ -172,6 +174,7 @@ public:
         : IndexedObject(0),
           mIsFixed(false),
           mEquationId(IndexType()),
+          mLocalEquationId(IndexType()),
           mpSolutionStepsData(),
           mpVariable(&msNone),
           mpReaction(&msNone),
@@ -185,6 +188,7 @@ public:
 // 		  : IndexedObject(Counter<Dof<TDataType> >::Increment()),
 // 		  mIsFixed(false),
 // 		  mEquationId(IndexType()),
+// 		  mLocalEquationId(IndexType()),
 // 		  mpSolutionStepsData(SolutionStepsDataContainerType::Pointer(new SolutionStepsDataContainerType)),
 // 		  mpVariable(&rThisVariable),
 // 		  mpReaction(&msNone),
@@ -199,6 +203,7 @@ public:
 // 		  : IndexedObject(Counter<Dof<TDataType> >::Increment()),
 // 		  mIsFixed(false),
 // 		  mEquationId(IndexType()),
+// 		  mLocalEquationId(IndexType()),
 // 		  mpSolutionStepsData(SolutionStepsDataContainerType::Pointer(new SolutionStepsDataContainerType)),
 // 		  mpVariable(&rThisVariable),
 // 		  mpReaction(&rThisReaction),
@@ -213,6 +218,7 @@ public:
         : IndexedObject(rOther),
           mIsFixed(rOther.mIsFixed),
           mEquationId(rOther.mEquationId),
+          mLocalEquationId(rOther.mLocalEquationId),
           mpSolutionStepsData(rOther.mpSolutionStepsData),
           mpVariable(rOther.mpVariable),
           mpReaction(rOther.mpReaction),
@@ -236,6 +242,7 @@ public:
         IndexedObject::operator=(rOther);
         mIsFixed = rOther.mIsFixed;
         mEquationId = rOther.mEquationId;
+        mLocalEquationId = rOther.mLocalEquationId;
         mpSolutionStepsData = rOther.mpSolutionStepsData;
         mpVariable = rOther.mpVariable;
         mpReaction = rOther.mpReaction;
@@ -396,11 +403,25 @@ public:
         return mEquationId;
     }
 
+    /** Return the local Equation Id related to this degree eof freedom.
+     */
+    EquationIdType LocalEquationId() const
+    {
+        return mLocalEquationId;
+    }
+
     /** Sets the Equation Id to the desired value
      */
     void SetEquationId(EquationIdType NewEquationId)
     {
         mEquationId = NewEquationId;
+    }
+
+    /** Sets the local Equation Id to the desired value
+     */
+    void SetLocalEquationId(EquationIdType NewEquationId)
+    {
+        mLocalEquationId = NewEquationId;
     }
 
     /** Fixes the Dof
@@ -483,6 +504,7 @@ public:
         else
             rOStream << "    IsFixed                : False" << std::endl;
         rOStream << "    Equation Id            : " << mEquationId << std::endl;
+        rOStream << "    Local Equation Id      : " << mLocalEquationId << std::endl;
     }
 
 
@@ -549,6 +571,7 @@ private:
 
     /** Equation identificator of the degree of freedom */
     EquationIdType mEquationId;
+    EquationIdType mLocalEquationId; // this is used for BDDC and FETI, also for the unassembled matrix format
 
     /** A pointer to solutionsteps data stored in node which is corresponded to this dof */
     SolutionStepsDataContainerType* mpSolutionStepsData;
@@ -608,6 +631,7 @@ private:
         KRATOS_SERIALIZE_SAVE_BASE_CLASS(rSerializer, IndexedObject );
         rSerializer.save("Is Fixed", mIsFixed);
         rSerializer.save("Equation Id", mEquationId);
+        rSerializer.save("Local Equation Id", mLocalEquationId);
         rSerializer.save("Solution Steps Data", mpSolutionStepsData);
         rSerializer.save("Variable", mpVariable->Name());
         rSerializer.save("Reaction", mpReaction->Name());
@@ -621,6 +645,7 @@ private:
         KRATOS_SERIALIZE_LOAD_BASE_CLASS(rSerializer, IndexedObject );
         rSerializer.load("Is Fixed", mIsFixed);
         rSerializer.load("Equation Id", mEquationId);
+        rSerializer.load("Local Equation Id", mLocalEquationId);
         rSerializer.load("Solution Steps Data", mpSolutionStepsData);
         rSerializer.load("Variable", name);
         mpVariable=KratosComponents<VariableData>::pGet(name);
