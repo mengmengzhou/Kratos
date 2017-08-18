@@ -225,6 +225,18 @@ array_1d<double, 6 > & ConstitutiveLaw::GetValue(const Variable<array_1d<double,
 }
 
 /**
+ * returns the value of a specified variable
+ * @param rThisVariable the variable to be returned
+ * @param rValue a reference to the returned value
+ * @return the value of the specified variable
+ */
+std::string& ConstitutiveLaw::GetValue(const Variable<std::string>& rVariable,
+        std::string& rValue)
+{
+    return rValue;
+}
+
+/**
  * sets the value of a specified variable
  * @param rVariable the variable to be returned
  * @param Value new value of the specified variable
@@ -295,6 +307,19 @@ void ConstitutiveLaw::SetValue(const Variable<array_1d<double, 3 > >& rVariable,
  */
 void ConstitutiveLaw::SetValue(const Variable<array_1d<double, 6 > >& rVariable,
                                const array_1d<double, 6 > & rValue,
+                               const ProcessInfo& rCurrentProcessInfo)
+{
+    KRATOS_ERROR <<  "Called the virtual function for SetValue"<< std::endl;;
+}
+
+/**
+ * sets the value of a specified variable
+ * @param rVariable the variable to be returned
+ * @param rValue new value of the specified variable
+ * @param rCurrentProcessInfo the process info
+ */
+void ConstitutiveLaw::SetValue(const Variable<std::string>& rVariable,
+                               const std::string& rValue,
                                const ProcessInfo& rCurrentProcessInfo)
 {
     KRATOS_ERROR <<  "Called the virtual function for SetValue"<< std::endl;;
