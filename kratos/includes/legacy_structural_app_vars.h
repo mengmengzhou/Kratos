@@ -137,6 +137,8 @@ namespace Kratos
 //    KRATOS_DEFINE_VARIABLE( double, IS_BOUNDARY )
 //    KRATOS_DEFINE_VARIABLE( double, IS_VISITED )
 
+    KRATOS_DEFINE_VARIABLE( bool, IS_INACTIVE )
+
 }  // namespace Kratos.
 
 #undef  KRATOS_EXPORT_MACRO
