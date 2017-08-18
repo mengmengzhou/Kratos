@@ -411,6 +411,14 @@ public:
         return p_clone;
     }
 
+    // Initialize the internal data for this geometry
+    virtual void Initialize(IntegrationMethod ThisMethod)
+    {}
+
+    // Clean the internal memory of this geometry
+    virtual void Finalize()
+    {}
+
     //lumping factors for the calculation of the lumped mass matrix
     virtual Vector& LumpingFactors( Vector& rResult )  const
     {
@@ -1689,7 +1697,7 @@ public:
     @see ShapeFunctionsLocalGradients
     @see ShapeFunctionLocalGradient
     */
-    const Matrix& ShapeFunctionsValues() const
+    virtual const Matrix& ShapeFunctionsValues() const
     {
         return mpGeometryData->ShapeFunctionsValues();
     }
@@ -1734,7 +1742,7 @@ public:
     @see ShapeFunctionsLocalGradients
     @see ShapeFunctionLocalGradient
     */
-    const Matrix& ShapeFunctionsValues( IntegrationMethod ThisMethod )  const
+    virtual const Matrix& ShapeFunctionsValues( IntegrationMethod ThisMethod )  const
     {
         return mpGeometryData->ShapeFunctionsValues( ThisMethod );
     }
@@ -1761,7 +1769,7 @@ public:
     @see ShapeFunctionsLocalGradients
     @see ShapeFunctionLocalGradient
     */
-    double ShapeFunctionValue( IndexType IntegrationPointIndex, IndexType ShapeFunctionIndex ) const
+    virtual double ShapeFunctionValue( IndexType IntegrationPointIndex, IndexType ShapeFunctionIndex ) const
     {
         return mpGeometryData->ShapeFunctionValue( IntegrationPointIndex, ShapeFunctionIndex );
     }
@@ -1788,7 +1796,7 @@ public:
     @see ShapeFunctionsLocalGradients
     @see ShapeFunctionLocalGradient
     */
-    double ShapeFunctionValue( IndexType IntegrationPointIndex, IndexType ShapeFunctionIndex, IntegrationMethod ThisMethod ) const
+    virtual double ShapeFunctionValue( IndexType IntegrationPointIndex, IndexType ShapeFunctionIndex, IntegrationMethod ThisMethod ) const
     {
         return mpGeometryData->ShapeFunctionValue( IntegrationPointIndex, ShapeFunctionIndex, ThisMethod );
     }
@@ -1835,7 +1843,7 @@ public:
     @see ShapeFunctionLocalGradient
     */
 
-    const ShapeFunctionsGradientsType& ShapeFunctionsLocalGradients() const
+    virtual const ShapeFunctionsGradientsType& ShapeFunctionsLocalGradients() const
     {
         return mpGeometryData->ShapeFunctionsLocalGradients();
     }
@@ -1861,7 +1869,7 @@ public:
     @see ShapeFunctionValue
     @see ShapeFunctionLocalGradient
     */
-    const ShapeFunctionsGradientsType& ShapeFunctionsLocalGradients( IntegrationMethod ThisMethod ) const
+    virtual const ShapeFunctionsGradientsType& ShapeFunctionsLocalGradients( IntegrationMethod ThisMethod ) const
     {
         return mpGeometryData->ShapeFunctionsLocalGradients( ThisMethod );
     }
@@ -1888,7 +1896,7 @@ public:
     @see ShapeFunctionValue
     @see ShapeFunctionsLocalGradients
     */
-    const Matrix& ShapeFunctionLocalGradient( IndexType IntegrationPointIndex )  const
+    virtual const Matrix& ShapeFunctionLocalGradient( IndexType IntegrationPointIndex )  const
     {
         return mpGeometryData->ShapeFunctionLocalGradient( IntegrationPointIndex );
     }
@@ -2196,6 +2204,7 @@ protected:
     ///@name Protected member Variables
     ///@{
 
+    GeometryData const* mpGeometryData;
 
     ///@}
     ///@name Protected Operators
@@ -2396,8 +2405,6 @@ private:
     ///@}
     ///@name Member Variables
     ///@{
-
-    GeometryData const* mpGeometryData;
 
 
     ///@}
