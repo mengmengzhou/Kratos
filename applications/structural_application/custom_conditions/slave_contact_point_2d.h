@@ -108,14 +108,8 @@ public:
      */
     SlaveContactPoint2D( IndexType NewId, GeometryType::Pointer pGeometry);
 
-    SlaveContactPoint2D( IndexType NewId, NodesArrayType const& ThisNodes);
-
     SlaveContactPoint2D( IndexType NewId, GeometryType::Pointer pGeometry,
                          PropertiesType::Pointer pProperties);
-
-
-    SlaveContactPoint2D(IndexType NewId, NodesArrayType& ThisNode);
-
 
     /**
      * Destructor.

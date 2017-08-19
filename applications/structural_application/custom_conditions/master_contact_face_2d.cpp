@@ -91,13 +91,6 @@ Condition::Pointer MasterContactFace2D::Create( IndexType NewId,
                                pProperties));
 }
 
-/// nodearraytype is equal to PointerVector<TPointType>
-MasterContactFace2D::MasterContactFace2D(IndexType NewId, NodesArrayType& ThisNodes)
-{
-}
-
-
-
 /**
  * Destructor. Never to be called manually
  */

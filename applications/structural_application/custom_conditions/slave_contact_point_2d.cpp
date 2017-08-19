@@ -73,8 +73,9 @@ SlaveContactPoint2D::SlaveContactPoint2D( IndexType NewId,
 
     GetValue( IS_CONTACT_SLAVE  )         = 1;
     GetValue( IS_CONTACT_MASTER )         = 0;
-    Condition::GeometryType& geom         = this->GetGeometry();
-    geom[0].GetValue(IS_CONTACT_SLAVE  )  = 1;
+    // hbui: I have to disable this code because geom[0] for some reason is inaccessible on Windows.
+	/*Condition::GeometryType& geom         = this->GetGeometry();
+    geom[0].GetValue(IS_CONTACT_SLAVE  )  = 1;*/
 
 }
 
@@ -88,10 +89,6 @@ SlaveContactPoint2D::SlaveContactPoint2D( IndexType NewId, GeometryType::Pointer
 {
 }
 
-SlaveContactPoint2D::SlaveContactPoint2D( IndexType NewId, NodesArrayType const& ThisNodes)
-{
-}
-
 Condition::Pointer SlaveContactPoint2D::Create( IndexType NewId,
         NodesArrayType const& ThisNodes,
         PropertiesType::Pointer pProperties) const
@@ -99,18 +96,6 @@ Condition::Pointer SlaveContactPoint2D::Create( IndexType NewId,
     return Condition::Pointer( new SlaveContactPoint2D(NewId, GetGeometry().Create(ThisNodes),
                                pProperties));
 }
-
-// nodearraytype is equal to PointerVector<TPointType>
-SlaveContactPoint2D::SlaveContactPoint2D(IndexType NewId, NodesArrayType& ThisNodes)
-{
-    //PointerGeometryType  pgeom    = PointerGeometryType(new Line2D2 <Node<3> >( ThisNodes));
-    //GetGeometry() = *pgeom;
-    //KRATOS_WATCH(GetGeometry())
-    //GetValue(IS_CONTACT_MASTER) = 1;
-    //for(NodesArrayType::iterator inode = ThisNodes.begin() ; inode!=ThisNodes.end(); inode++)
-}
-
-
 
 /**
  * Destructor. Never to be called manually

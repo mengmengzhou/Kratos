@@ -112,10 +112,6 @@ public:
     MasterContactFace2D( IndexType NewId, GeometryType::Pointer pGeometry,
                          PropertiesType::Pointer pProperties);
 
-
-    MasterContactFace2D(IndexType NewId, NodesArrayType& ThisNode);
-
-
     /**
      * Destructor.
      */
