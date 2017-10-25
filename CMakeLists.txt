@@ -159,6 +159,27 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
 
 ######################################################################################
 ######################################################################################
+# selected Kratos version for SD
+if(KRATOS_SD_REF_NUMBER)
+    if(${KRATOS_SD_REF_NUMBER} EQUAL 2)
+        message("kratos_bcn2 will be compiled")
+        add_definitions(-DKRATOS_SD_REF_NUMBER_2)
+    elseif(${KRATOS_SD_REF_NUMBER} EQUAL 3)
+        message("kratos_bcn3 will be compiled")
+        add_definitions(-DKRATOS_SD_REF_NUMBER_3)
+    else()
+        add_definitions(-DKRATOS_SD_REF_NUMBER_2)
+    endif()
+else()
+    message("kratos_bcn2 will be compiled")
+    add_definitions(-DKRATOS_SD_REF_NUMBER_2)
+endif()
+################################
+
+if(${ISOGEOMETRIC_APPLICATION} MATCHES ON)
+add_definitions( -DENABLE_BEZIER_GEOMETRY )
+endif()
+
 ######################################################################################
 
 ## Find all dependencies
