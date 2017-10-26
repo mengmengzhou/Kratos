@@ -411,6 +411,16 @@ public:
     //     return p_clone;
     // }
 
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    // Initialize this geometry
+    virtual void Initialize(IntegrationMethod ThisMethod)
+    {}
+
+    // Clean the internal memory of this geometry
+    virtual void Clean()
+    {}
+    #endif
+
     //lumping factors for the calculation of the lumped mass matrix
     virtual Vector& LumpingFactors( Vector& rResult )  const
     {
@@ -1689,10 +1699,20 @@ public:
     @see ShapeFunctionsLocalGradients
     @see ShapeFunctionLocalGradient
     */
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    virtual const Matrix& ShapeFunctionsValues() const
+    {
+        return mpGeometryData->ShapeFunctionsValues();
+    }
+    #else
     const Matrix& ShapeFunctionsValues() const
     {
         return mpGeometryData->ShapeFunctionsValues();
     }
+    #endif
+
+
+
 
     /** This method gives all non-zero shape functions values
     evaluated at the rCoordinates provided
@@ -1708,10 +1728,13 @@ public:
     @see ShapeFunctionLocalGradient
     */
 
-    virtual Vector& ShapeFunctionsValues (Vector &rResult, const CoordinatesArrayType& rCoordinates) const
+    virtual Vector& ShapeFunctionsValues (Vector &rResults, const CoordinatesArrayType& rCoordinates) const
     {
-        KRATOS_ERROR << "Calling base class ShapeFunctionsValues method instead of derived class one. Please check the definition of derived class. " << *this << std::endl;
-        return rResult;
+        if(rResults.size() != this->PointsNumber())
+            rResults.resize(this->PointsNumber(), false);
+        for(unsigned int i = 0; i < this->PointsNumber(); ++i)
+            rResults[i] = this->ShapeFunctionValue(i, rCoordinates);
+        return rResults;
     }
 
     /** This method gives all shape functions values evaluated in all
@@ -1734,10 +1757,17 @@ public:
     @see ShapeFunctionsLocalGradients
     @see ShapeFunctionLocalGradient
     */
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    virtual const Matrix& ShapeFunctionsValues( IntegrationMethod ThisMethod )  const
+    {
+        return mpGeometryData->ShapeFunctionsValues( ThisMethod );
+    }
+    #else
     const Matrix& ShapeFunctionsValues( IntegrationMethod ThisMethod )  const
     {
         return mpGeometryData->ShapeFunctionsValues( ThisMethod );
     }
+    #endif
 
     /** This method gives value of given shape function evaluated in
     given integration point of default integration method. It just
@@ -1761,10 +1791,17 @@ public:
     @see ShapeFunctionsLocalGradients
     @see ShapeFunctionLocalGradient
     */
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    virtual double ShapeFunctionValue( IndexType IntegrationPointIndex, IndexType ShapeFunctionIndex ) const
+    {
+        return mpGeometryData->ShapeFunctionValue( IntegrationPointIndex, ShapeFunctionIndex );
+    }
+    #else
     double ShapeFunctionValue( IndexType IntegrationPointIndex, IndexType ShapeFunctionIndex ) const
     {
         return mpGeometryData->ShapeFunctionValue( IntegrationPointIndex, ShapeFunctionIndex );
     }
+    #endif
 
     /** This method gives value of given shape function evaluated in given
     integration point of given integration method. There is no
@@ -1788,10 +1825,17 @@ public:
     @see ShapeFunctionsLocalGradients
     @see ShapeFunctionLocalGradient
     */
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    virtual double ShapeFunctionValue( IndexType IntegrationPointIndex, IndexType ShapeFunctionIndex, IntegrationMethod ThisMethod ) const
+    {
+        return mpGeometryData->ShapeFunctionValue( IntegrationPointIndex, ShapeFunctionIndex, ThisMethod );
+    }
+    #else
     double ShapeFunctionValue( IndexType IntegrationPointIndex, IndexType ShapeFunctionIndex, IntegrationMethod ThisMethod ) const
     {
         return mpGeometryData->ShapeFunctionValue( IntegrationPointIndex, ShapeFunctionIndex, ThisMethod );
     }
+    #endif
 
     /** This method gives value of given shape function evaluated in given
     point.
@@ -1834,11 +1878,17 @@ public:
     @see ShapeFunctionValue
     @see ShapeFunctionLocalGradient
     */
-
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    virtual const ShapeFunctionsGradientsType& ShapeFunctionsLocalGradients() const
+    {
+        return mpGeometryData->ShapeFunctionsLocalGradients();
+    }
+    #else
     const ShapeFunctionsGradientsType& ShapeFunctionsLocalGradients() const
     {
         return mpGeometryData->ShapeFunctionsLocalGradients();
     }
+    #endif
 
     /** This method gives all shape functions gradients evaluated in
     all integration points of given integration method. There is
@@ -1861,10 +1911,17 @@ public:
     @see ShapeFunctionValue
     @see ShapeFunctionLocalGradient
     */
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    virtual const ShapeFunctionsGradientsType& ShapeFunctionsLocalGradients( IntegrationMethod ThisMethod ) const
+    {
+        return mpGeometryData->ShapeFunctionsLocalGradients( ThisMethod );
+    }
+    #else
     const ShapeFunctionsGradientsType& ShapeFunctionsLocalGradients( IntegrationMethod ThisMethod ) const
     {
         return mpGeometryData->ShapeFunctionsLocalGradients( ThisMethod );
     }
+    #endif
 
     /** This method gives gradient of given shape function evaluated in
     given integration point of default integration method. It just
@@ -1888,10 +1945,17 @@ public:
     @see ShapeFunctionValue
     @see ShapeFunctionsLocalGradients
     */
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    virtual const Matrix& ShapeFunctionLocalGradient( IndexType IntegrationPointIndex )  const
+    {
+        return mpGeometryData->ShapeFunctionLocalGradient( IntegrationPointIndex );
+    }
+    #else
     const Matrix& ShapeFunctionLocalGradient( IndexType IntegrationPointIndex )  const
     {
         return mpGeometryData->ShapeFunctionLocalGradient( IntegrationPointIndex );
     }
+    #endif
 
     /** This method gives gradient of given shape function evaluated
     in given integration point of given integration
@@ -2196,6 +2260,9 @@ protected:
     ///@name Protected member Variables
     ///@{
 
+    #ifdef ENABLE_BEZIER_GEOMETRY
+    GeometryData const* mpGeometryData;
+    #endif
 
     ///@}
     ///@name Protected Operators
@@ -2397,8 +2464,9 @@ private:
     ///@name Member Variables
     ///@{
 
+    #if !defined(ENABLE_BEZIER_GEOMETRY)
     GeometryData const* mpGeometryData;
-
+    #endif
 
     ///@}
     ///@name Serialization

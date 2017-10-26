@@ -84,6 +84,9 @@ public:
         Kratos_Tetrahedra,
         Kratos_Hexahedra,
         Kratos_Prism,
+        Kratos_NURBS,
+        Kratos_Polygon,
+        Kratos_Polyhedron,
         Kratos_generic_family
     };
 
@@ -113,7 +116,30 @@ public:
         Kratos_Line3D3,
         Kratos_Point2D,
         Kratos_Point3D,
-        Kratos_Sphere3D1
+        Kratos_Sphere3D1,
+        Kratos_Bezier2D,
+        Kratos_Bezier2D3,
+        Kratos_Bezier3D,
+        Kratos_Tritagon, //3 // it's a fake name but need to avoid duplication with Kratos_Triangle
+        Kratos_Tetragon, // 4
+        Kratos_Pentagon, // 5
+        Kratos_Hexagon, // 6
+        Kratos_Heptagon, // 7
+        Kratos_Octagon, // 8
+        Kratos_Nonagon, // 9
+        Kratos_Decagon, // 10
+        Kratos_Hendecagon, // 11
+        Kratos_Dodecagon, // 12
+        Kratos_Triskaidecagon, // 13
+        Kratos_Tetrakaidecagon, // 14
+        Kratos_Pentadecagon, // 15
+        Kratos_Hexakaidecagon, // 16
+        Kratos_Heptadecagon, // 17
+        Kratos_Octakaidecagon, // 18
+        Kratos_Enneadecagon, // 19
+        Kratos_Octahedron,
+        Kratos_Dodecahedron,
+        Kratos_Icosahedron
     };
 
 
