@@ -55,3 +55,8 @@ kratos/includes/kratos_version.h
 *.mesh
 *.o.sol
 *.o.mesh
+
+# SD
+*.bak
+*.orig
+
